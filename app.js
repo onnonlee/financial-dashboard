@@ -796,25 +796,38 @@
 
   // ===== 처음 설정·계좌 추가를 캡처로 (은행앱 전체 계좌·카드앱 화면) =====
   // 이름 줄과 금액 줄을 짝지음. "한도"가 붙은 금액은 바로 앞 마이너스통장의 한도로.
+  // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 이름 줄 (토스 내 계좌)
+  // 금액만 있는 줄이 이어서 나오면 그 앞 것은 합계로 보고 버림. "합계에 포함되지 않아요" 아래는 기본으로 빼기.
   function parseSetup(text) {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const amtRe = /([-−]?\s?\d{1,3}(?:,\d{3})+|[-−]?\s?\d+)\s*원|([-−]?\d{1,3}(?:,\d{3})+)/;
     const acctNoRe = /\d{2,6}-\d{2,6}(-\d{1,8})*/g;
-    const out = []; let pend = '';
-    for (const l of lines) {
+    const noise = /송금|보내기|가져오기|불러오기|더보기|이체|개설|편집|둘러보기|찾는다면|혜택|추천|이벤트|광고|^내 계좌$|^입출금$|^저축$|^투자$|^대출$|^기타/;
+    const clean = (l) => l.replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능(금액)?|결제\s*예정(금액)?|이번\s*달|청구(금액)?|이용(금액)?/g, '').replace(/[|·•:]/g, ' ').replace(/\s+/g, ' ').trim();
+    const isName = (l) => { const b = clean(l); return !!b && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
+    const out = []; let pend = ''; let excl = false;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
       const am = l.match(amtRe);
-      const bare = l.replace(acctNoRe, '').replace(/\*+/g, '').trim();
-      if (!am) { if (bare && !/^[\d\s.:\-]+$/.test(bare) && !/보내기|가져오기|더보기|송금|이체/.test(bare)) pend = bare; continue; }
+      if (!am) {
+        if (/합계에\s*포함되지|합산\s*제외|숨긴/.test(l)) excl = true;
+        pend = isName(l) ? clean(l) : (noise.test(clean(l)) ? '' : pend);
+        continue;
+      }
       if (/총|합계|자산|순자산|전체/.test(l)) { pend = ''; continue; }
       const amount = parseAmt((am[1] || am[2]).replace('−', '-').replace(/\s/g, ''));
       if (/한도/.test(l)) { const prev = out[out.length - 1]; if (prev) { prev.limit = Math.abs(amount); prev.kind = prev.kind === 'card' ? 'card' : 'overdraft'; } continue; }
-      let name = bare.replace(amtRe, '').replace(/잔액|출금가능|결제\s*예정(금액)?|이번\s*달|청구(금액)?|이용(금액)?/g, '').replace(/[|·•:]/g, ' ').replace(/\s+/g, ' ').trim();
-      if (!name) name = pend;
+      let name = clean(l.replace(amtRe, ''));
+      if (!name && pend) name = pend;
+      else if (!name && lines[i + 1] && isName(lines[i + 1])) { name = clean(lines[i + 1]); i++; }
       pend = '';
-      if (!name) continue;
-      const kind = /카드/.test(name) ? 'card' : /마이너스|마통|한도대출/.test(name) || amount < 0 ? 'overdraft' : /지역화폐|지역사랑|상품권|동백|온누리|페이머니/.test(name) ? 'local' : 'bank';
+      if (!name) continue; // 이름 없는 금액 = 묶음 합계
+      const kind = excl ? 'skip' : /카드/.test(name) ? 'card' : /마이너스|마통|한도대출/.test(name) || amount < 0 ? 'overdraft' : /지역화폐|지역사랑|상품권|동백|온누리|페이머니/.test(name) ? 'local' : 'bank';
       out.push({ name: name.slice(0, 20), amount, kind, limit: null, payDay: 15 });
     }
+    // 같은 이름은 번호를 붙여 구분 (은행 이름이 로고로만 보이는 경우)
+    const seen = {};
+    out.forEach((r) => { seen[r.name] = (seen[r.name] || 0) + 1; if (seen[r.name] > 1) r.name += ' ' + seen[r.name]; });
     return out;
   }
   function setupSheet(onDone) {
@@ -827,11 +840,11 @@
         if (!rows) return '<div class="hint">은행앱 <b>전체 계좌</b> 화면과 카드앱 <b>결제 예정 금액</b> 화면을 캡처한 뒤, 사진에서 글자를 길게 눌러 <b>모두 선택 → 복사</b>하고 붙여넣어 주세요. 여러 장이면 이어서 붙여넣으면 돼요.</div>' +
           '<textarea class="input" name="raw" placeholder="여기에 붙여넣기"></textarea><div class="hint">계좌번호는 저장하지 않아요. 이름과 금액만 읽어요.</div>';
         if (!rows.length) return '<div class="empty">이름과 금액을 못 찾았어요.<br>글자를 다시 복사해 주세요.</div>';
-        return '<div class="hint">줄마다 종류를 확인해 주세요. 금액은 은행앱 잔액(마이너스통장은 쓴 만큼 −), 카드는 결제 예정 금액이에요.</div>' + rows.map((r, i) =>
+        return '<div class="hint">줄마다 이름과 종류를 확인해 주세요. 금액이 −인 통장은 마이너스통장으로 골라 두었어요. 한도를 적으면 남은 한도가 쓸 수 있는 돈이 돼요. 이름이 같으면 은행 이름을 붙여 주세요.</div>' + rows.map((r, i) =>
           '<div class="card" style="background:var(--surface-2);gap:8px;padding:12px"><input class="input" name="n' + i + '" value="' + esc(r.name) + '">' +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
           (r.kind === 'skip' ? '' : '<input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '">') + '</div>' +
-          (r.kind === 'overdraft' ? '<label class="field"><span>한도</span><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 30,000,000"></label>' : '') +
+          (r.kind === 'overdraft' ? '<label class="field"><span>한도' + (r.limit ? '' : ' <span class="badge warn">적어 주세요</span>') + '</span><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 30,000,000"></label>' : '') +
           (r.kind === 'card' ? '<select class="input" name="d' + i + '">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === r.payDay ? ' selected' : '') + '>결제일 ' + l + '</option>').join('') + '</select>' : '') + '</div>').join('');
       },
       foot: () => !rows ? '<button class="btn" data-act="setupRead">읽기</button>' : rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button><button class="btn gray" data-act="setupBack">다시 붙여넣기</button>' : '<button class="btn gray" data-act="setupBack">다시 붙여넣기</button>',
