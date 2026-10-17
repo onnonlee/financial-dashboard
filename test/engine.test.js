@@ -195,4 +195,64 @@ test('캡처 중복 의심: 날짜+금액+가맹점', () => {
   assert.ok(!E.findDuplicate(s, { date: '2026-10-16', amount: 6000, memo: '김밥천국' }));
 });
 
+test('M8 마이너스통장은 남은 한도가 쓸 수 있는 돈, 사용액은 대출 합계', () => {
+  const s = base();
+  s.accounts.push({ id: 'od', name: '토스 마통', kind: 'overdraft', include: true, limit: 5000000, rate: 7.5 });
+  s.balanceChecks.push({ id: 'b9', accountId: 'od', amount: -4000000, at: 1000 });
+  const sm = E.summary(s, '2026-10-10');
+  assert.strictEqual(sm.spendable, 3500000 + 1000000);
+  const ls = E.loanSummary(s);
+  assert.strictEqual(ls.overdraftTotal, 4000000);
+  s.settings.overdraftMode = 'balance';
+  assert.strictEqual(E.summary(s, '2026-10-10').spendable, 3500000 - 4000000);
+});
+
+test('대출 월 납입 자동 생성, 가족 대납은 같은 날 대납금 수입과 짝', () => {
+  const s = base();
+  s.loans.push({ id: 'kb', name: '신용대출', balance: 30000000, rate: 4.0, monthly: 400000, payDay: 25, payFrom: 'kb', familyPayer: '가족' });
+  s.loans.push({ id: 'pen', name: '연금대출', balance: 6000000, rate: 4.5, monthly: 180000, payDay: 25, payFrom: 'kb' });
+  E.ensurePeriod(s, '2026-11', 2000);
+  const out = s.txns.filter((t) => t.source && t.source.loanId && t.kind === 'expense');
+  const fam = s.txns.filter((t) => t.source && t.source.family);
+  assert.strictEqual(out.length, 2);
+  assert.strictEqual(fam.length, 1);
+  assert.strictEqual(fam[0].date, out[0].date);
+  // 대납 대출은 예상잔액에 영향 0, 본인 부담만 빠짐
+  assert.strictEqual(E.summary(s, '2026-10-26').forecast, 3500000 - 180000);
+  const ls = E.loanSummary(s);
+  assert.strictEqual(ls.monthlySelf, 180000);
+  assert.strictEqual(ls.monthlyFamily, 400000);
+  assert.strictEqual(ls.byRate[0].name, '연금대출');
+});
+
+test('이번 주기 여유/부족 = 이 주기 수입 − 계좌 지출 − 이 주기 카드대금', () => {
+  const s = base();
+  s.txns.push({ id: 'sal', kind: 'income', salary: true, amount: 3000000, date: '2026-09-24', status: 'done', to: { type: 'account', id: 'kb' }, recordedAt: 5000 });
+  s.txns.push({ id: 'rent', kind: 'expense', amount: 600000, date: '2026-09-26', status: 'planned', from: { type: 'account', id: 'kb' }, recordedAt: 5000 });
+  s.txns.push({ id: 'tr', kind: 'transfer', amount: 200000, date: '2026-10-01', status: 'done', from: { type: 'account', id: 'kb' }, to: { type: 'account', id: 'toss' }, recordedAt: 5000 });
+  s.cardChecks.push({ id: 'c', cardId: 'ss', payMonth: '2026-10', amount: 2500000, at: 3000 });
+  const pb = E.periodBalance(s, '2026-10');
+  assert.strictEqual(pb.income, 3000000);
+  assert.strictEqual(pb.out, 600000 + 2500000);
+  assert.strictEqual(pb.left, -100000);
+});
+
+test('할부 월별 청구 추이', () => {
+  const s = base();
+  s.installments.push({ id: 'a', name: 'A', cardId: 'ss', startPayMonth: '2026-10', months: 3, amount: 100 });
+  s.installments.push({ id: 'b', name: 'B', cardId: 'ss', startPayMonth: '2026-11', months: 1, amount: 50 });
+  const tr = E.installmentTrend(s, '2026-10', 6);
+  assert.deepStrictEqual(tr.map((r) => [r.month, r.total]), [['2026-10', 100], ['2026-11', 150], ['2026-12', 100]]);
+});
+
+test('받을 돈을 예정보다 더 받으면 더 받은 금액이 남음', () => {
+  const s = base();
+  s.debts.push({ id: 'd', dir: 'recv', principal: 68650 });
+  s.txns.push({ id: 's', kind: 'settle', debtId: 'd', amount: 79000, date: '2026-09-22', status: 'done', to: { type: 'account', id: 'kb' }, recordedAt: 5000 });
+  const st = E.debtStatus(s, s.debts[0]);
+  assert.strictEqual(st.remaining, 0);
+  assert.strictEqual(st.extra, 10350);
+  assert.strictEqual(st.state, '완료');
+});
+
 console.log('\n' + passed + '개 통과');

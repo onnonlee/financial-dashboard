@@ -111,7 +111,63 @@
   function debtStatus(state, debt) {
     const settled = sum(state.txns.filter((t) => t.kind === 'settle' && t.status === 'done' && t.debtId === debt.id), (t) => t.amount);
     const remaining = Math.max(0, debt.principal - settled);
-    return { settled, remaining, state: settled <= 0 ? '미정산' : remaining > 0 ? '부분정산' : '완료' };
+    // 예정보다 더 받거나 더 갚은 금액은 따로 남김
+    return { settled, remaining, extra: Math.max(0, settled - debt.principal), state: settled <= 0 ? '미정산' : remaining > 0 ? '부분정산' : '완료' };
+  }
+
+  // ---------- 마이너스통장 (M8: 쓸 수 있는 돈은 남은 한도, 사용액은 대출) ----------
+  const isOverdraft = (a) => a.kind === 'overdraft';
+  function available(state, a, bal) {
+    const b = bal == null ? accountBalance(state, a.id).amount : bal;
+    return isOverdraft(a) && state.settings.overdraftMode !== 'balance' ? (a.limit || 0) + b : b;
+  }
+  const overdraftUsed = (a, bal) => (isOverdraft(a) ? Math.max(0, -bal) : 0);
+
+  // ---------- 대출 ----------
+  // 일반대출은 잔액을 직접 관리, 마이너스통장 사용액은 계좌에서 계산
+  function loanSummary(state) {
+    const od = state.accounts.filter(isOverdraft).map((a) => {
+      const bal = accountBalance(state, a.id).amount;
+      return { account: a, used: overdraftUsed(a, bal), left: (a.limit || 0) + bal };
+    });
+    const loans = state.loans || [];
+    const self = sum(loans.filter((l) => !l.familyPayer), (l) => l.monthly || 0);
+    const family = sum(loans.filter((l) => l.familyPayer), (l) => l.monthly || 0);
+    return {
+      overdrafts: od, loans,
+      overdraftTotal: sum(od, (o) => o.used), loanTotal: sum(loans, (l) => l.balance || 0),
+      total: sum(od, (o) => o.used) + sum(loans, (l) => l.balance || 0),
+      monthlySelf: self, monthlyFamily: family,
+      byRate: loans.concat(od.filter((o) => o.used > 0).map((o) => ({ name: o.account.name, rate: o.account.rate, balance: o.used }))).filter((x) => x.rate).sort((a, b) => b.rate - a.rate),
+    };
+  }
+
+  // ---------- 이번 주기 여유/부족: 이 주기 수입으로 이 주기에 나갈 돈을 감당하는지 ----------
+  function periodBalance(state, p) {
+    const { start, end } = periodRange(state, p);
+    const incl = new Set(state.accounts.filter((a) => a.include).map((a) => a.id));
+    const mine = (r) => r && r.type === 'account' && incl.has(r.id);
+    let income = 0, out = 0;
+    const parts = { income: 0, card: 0, account: 0, loan: 0, other: 0 };
+    for (const t of state.txns) {
+      if (txnPeriod(state, t) !== p) continue;
+      if (t.kind === 'income' && mine(t.to)) { income += t.amount; parts.income += t.amount; }
+      else if (t.kind === 'expense' && mine(t.from)) { out += t.amount; if (t.categoryId === '대출') parts.loan += t.amount; else parts.account += t.amount; }
+      else if (t.kind === 'settle' && mine(t.to)) { income += t.amount; parts.income += t.amount; }
+      else if (t.kind === 'settle' && mine(t.from)) { out += t.amount; parts.other += t.amount; }
+      else if (t.kind === 'transfer' && mine(t.from) && !mine(t.to)) { out += t.amount; parts.other += t.amount; }
+      else if (t.kind === 'transfer' && !mine(t.from) && mine(t.to)) { income += t.amount; parts.income += t.amount; }
+    }
+    for (const c of state.cards) {
+      for (const m of [addMonths(p, -1), p, addMonths(p, 1)]) {
+        const d = cardPayDate(c, m);
+        if (d < start || d > end) continue;
+        const pay = state.txns.find((t) => t.kind === 'cardPayment' && t.status === 'done' && t.cardId === c.id && t.payMonth === m);
+        const amt = pay ? pay.amount : cardBill(state, c.id, m).total;
+        out += amt; parts.card += amt;
+      }
+    }
+    return { period: p, income, out, left: income - out, parts };
   }
 
   // ---------- 현황 숫자 (②④⑤⑥ + 지역화폐) ----------
@@ -121,8 +177,9 @@
     const incl = new Set(state.accounts.filter((a) => a.include).map((a) => a.id));
     const balances = state.accounts.map((a) => ({ account: a, ...accountBalance(state, a.id) }));
 
-    // ② 쓸 수 있는 돈: 합산 켠 계정 합. 마통은 잔액 그대로(미사용 한도 제외)
-    const spendable = sum(balances.filter((b) => incl.has(b.account.id)), (b) => b.amount);
+    balances.forEach((b) => { b.available = available(state, b.account, b.amount); });
+    // ② 쓸 수 있는 돈: 합산 켠 계정 합. 마통은 남은 한도 (M8)
+    const spendable = sum(balances.filter((b) => incl.has(b.account.id)), (b) => b.available);
     // M5: 지역화폐는 합산 꺼져 있으면 따로
     const localMoney = sum(balances.filter((b) => b.account.kind === 'local' && !incl.has(b.account.id)), (b) => b.amount);
 
@@ -173,6 +230,7 @@
       nextCardTotal: sum(nextCards, (b) => b.total), nextCards,
       remainingPlanned: outflow, plannedOut: outItems.sort((a, b) => (a.date < b.date ? -1 : 1)), plannedIn: inflow,
       receivable: recv, payable: pay, localMoney, balances, cardBills,
+      debtTotal: loanSummary(state).total,
       unclosedPrev: !isClosed(state, addMonths(p, -1)) && hasAnyIn(state, addMonths(p, -1)),
     };
   }
@@ -214,9 +272,21 @@
       // 결제일이 시작일 이후면 앞달, 아니면 끝달
       const date = r.day >= state.settings.cycleStartDay ? dateIn(addMonths(p, -1), r.day) : dateIn(p, r.day);
       const t = { id, kind: r.kind || 'expense', amount: amountAt(r, p), date, status: 'planned', from: r.method, to: r.to || null,
-        categoryId: r.categoryId || null, memo: r.name, source: { ruleId: r.id }, recordedAt: now };
+        categoryId: r.categoryId || null, memo: r.name, source: { ruleId: r.id }, approx: !!r.approx, salary: !!r.salary, recordedAt: now };
       if (isCard(r.method)) { t.cardPayMonth = cardPayMonth(byId(state.cards, r.method.id), date); t.reflect = 'unreflected'; }
       made.push(t);
+    }
+    // 대출 월 납입: 납부 계좌에서 정기 출금, 가족 대납이면 같은 날 대납금 수입도 함께
+    for (const l of state.loans || []) {
+      if (!l.monthly || !l.payDay || !l.payFrom || l.active === false) continue;
+      if (l.start && p < l.start) continue;
+      const date = l.payDay >= state.settings.cycleStartDay ? dateIn(addMonths(p, -1), l.payDay) : dateIn(p, l.payDay);
+      const id = 'l:' + l.id + ':' + p;
+      if (!have.has(id)) made.push({ id, kind: 'expense', amount: l.monthly, date, status: 'planned', from: { type: 'account', id: l.payFrom },
+        categoryId: '대출', memo: l.name + ' 납입', source: { loanId: l.id }, approx: !!l.approx, recordedAt: now });
+      const fid = 'lf:' + l.id + ':' + p;
+      if (l.familyPayer && !have.has(fid)) made.push({ id: fid, kind: 'income', amount: l.monthly, date, status: 'planned', to: { type: 'account', id: l.payFrom },
+        categoryId: '대납금', memo: l.familyPayer + ' 대납금 (' + l.name + ')', source: { loanId: l.id, family: true }, recordedAt: now });
     }
     for (const ins of state.installments) {
       const card = byId(state.cards, ins.cardId);
@@ -240,6 +310,25 @@
     for (const h of rule.history || []) if (h.from <= p) a = h.amount;
     return a;
   }
+
+  // ---------- 할부 월별 청구 추이 (카드별) ----------
+  function installmentTrend(state, fromMonth, months) {
+    const rows = [];
+    for (let k = 0; k < months; k++) {
+      const m = addMonths(fromMonth, k);
+      const byCard = {};
+      for (const ins of state.installments) {
+        const idx = monthDiff(ins.startPayMonth, m);
+        if (idx < 0 || idx >= ins.months) continue;
+        const a = Array.isArray(ins.amounts) ? ins.amounts[idx] : ins.amount;
+        byCard[ins.cardId] = (byCard[ins.cardId] || 0) + a;
+      }
+      const total = Object.values(byCard).reduce((x, y) => x + y, 0);
+      if (total) rows.push({ month: m, byCard, total });
+    }
+    return rows;
+  }
+  const monthDiff = (a, b) => { const [y1, m1] = parseYM(a); const [y2, m2] = parseYM(b); return (y2 - y1) * 12 + (m2 - m1); };
 
   // ---------- 월마감 (P5 경고만, 이월은 같은 기록을 옮김) ----------
   const isClosed = (state, p) => state.closes.some((c) => c.period === p && !c.reopenedAt);
@@ -291,8 +380,8 @@
     return {
       version: 1,
       settings: { cycleStartDay: 25 },
-      accounts: [], cards: [], recurring: [], installments: [], people: [], debts: [],
-      categories: ['식비', '카페', '교통', '쇼핑', '생활', '의료', '경조사', '주거', '통신', '구독', '급여', '기타'],
+      accounts: [], cards: [], recurring: [], installments: [], people: [], debts: [], loans: [],
+      categories: ['식비', '카페', '교통', '쇼핑', '생활', '의료', '경조사', '주거', '통신', '구독', '보험', '대출', '급여', '기타'],
       txns: [], balanceChecks: [], cardChecks: [], closes: [],
     };
   }
@@ -300,6 +389,7 @@
   const api = {
     addMonths, addDays, dateIn, periodOf, periodRange, txnPeriod, cardPayMonth, cardPayDate,
     accountBalance, balanceGap, cardBill, debtStatus, summary, flow, ensurePeriod,
+    available, loanSummary, periodBalance, installmentTrend,
     closeChecks, closePeriod, reopenPeriod, isClosed, findDuplicate, emptyState, daysBetween,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
