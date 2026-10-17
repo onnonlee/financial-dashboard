@@ -30,6 +30,7 @@
 
   const now = () => Date.now();
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const APP_VERSION = '10.17-5';
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const curPeriod = () => E.periodOf(S, today());
 
@@ -565,7 +566,7 @@
       (S.accounts.some((a) => a.kind === 'overdraft') ? '<button class="row" data-act="settingOverdraft"><div class="grow"><span class="t">마이너스통장 쓸 수 있는 돈</span></div><span class="s">' + (S.settings.overdraftMode === 'balance' ? '잔액 그대로' : '남은 한도') + '</span><span class="chev">' + I.right + '</span></button>' : '') +
       '<button class="row" data-act="syncOpen"><div class="grow"><span class="t">구글 드라이브 동기화</span></div><span class="s' + (sync.on ? ' in' : '') + '">' + esc(sync.text) + '</span><span class="chev">' + I.right + '</span></button>' +
       '<button class="row" data-act="backup"><div class="grow"><span class="t">백업 파일 내보내기·가져오기</span></div><span class="chev">' + I.right + '</span></button></div>';
-    h += '<div class="hint" style="text-align:center;padding:8px">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가</div>';
+    h += '<div class="hint" style="text-align:center;padding:8px">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가<br>버전 ' + APP_VERSION + '</div>';
     return h;
   }
 
