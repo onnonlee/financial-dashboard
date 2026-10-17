@@ -1,5 +1,5 @@
 // 오프라인에서도 열리게 앱 파일만 저장. 데이터는 localStorage에 있음.
-const CACHE = 'money-v3';
+const CACHE = 'money-v4';
 const FILES = ['./', 'index.html', 'app.css', 'engine.js', 'sync.js', 'app.js', 'manifest.webmanifest', 'icons/icon-180.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => {

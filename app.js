@@ -798,6 +798,11 @@
   // 이름 줄과 금액 줄을 짝지음. "한도"가 붙은 금액은 바로 앞 마이너스통장의 한도로.
   // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 이름 줄 (토스 내 계좌)
   // 금액만 있는 줄이 이어서 나오면 그 앞 것은 합계로 보고 버림. "합계에 포함되지 않아요" 아래는 기본으로 빼기.
+  const BANKS = ['국민', '토스', '신한', '하나', '우리', '농협', '카카오'];
+  function bankOf(n) {
+    if (/카드/.test(n)) return null;
+    return /KB|국민/i.test(n) ? '국민' : /토스/.test(n) ? '토스' : /신한|쏠편한|쓸편한/.test(n) ? '신한' : /하나/.test(n) ? '하나' : /우리/.test(n) ? '우리' : /NH|농협/i.test(n) ? '농협' : /카카오/.test(n) ? '카카오' : null;
+  }
   function parseSetup(text) {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const amtRe = /([-−]?\s?\d{1,3}(?:,\d{3})+|[-−]?\s?\d+)\s*원|([-−]?\d{1,3}(?:,\d{3})+)/;
@@ -825,7 +830,9 @@
       const kind = excl ? 'skip' : /카드/.test(name) ? 'card' : /마이너스|마통|한도대출/.test(name) || amount < 0 ? 'overdraft' : /지역화폐|지역사랑|상품권|동백|온누리|페이머니/.test(name) ? 'local' : 'bank';
       out.push({ name: name.slice(0, 20), amount, kind, limit: null, payDay: 15 });
     }
-    // 같은 이름은 번호를 붙여 구분 (은행 이름이 로고로만 보이는 경우)
+    // 이름은 은행 이름만 (온 요청). 상품명으로 은행을 알 수 있으면 바꾸고, 모르면 확인 화면에서 고름
+    out.forEach((r) => { const bk = bankOf(r.name); if (bk) r.name = bk + (/서브/.test(r.name) ? ' 서브' : ''); else r.pickBank = r.kind !== 'card'; });
+    // 같은 이름은 번호를 붙여 구분
     const seen = {};
     out.forEach((r) => { seen[r.name] = (seen[r.name] || 0) + 1; if (seen[r.name] > 1) r.name += ' ' + seen[r.name]; });
     return out;
@@ -840,8 +847,9 @@
         if (!rows) return '<div class="hint">은행앱 <b>전체 계좌</b> 화면과 카드앱 <b>결제 예정 금액</b> 화면을 캡처한 뒤, 사진에서 글자를 길게 눌러 <b>모두 선택 → 복사</b>하고 붙여넣어 주세요. 여러 장이면 이어서 붙여넣으면 돼요.</div>' +
           '<textarea class="input" name="raw" placeholder="여기에 붙여넣기"></textarea><div class="hint">계좌번호는 저장하지 않아요. 이름과 금액만 읽어요.</div>';
         if (!rows.length) return '<div class="empty">이름과 금액을 못 찾았어요.<br>글자를 다시 복사해 주세요.</div>';
-        return '<div class="hint">줄마다 이름과 종류를 확인해 주세요. 금액이 −인 통장은 마이너스통장으로 골라 두었어요. 한도를 적으면 남은 한도가 쓸 수 있는 돈이 돼요. 이름이 같으면 은행 이름을 붙여 주세요.</div>' + rows.map((r, i) =>
+        return '<div class="hint">줄마다 이름과 종류를 확인해 주세요. 금액이 −인 통장은 마이너스통장으로 골라 두었어요. 한도를 적으면 남은 한도가 쓸 수 있는 돈이 돼요. 은행을 못 알아본 통장은 아래 은행 버튼을 눌러 주세요.</div>' + rows.map((r, i) =>
           '<div class="card" style="background:var(--surface-2);gap:8px;padding:12px"><input class="input" name="n' + i + '" value="' + esc(r.name) + '">' +
+          (r.pickBank ? '<div class="chips" style="flex-wrap:wrap">' + BANKS.map((bk) => '<button class="chip' + (r.name === bk ? ' on' : '') + '" data-act="setupBank" data-i="' + i + '" data-b="' + bk + '">' + bk + '</button>').join('') + '</div>' : '') +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
           (r.kind === 'skip' ? '' : '<input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '">') + '</div>' +
           (r.kind === 'overdraft' ? '<label class="field"><span>한도' + (r.limit ? '' : ' <span class="badge warn">적어 주세요</span>') + '</span><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 30,000,000"></label>' : '') +
@@ -853,6 +861,7 @@
       read() { rows = parseSetup(val('raw') || ''); rows.forEach((r) => { if (S.accounts.some((a) => a.name === r.name) || S.cards.some((c) => c.name === r.name)) r.kind = 'skip'; }); paintSheet(); },
       back() { rows = null; paintSheet(); },
       kind(i, k) { sync(); rows[i].kind = k; paintSheet(); },
+      bank(i, bk) { sync(); rows[i].name = bk; paintSheet(); },
       save() {
         sync();
         const use = rows.filter((r) => r.kind !== 'skip' && r.name);
@@ -1017,6 +1026,7 @@
     setupRead: () => sheet.setup.read(),
     setupBack: () => sheet.setup.back(),
     setupSave: () => sheet.setup.save(),
+    setupBank: (d) => sheet.setup.bank(Number(d.i), d.b),
     editLoan: (d) => editLoan(d.id),
     payCard(d) {
       const c = card(d.id); const b = E.cardBill(S, c.id, d.m);
