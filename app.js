@@ -30,7 +30,7 @@
 
   const now = () => Date.now();
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const APP_VERSION = '10.17-5';
+  const APP_VERSION = '10.18-1';
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const curPeriod = () => E.periodOf(S, today());
 
@@ -922,23 +922,83 @@
   }
 
   // ===== 백업 (비상용) =====
+  // 가져온 파일: 전체 백업이면 바꾸고, 이전 정보 묶음(money-seed)이면 지금 데이터에 더함
+  function takeImport(txt) {
+    let data; try { data = JSON.parse(txt); } catch (e) { return toast('이 내용은 읽을 수 없어요'); }
+    if (data && data.kind === 'money-seed') return mergeSeed(data);
+    if (!data || !data.version || !Array.isArray(data.txns)) return toast('이 내용은 읽을 수 없어요');
+    if (!confirm('지금 데이터를 백업 파일 내용으로 바꿀까요?')) return;
+    S = data; S.onboarded = true; save(); closeSheet(); view.tab = 'home'; render(); toast('가져왔어요');
+  }
   function backupSheet() {
     openSheet({
-      title: '백업',
-      body: () => '<div class="hint">모든 기록을 파일 하나로 내보내요. 다른 기기에서 가져오면 그대로 이어서 쓸 수 있어요. 가져오면 지금 데이터는 바뀌어요.</div>' +
-        '<input type="file" accept="application/json,.json" id="importFile" hidden>',
-      foot: () => '<button class="btn" data-act="exportJSON">파일로 내보내기</button><button class="btn gray" data-act="importJSON">파일 가져오기</button>',
+      title: '백업·가져오기',
+      body: () => '<div class="hint">모든 기록을 파일 하나로 내보내요. 다른 기기에서 가져오면 그대로 이어서 쓸 수 있어요. 전체 백업을 가져오면 지금 데이터는 바뀌어요.</div>' +
+        '<div class="hint">이전 정보 묶음(대출·고정비·카드 등)은 지금 데이터를 지우지 않고 <b>더해요</b>. 이름이 같은 항목은 건너뛰어요.</div>' +
+        '<textarea class="input" name="seedText" placeholder="파일 내용을 붙여넣어도 돼요"></textarea>' +
+        '<input type="file" accept="application/json,.json,text/plain" id="importFile" hidden>',
+      foot: () => '<button class="btn" data-act="importJSON">파일 가져오기</button><button class="btn gray" data-act="importPaste">붙여넣은 내용 가져오기</button><button class="btn gray" data-act="exportJSON">파일로 내보내기</button>',
       mount(sh) {
         sh.querySelector('#importFile').addEventListener('change', (e) => {
           const file = e.target.files[0]; if (!file) return;
-          file.text().then((txt) => {
-            const data = JSON.parse(txt);
-            if (!data || !data.version || !Array.isArray(data.txns)) throw new Error('bad');
-            if (!confirm('지금 데이터를 백업 파일 내용으로 바꿀까요?')) return;
-            S = data; S.onboarded = true; save(); closeSheet(); view.tab = 'home'; render(); toast('가져왔어요');
-          }).catch(() => toast('이 파일은 읽을 수 없어요'));
+          file.text().then(takeImport).catch(() => toast('이 파일은 읽을 수 없어요'));
         });
       },
+    });
+  }
+  // 이번 주기 날짜가 이미 지났으면 다음 주기부터 (이미 나간 돈은 잔액에 들어 있음)
+  function firstPeriodFor(day) {
+    const cp = curPeriod(); const pm = day >= S.settings.cycleStartDay ? E.addMonths(cp, -1) : cp;
+    return pm + '-' + String(Math.min(day, 28)).padStart(2, '0') < today() ? E.addMonths(cp, 1) : cp;
+  }
+  function mergeSeed(d) {
+    const findAcc = (n) => S.accounts.find((a) => a.name === n) || S.accounts.find((a) => bankOf(a.name) && bankOf(a.name) === bankOf(n));
+    const findCard = (n) => S.cards.find((c) => c.name === n);
+    const added = { acc: 0, card: 0, rule: 0, loan: 0, debt: 0, inst: 0 }; const needBal = [];
+    for (const a of d.accounts || []) {
+      let x = findAcc(a.name);
+      if (!x) { x = { id: uid(), name: a.name, kind: a.kind || 'bank', include: a.kind !== 'local' }; S.accounts.push(x); added.acc++; needBal.push(a.name); }
+      if (a.kind === 'overdraft') { x.kind = 'overdraft'; if (a.limit) x.limit = a.limit; if (a.rate) x.rate = a.rate; }
+      if (a.note && !x.note) x.note = a.note;
+    }
+    const ref = (m) => { if (!m) return null; if (m.type === 'card') { const c = findCard(m.name); return c ? { type: 'card', id: c.id } : null; } const a = findAcc(m.name); return a ? { type: 'account', id: a.id } : null; };
+    for (const c of d.cards || []) {
+      if (findCard(c.name)) continue;
+      const a = findAcc(c.account) || S.accounts[0]; if (!a) continue;
+      S.cards.push({ id: uid(), name: c.name, payDay: c.payDay || 15, payOffset: c.payOffset == null ? 1 : c.payOffset, accountId: a.id }); added.card++;
+    }
+    for (const r of d.recurring || []) {
+      if (S.recurring.some((y) => y.name === r.name)) continue;
+      const m = ref(r.method); if (!m) continue;
+      const x = { id: uid(), name: r.name, kind: r.kind || 'expense', amount: r.amount, day: r.day, categoryId: r.category || '기타', active: r.active !== false, approx: !!r.approx, note: r.note || '', end: r.end || null, start: firstPeriodFor(r.day) };
+      if (x.kind === 'income') { x.to = m; x.method = null; x.salary = !!r.salary; } else { x.method = m; x.to = null; }
+      S.recurring.push(x); added.rule++;
+    }
+    if (!S.loans) S.loans = [];
+    for (const l of d.loans || []) {
+      if (S.loans.some((y) => y.name === l.name)) continue;
+      const a = findAcc(l.payFrom); if (!a) continue;
+      S.loans.push({ id: uid(), name: l.name, bank: l.bank || '', balance: l.balance || 0, rate: l.rate || null, monthly: l.monthly || 0, approx: !!l.approx, payDay: l.payDay, payFrom: a.id, familyPayer: l.familyPayer || null, note: l.note || '', active: true, start: firstPeriodFor(l.payDay) }); added.loan++;
+    }
+    for (const b of d.debts || []) {
+      let pp = S.people.find((x) => x.name === b.person); if (!pp) { pp = { id: uid(), name: b.person }; S.people.push(pp); }
+      if (S.debts.some((y) => y.personId === pp.id && y.reason === b.reason)) continue;
+      S.debts.push({ id: uid(), dir: b.dir, personId: pp.id, reason: b.reason || '', principal: b.principal, dueDate: b.dueDate || null, includeInForecast: false }); added.debt++;
+    }
+    for (const i of d.installments || []) {
+      if (S.installments.some((y) => y.name === i.name)) continue;
+      const c = findCard(i.card); if (!c) continue;
+      S.installments.push({ id: uid(), name: i.name, cardId: c.id, startPayMonth: i.startPayMonth, months: i.months, amount: i.amount, note: i.note || '' }); added.inst++;
+    }
+    S.onboarded = true;
+    E.ensurePeriod(S, curPeriod(), now());
+    save(); closeSheet(); render();
+    openSheet({
+      title: '이전 정보를 더했어요',
+      body: () => '<div class="detail" style="margin:0">' + [['계좌', added.acc], ['카드', added.card], ['정기결제·수입', added.rule], ['대출', added.loan], ['받을·갚을 돈', added.debt], ['할부', added.inst]].map(([l, n]) => '<div class="line"><span>' + l + '</span><b>' + n + '개</b></div>').join('') + '</div>' +
+        '<div class="hint">마이너스통장 한도·금리는 같은 은행 계좌에 붙였어요. 이번 주기에 이미 지난 날짜의 고정비·대출은 다음 주기부터 예정으로 생겨요.</div>' +
+        (needBal.length ? '<div class="hint" style="color:var(--warn)">잔액을 아직 모르는 계좌: ' + needBal.map(esc).join(', ') + ' · 빠른 업데이트에서 은행앱 잔액을 적어 주세요.</div>' : ''),
+      foot: () => '<button class="btn" data-act="ledgerTab" data-t="account">장부에서 보기</button>',
     });
   }
   function exportJSON() {
@@ -1017,6 +1077,7 @@
     backup: () => backupSheet(),
     exportJSON,
     importJSON: () => document.getElementById('importFile').click(),
+    importPaste: () => { const t = (val('seedText') || '').trim(); if (!t) return toast('내용을 붙여넣어 주세요'); takeImport(t); },
     obNext, obBack: () => { ob.step--; render(); },
     obCapture: () => setupSheet((na, nc) => {
       if (!na && !nc) return;
