@@ -30,7 +30,7 @@
 
   const now = () => Date.now();
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const APP_VERSION = '10.18-3';
+  const APP_VERSION = '10.18-4';
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const curPeriod = () => E.periodOf(S, today());
 
@@ -152,9 +152,9 @@
     const cur = TABS.find((x) => x[0] === view.tab);
     let title = cur ? cur[1] : '관리'; let sub = '';
     if (view.tab === 'home') {
-      const r = E.periodRange(S, curPeriod()); const sync = syncLabel();
+      const r = E.periodRange(S, curPeriod());
       title = pName(curPeriod()) + ' 급여주기';
-      sub = '<span>' + md(r.start) + ' – ' + md(r.end) + ' · ' + (E.daysBetween ? E.daysBetween(today(), r.end) + '일 남음' : '') + '</span><span class="dot' + (sync.on ? '' : ' off') + '"></span><span>' + esc(sync.text) + '</span>';
+      sub = '<span>' + md(r.start) + ' – ' + md(r.end) + ' · ' + (E.daysBetween ? E.daysBetween(today(), r.end) + '일 남음' : '') + '</span>';
     }
     return '<header class="hdr"><div class="hdr-top"><div style="min-width:0"><h1>' + title + '</h1>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>' +
       '<div class="hdr-act"><button class="pill" data-act="quick">' + I.refresh + '<span>빠른 업데이트</span></button>' +
