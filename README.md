@@ -1,11 +1,12 @@
-# 머니 (개인 재무 앱)
+# 머니 v2 (개인 재무 앱)
 
-iPhone Safari용 정적 웹앱. 빌드 없음, 서버 없음. 데이터는 기기(localStorage)에 저장.
+iPhone Safari용 정적 웹앱. 빌드 없음, 서버 없음. 데이터는 기기(localStorage `money.v2`)에 저장.
+이전 대시보드(월간 금융 흐름) 구조를 따르되, 값을 한 곳에서 고치면 모든 탭이 같이 바뀌도록 새로 만듦.
 
-- `engine.js` 계산 엔진 (설계: ../design/03-데이터모델-계산원칙.md). 화면은 이 결과만 보여줌
-- `app.js` 화면, `app.css` 디자인 기준 (../design/05-디자인방향.md)
-- `sync.js` 구글 드라이브 동기화 자리 (OAuth 클라이언트 준비 후)
-- `test/engine.test.js` 설계서 테스트 시나리오 9개 + 결정 규칙. `node test/engine.test.js`
+- `core.js` 계산 엔진. 기본 정보(계좌·카드·고정비·대출·할부·수입·갚을 돈)와 가계부 기록만 저장하고, 매달 일정·잔액·카드값·대출 잔액은 매번 계산
+- `main.js` 화면 (입력·현황·가계부·월간 흐름·고정비·대출·계좌·카드·할부·수입·갚을·받을 돈), `style.css` 디자인
+- 예전 버전(`money.v1`) 데이터가 있으면 처음 열 때 자동으로 옮김
+- `test/core.test.js` 계산 시험 (가짜 숫자). `node test/core.test.js`
 
 로컬 실행: `python3 -m http.server` 후 http://localhost:8000
 단축어 연결: `…/#/import?t=<복사한 글자>` 로 열면 캡처 가져오기 화면이 바로 열림
