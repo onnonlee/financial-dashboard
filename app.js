@@ -30,7 +30,7 @@
 
   const now = () => Date.now();
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-  const APP_VERSION = '10.18-1';
+  const APP_VERSION = '10.18-2';
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const curPeriod = () => E.periodOf(S, today());
 
@@ -204,9 +204,44 @@
       }).join('') + '</div>';
     }
 
-    h += '<div class="grid2"><button class="tile" data-act="toggle" data-k="fore"><span class="label">남은 예정 지출</span><span class="v">' + won(sm.remainingPlanned) + '원</span></button>' +
-      '<a class="tile" href="#/ledger" data-act="ledgerTab" data-t="people" style="text-decoration:none;color:inherit"><span class="label">받을 돈 · 갚을 돈</span><span class="v"><span class="in">+' + won(sm.receivable) + '</span> <span class="muted" style="font-weight:500">/</span> ' + won(sm.payable) + '</span></a></div>';
-    if (S.accounts.some((a) => a.kind === 'local' && !a.include)) h += '<div class="sub" style="justify-content:space-between;padding:2px 6px"><span>지역화폐 · 합계에서 빠져 있어요</span><span>' + won(sm.localMoney) + '원</span></div>';
+    // ---- 이전 대시보드처럼 한 화면 정리: 이번 급여 → 계좌 → 앞으로 나갈 돈 → 대출 → 갚을·받을 돈 ----
+    const head = (title, right, act) => '<div class="sec-head"' + (act ? ' data-act="' + act[0] + '"' + (act[1] ? ' data-t="' + act[1] + '"' : '') + ' role="button"' : '') + '><span>' + title + '</span><span class="sec-right">' + right + (act ? ' ' + I.right : '') + '</span></div>';
+    // 이번 급여로 여유/부족
+    const pb = E.periodBalance(S, sm.period); const short = pb.left < 0;
+    if (pb.parts.income || pb.parts.card || pb.parts.account || pb.parts.loan) h += '<div class="card tight">' + head('이번 급여로', '<b style="color:' + (short ? 'var(--warn)' : 'var(--in)') + '">' + (short ? '부족 −' : '여유 +') + won(Math.abs(pb.left)) + '</b>') +
+      '<div class="detail" style="margin:0 16px 14px"><div class="line"><span>이 주기 수입</span><span class="in">+' + won(pb.parts.income) + '</span></div><div class="line"><span>카드대금</span><span>−' + won(pb.parts.card) + '</span></div><div class="line"><span>계좌 고정비·지출</span><span>−' + won(pb.parts.account) + '</span></div><div class="line"><span>대출 납입</span><span>−' + won(pb.parts.loan) + '</span></div>' + (pb.parts.other ? '<div class="line"><span>정산·기타</span><span>−' + won(pb.parts.other) + '</span></div>' : '') + '</div></div>';
+    // 계좌: 은행별 잔액·남은 한도, 마통은 사용률 막대
+    if (sm.balances.length) {
+      h += '<div class="card tight">' + head('계좌', won(sm.balances.filter((b) => b.account.include).reduce((a, b) => a + b.available, 0)) + '원', ['ledgerTab', 'account']) + sm.balances.map((b) => {
+        const a = b.account; const od = a.kind === 'overdraft' && a.limit;
+        const used = od ? Math.max(0, -b.amount) : 0;
+        return '<button class="row" data-act="balance" data-id="' + a.id + '"><span class="ico">' + acctIcon(a) + '</span><div class="grow"><span class="t">' + esc(a.name) + (!a.include ? ' <span class="badge gray">따로</span>' : '') + '</span>' +
+          (od ? '<span class="s">' + won(used) + ' / ' + won(a.limit) + ' 사용</span><span class="bar" style="height:5px;margin-top:4px"><span style="width:' + Math.min(100, used / a.limit * 100) + '%;background:' + (used / a.limit > 0.9 ? 'var(--warn-dot)' : 'var(--accent)') + '"></span></span>' : '<span class="s">확인 ' + ago(b.checkedAt) + '</span>') +
+          '</div><div style="text-align:right"><span class="amt">' + wonS(b.available) + '</span>' + (od ? '<span class="s" style="display:block;font-size:12px;color:var(--text-3)">남은 한도</span>' : '') + '</div></button>';
+      }).join('') + '</div>';
+    }
+    // 앞으로 나갈 돈 (이번 주기 남은 예정, 날짜순)
+    const outs = sm.plannedOut.filter((o) => o.amount > 0).sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (outs.length || sm.plannedIn) {
+      h += '<div class="card tight">' + head('이번 주기 남은 예정', '−' + won(sm.remainingPlanned) + '원', ['tabFlow']) + outs.slice(0, 8).map((o) =>
+        '<div class="row"><span class="date-chip">' + md(o.date) + '</span><div class="grow"><span class="t">' + esc(o.label) + '</span></div><span class="amt">−' + won(o.amount) + '</span></div>').join('') +
+        (outs.length > 8 ? '<div class="hint" style="padding:0 16px 12px">외 ' + (outs.length - 8) + '건 · 흐름 탭에서 전체 보기</div>' : '') +
+        (sm.plannedIn ? '<div class="row"><div class="grow"><span class="t">들어올 예정</span></div><span class="amt in">+' + won(sm.plannedIn) + '</span></div>' : '') + '</div>';
+    }
+    // 대출 요약
+    const L = E.loanSummary(S);
+    if (L.total) {
+      h += '<div class="card tight">' + head('대출·마이너스통장', won(L.total) + '원', ['ledgerTab', 'account']) +
+        '<div class="detail" style="margin:0 16px 14px"><div class="line"><span>마이너스통장 사용</span><span>' + won(L.overdraftTotal) + '</span></div><div class="line"><span>일반대출 잔액</span><span>' + won(L.loanTotal) + '</span></div>' +
+        (L.monthlySelf || L.monthlyFamily ? '<div class="line"><span>매달 내 부담</span><b>' + won(L.monthlySelf) + '</b></div>' + (L.monthlyFamily ? '<div class="line"><span>가족 대납</span><span>' + won(L.monthlyFamily) + '</span></div>' : '') : '') +
+        (L.byRate[0] ? '<div class="line"><span>먼저 갚을 것</span><span>' + esc(L.byRate[0].name) + ' ' + L.byRate[0].rate + '%</span></div>' : '') + '</div></div>';
+    }
+    // 갚을 돈·받을 돈
+    const openD = S.debts.map((d) => ({ d, st: E.debtStatus(S, d) })).filter((x) => x.st.remaining > 0);
+    if (openD.length) {
+      h += '<div class="card tight">' + head('갚을 돈 · 받을 돈', (sm.receivable ? '<span class="in">+' + won(sm.receivable) + '</span> / ' : '') + won(sm.payable) + '원', ['ledgerTab', 'people']) + openD.map(({ d, st }) =>
+        '<button class="row" data-act="debt" data-id="' + d.id + '"><div class="grow"><span class="t">' + esc((person(d.personId) || {}).name || '') + '</span><span class="s">' + esc(d.reason || '') + (st.state === '부분정산' ? ' · 부분정산' : '') + '</span></div><span class="amt' + (d.dir === 'recv' ? ' in' : '') + '">' + (d.dir === 'recv' ? '+' : '−') + won(st.remaining) + '</span></button>').join('') + '</div>';
+    }
     return h;
   }
 
@@ -1012,6 +1047,7 @@
   // ---------- 동작 ----------
   const A = {
     closeSheet,
+    tabFlow: () => { location.hash = '#/flow'; },
     quick: (d) => quickSheet(d.tab),
     qtab: (d) => sheet.setTab(d.t),
     toggle: (d) => { UI.expanded[d.k] = !UI.expanded[d.k]; render(); },

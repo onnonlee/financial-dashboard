@@ -188,3 +188,10 @@ textarea.input { padding: 12px 14px; min-height: 120px; resize: vertical; }
 .steps { display: flex; gap: 6px; }
 .steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .steps span.on { background: var(--accent); }
+
+/* 현황 섹션 머리 */
+.sec-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px 6px; font-size: 15px; font-weight: 700; }
+.sec-head[role=button] { cursor: pointer; }
+.sec-right { display: inline-flex; align-items: center; gap: 2px; font-size: 15px; font-weight: 600; white-space: nowrap; color: var(--text); }
+.sec-right svg { color: var(--text-3); }
+.date-chip { flex: none; min-width: 44px; font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
