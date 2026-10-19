@@ -445,3 +445,12 @@ details.paste .btn { margin-top: 8px; }
 .info-extra span { color: var(--text3); font-size: 13px; font-weight: 600; }
 .info-extra p { font-size: 15px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertical; }
+.ob-sal { display: flex; flex-direction: column; gap: 10px; background: var(--card); border-radius: 22px; padding: 18px; }
+.ob-sal > span { font-size: 17px; font-weight: 700; }
+.ob-sal em { display: block; font-style: normal; font-size: 13px; font-weight: 500; color: var(--text3); margin-top: 3px; }
+.ob-pick { display: flex; flex-direction: column; gap: 12px; }
+.ob-pick b { font-size: 16px; }
+.ob-pick .chip { background: var(--soft); display: inline-flex; align-items: center; gap: 6px; }
+.ob-pick .chip.on { background: var(--blue); color: #fff; }
+.ob-pick .chip .bico { width: 20px; height: 20px; border-radius: 6px; font-size: 8px; }
+.ob-link { text-align: left; padding: 4px 4px; font-size: 15px; font-weight: 600; color: var(--blue); }
