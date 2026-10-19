@@ -541,3 +541,11 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .ob-quick .chip.on { background: var(--blue); color: #fff; }
 .ob-last { align-self: flex-start; margin-top: 4px; padding: 11px 16px; border-radius: 20px; background: var(--card); font-size: 15px; font-weight: 600; color: var(--text); }
 .ob-last.on { background: var(--blue); color: #fff; }
+/* 금액 아래: 읽어 주기 + [만]·[천] */
+.ko-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.ko-amt { font-size: 14px; font-weight: 600; color: var(--blue); letter-spacing: -0.2px; }
+.ko-units { display: flex; gap: 6px; margin-left: auto; }
+.ko-units button { min-width: 48px; height: 36px; padding: 0 12px; border-radius: 18px; background: var(--soft); font-size: 15px; font-weight: 700; color: var(--text); }
+.card .ko-units button, #sheet .ko-units button { background: var(--bg); }
+.ko-units button:active { transform: scale(.95); background: var(--line); }
+.money.huge + .ko-row .ko-units button { background: var(--card); }

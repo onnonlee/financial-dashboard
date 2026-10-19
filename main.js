@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.24';
+  const VERSION = '2.26';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -80,7 +80,7 @@
     el.innerHTML = '<div class="sheet-head"><b>' + esc(sheet.title) + '</b>' + (sheet.headRight ? sheet.headRight() : '') + '<button class="icon-btn" data-act="closeSheet" aria-label="닫기">' + I.close + '</button></div>' +
       '<div class="sheet-body">' + sheet.body() + '</div>' + (sheet.foot ? '<div class="sheet-foot">' + sheet.foot() + '</div>' : '');
     el.querySelector('.sheet-body').scrollTop = top;
-    if (sheet.mount) sheet.mount(el);
+    koAll(el); if (sheet.mount) sheet.mount(el);
     if (sheet.focus && !sheet.focused) { sheet.focused = true; const f = el.querySelector(sheet.focus); if (f) setTimeout(() => f.focus(), 60); }
   }
   function closeSheet() {
@@ -91,6 +91,29 @@
 
   // 입력 칸 하나
   const dayOpts = Array.from({ length: 31 }, (_, i) => [i + 1, i + 1 + '일']);
+  // 금액 읽어 주기: 3,205,000 → '320만 5,000원' (0을 몇 개 쳤는지 헷갈리지 않게 입력 칸 아래에 보여줌)
+  const koWon = (n) => { n = Math.round(Math.abs(n)); if (n < 10000) return ''; const e = Math.floor(n / 1e8), m = Math.floor(n % 1e8 / 1e4), r = n % 1e4;
+    return [e ? e + '억' : '', m ? won(m) + '만' : '', r ? won(r) : ''].filter(Boolean).join(' ') + '원'; };
+  // 금액 칸 아래: 읽어 주기 + [만]·[천] 버튼 (320 치고 [만] → 3,200,000, 이어서 5 치고 [천] → 3,205,000)
+  function koFill(el) {
+    const box = el.closest('.money'); if (!box || box.closest('.in-row, .dyn-grid')) return;
+    let row = box.nextElementSibling;
+    if (!row || !row.classList.contains('ko-row')) { row = document.createElement('div'); row.className = 'ko-row'; row.innerHTML = '<span class="ko-amt"></span><span class="ko-units"><button type="button" data-act="unit" data-u="10000">만</button><button type="button" data-act="unit" data-u="1000">천</button></span>'; box.after(row); }
+    row.querySelector('.ko-amt').textContent = koWon(parseAmt(el.value));
+  }
+  // 단위를 누른 뒤 이어서 친 숫자만 따로 모음 (앞에 확정한 금액 base, 이어 친 숫자 pend)
+  function moneyTyped(el) {
+    const dg = el.value.replace(/[^0-9]/g, ''); const ds = el.dataset;
+    if (ds.base) {
+      const prev = ds.prev || ''; let pend = ds.pend || '';
+      if (dg.length > prev.length && dg.startsWith(prev)) pend += dg.slice(prev.length);
+      else if (dg.length < prev.length && prev.startsWith(dg) && pend) pend = pend.slice(0, Math.max(0, pend.length - (prev.length - dg.length)));
+      else if (dg !== prev) { delete ds.base; delete ds.pend; delete ds.prev; return Number(dg || 0); }
+      ds.pend = pend; const n = Number(ds.base) + Number(pend || 0); ds.prev = String(n); return n;
+    }
+    return Number(dg || 0);
+  }
+  const koAll = (root) => (root || document).querySelectorAll('[data-live=money]').forEach(koFill);
   function field(f) {
     const lab = '<span class="lab">' + esc(f.label) + (f.sub ? ' <em>' + esc(f.sub) + '</em>' : '') + '</span>';
     if (f.type === 'switch') return '<label class="switch"><span>' + esc(f.label) + (f.hint ? '<small>' + esc(f.hint) + '</small>' : '') + '</span><input type="checkbox" name="' + f.name + '"' + (f.value ? ' checked' : '') + '><i></i></label>';
@@ -118,7 +141,7 @@
   function render() {
     const app = document.getElementById('app');
     for (const f of S.fixed) if (f.base) f.amount = C.fixedAmount(f, curP());
-    if (onboarding()) { app.innerHTML = onboard(); return; }
+    if (onboarding()) { app.innerHTML = onboard(); koAll(app); return; }
     if (!view.P) view.P = curP();
     const fn = { more: moreScreen, input: inputScreen, home: homeScreen, book: bookScreen, flow: flowScreen, fixed: fixedScreen, loans: loansScreen, accounts: accountsScreen, cards: cardsScreen, income: incomeScreen, debts: debtsScreen, settings: settingsScreen }[view.tab] || homeScreen;
     const st = C.status(S, today());
@@ -709,7 +732,6 @@
       body() {
         let h = '<div class="seg">' + [['expense', '지출'], ['income', '수입'], ['transfer', '이체']].map(([k, l]) => '<button data-act="recType" data-k="' + k + '"' + (f.type === k ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div>';
         h += '<div class="money big"><input class="input" name="amt" inputmode="numeric" data-live="money" value="' + (x.amount ? won(x.amount) : '') + '" placeholder="0"><span>원</span></div>';
-        h += '<div class="chips">' + [1000, 10000, 50000].map((n) => '<button class="chip" data-act="addAmt" data-n="' + n + '">+' + (n >= 10000 ? n / 10000 + '만' : '1천') + '</button>').join('') + '</div>';
         if (f.type !== 'transfer') {
           const cats = f.type === 'income' ? ['급여', '용돈', '정산', '환급', '수당', '기타'] : S.categories;
           h += '<div class="cats">' + cats.map((c) => '<button class="cat' + (f.cat === c ? ' on' : '') + '" data-act="recCat" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>';
@@ -1384,7 +1406,13 @@
     editRecord(d) { const r = S.records.find((x) => x.id === d.id); if (r) recordSheet(r); },
     recType(d) { const rec = sheet.rec; rec.x.amount = Math.abs(parseAmt(val('amt'))); rec.x.memo = val('memo'); rec.x.date = val('date'); rec.f.type = d.k; rec.f.cat = d.k === 'income' ? '급여' : rec.f.cat === '급여' ? last.cat || '식비' : rec.f.cat; paintSheet(); },
     recCat(d) { sheet.rec.f.cat = d.c; document.querySelectorAll('#sheet .cat').forEach((b) => b.classList.toggle('on', b.dataset.c === d.c)); recHint(); },
-    addAmt(d) { const el = document.querySelector('#sheet [name=amt]'); el.value = won(Math.abs(parseAmt(el.value)) + Number(d.n)); },
+    unit(d, b) {
+      const el = b.closest('.ko-row').previousElementSibling.querySelector('.input'); const ds = el.dataset; const u = Number(d.u);
+      const typed = ds.base ? Number(ds.pend || 0) : moneyTyped(el); if (!typed) return el.focus();
+      const n = Number(ds.base || 0) + typed * u; ds.base = n; ds.pend = ''; ds.prev = String(n);
+      el.value = won(n); koFill(el); el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+      if (sheet && sheet.rec) recHint();
+    },
     saveRecord,
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
@@ -1474,10 +1502,12 @@
     if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.preventDefault();
     fn(el.dataset, el, ev);
   });
+  // [만]·[천]을 눌러도 자판이 내려가지 않게
+  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('.ko-units')) ev.preventDefault(); });
   document.addEventListener('input', (ev) => {
     const el = ev.target; const live = el.dataset && el.dataset.live;
     if (live === 'money') {
-      const n = Math.abs(parseAmt(el.value)); el.value = el.value.trim() === '' ? '' : won(n);
+      const n = moneyTyped(el); el.value = el.value.trim() === '' ? '' : won(n); koFill(el);
       if (el.dataset.est != null) { const g = n - Number(el.dataset.est); const gap = document.getElementById('gap'); if (gap) gap.textContent = (g > 0 ? '+' : g < 0 ? '−' : '') + won(g); }
       recHint();
     } else if (live === 'hint') recHint();
