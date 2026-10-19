@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.10';
+  const VERSION = '2.11';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -998,11 +998,11 @@
     const sm = document.createElement('canvas'); sm.width = sm.height = 8; const sg = sm.getContext('2d', { willReadFrequently: true });
     sg.drawImage(cv, ix, iy, iw, ih, 0, 0, 8, 8); const sp = sg.getImageData(0, 0, 8, 8).data; const sig = [];
     for (let k = 0; k < sp.length; k += 4) sig.push(sp[k], sp[k + 1], sp[k + 2]);
-    const th = document.createElement('canvas'); th.width = th.height = 64; const tg = th.getContext('2d');
+    const T = wide ? 128 : 64; const th = document.createElement('canvas'); th.width = th.height = T; const tg = th.getContext('2d');
     if (wide) {
       // 칸 배경색은 투명하게 지우고 로고만 가운데에 놓음
-      const f = 50 / Math.max(bw, bh); tg.drawImage(cv, a, b, bw, bh, 32 - bw * f / 2, 32 - bh * f / 2, bw * f, bh * f);
-      const im = tg.getImageData(0, 0, 64, 64); const q = im.data;
+      const f = 100 / Math.max(bw, bh); tg.drawImage(cv, a, b, bw, bh, 64 - bw * f / 2, 64 - bh * f / 2, bw * f, bh * f);
+      const im = tg.getImageData(0, 0, 128, 128); const q = im.data;
       for (let k = 0; k < q.length; k += 4) { const df = Math.abs(q[k] - bg[0]) + Math.abs(q[k + 1] - bg[1]) + Math.abs(q[k + 2] - bg[2]); if (df < 24) q[k + 3] = 0; else if (df < 48) q[k + 3] = Math.round(255 * (df - 24) / 24); }
       tg.putImageData(im, 0, 0);
     }
