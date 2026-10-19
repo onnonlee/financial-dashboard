@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.20';
+  const VERSION = '2.22';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -614,36 +614,53 @@
   // 맨 처음 소개 화면: 앱이 뭘 해주는지 보여주고 '시작하기'로 급여 단계부터
   function intro() {
     const feat = (ic, cls, t, d) => '<div class="in-feat"><span class="m-ic ' + cls + '">' + ic + '</span><div><b>' + t + '</b><span>' + d + '</span></div></div>';
-    return '<main class="screen hello"><div class="in-hero"><img src="icons/icon-180.png" alt="" class="in-logo"><h1>급여일부터 급여일까지,<br>내 돈 흐름을 한눈에</h1><p>이번 급여로 버틸 수 있는지 매일 확인해요.</p></div>' +
-      '<div class="in-card"><span>지금 쓸 수 있는 돈</span><b>1,284,500원</b><div class="in-chips"><i>이번 급여로 여유 320,000원</i><i>10/24 예상 잔액 412,000원</i></div><div class="in-bar"><s style="width:62%"></s></div><small>보기 예시예요</small></div>' +
+    return '<main class="screen hello"><div class="in-hero"><img src="icons/icon-180.png" alt="" class="in-logo"><h1>월급날부터 다음 월급날까지,<br>내 돈 흐름을 한눈에</h1><p>급여주기를 확인하고 흐름을 관리해요.</p></div>' +
+      '<div class="in-card"><span>지금 쓸 수 있는 돈</span><b>1,284,500원</b><div class="in-chips"><i>이번 급여로 여유 320,000원</i><i>10/24 예상 잔액 412,000원</i></div><div class="in-bar"><s style="width:62%"></s></div></div>' +
       '<div class="in-feats">' + feat(I.flow, 'blue', '이번 달 남는 돈 미리 보기', '월급·카드값·고정비·대출을 날짜별로 계산해요') + feat(I.scan, 'green', '캡처 한 장으로 계좌 입력', '은행앱 화면을 찍으면 잔액이 한 번에 들어가요') + feat(I.book, 'indigo', '할부·약정까지 기억', '끝나는 할인, 남은 할부를 대신 챙겨요') + '</div>' +
-      '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button><p class="hint center">다섯 단계, 몇 분이면 끝나요. 데이터는 이 아이폰에만 저장돼요.</p></div></main>';
+      '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button><p class="in-note">다섯 단계면 끝나요 · 데이터는 이 아이폰에만 저장돼요</p></div></main>';
   }
+  // 급여 단계는 토스처럼 질문을 하나씩: 답하면 다음 질문이 위에 나타나고, 답한 건 아래에 쌓임 (누르면 다시 고치기)
+  const OB_Q = ['급여일이 언제인가요?', '월급은 얼마인가요?', '어느 은행으로 받나요?', '다른 수입도 있나요?'];
+  const obQ = () => S.obQ || 0;
+  const obMax = () => S.obMaxQ != null ? S.obMaxQ : (salaryOf() ? 3 : 0);
   function onboard() {
     if (S.onboard == null) return intro();
     const step = S.onboard || 0; const pd = S.settings.payDay; const last = step === OB_STEPS.length - 1;
-    const head = (t, p) => '<div class="ob-head"><h1>' + t + '</h1><p>' + p + '</p></div>';
+    const head = (t, p) => '<div class="ob-head ob-in"><h1>' + t + '</h1>' + (p ? '<p>' + p + '</p>' : '') + '</div>';
     const list = (rows) => rows.length ? '<section class="card ob-list">' + rows.join('') + '</section>' : '';
     const item = (act, id, t, sub, amt, extra) => '<button class="row" data-act="' + act + '" data-id="' + id + '"' + (extra || '') + '><span class="grow"><span class="t">' + t + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' + amt + '</button>';
-    const foot = (has, opt) => '<div class="ob-foot"><button class="btn" data-act="' + (last ? 'obDone' : 'obNext') + '">' + (last ? (has ? '시작하기' : '대출 없이 시작하기') : (has || !opt ? '다음' : '없어요, 다음')) + '</button>' +
-      '<button class="btn ghost" data-act="obBack">이전</button></div>';
-    let h = '<main class="screen ob"><div class="ob-prog">' + OB_STEPS.map((t, i) => '<span class="' + (i < step ? 'done' : i === step ? 'on' : '') + '"><i></i>' + t + '</span>').join('') + '</div>';
+    const cta = (act, label, sub) => '<div class="ob-foot">' + (sub || '') + '<button class="btn" data-act="' + act + '">' + label + '</button></div>';
+    const foot = (has, opt) => cta(last ? 'obDone' : 'obNext', last ? (has ? '시작하기' : '대출 없이 시작하기') : (has || !opt ? '다음' : '없어요, 다음'));
+    const q = obQ(); const prog = (step + (step === 0 ? Math.min(q, 3) / 4 : 0) + 0.5) / OB_STEPS.length;
+    let h = '<main class="screen ob"><div class="ob-top"><button class="ob-back" data-act="obBack" aria-label="이전">' + I.left + '</button><div class="ob-bar"><s style="width:' + Math.round(prog * 100) + '%"></s></div><span class="ob-n">' + (step + 1) + '/' + OB_STEPS.length + '</span></div>';
     if (step === 0) {
-      const r = C.periodRange(S, C.periodOf(S, today())); const sal = S.obSalary || (salaryOf() || {}).amount;
-      h += head('급여일이 언제인가요?', '월급 받는 날을 골라 주세요. 이날부터 다음 급여일 전날까지를 한 달로 계산해요.') +
-        '<div class="ob-days">' + dayOpts.map(([v]) => '<button type="button" class="' + (v === pd ? 'on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '</button>').join('') + '</div>' +
-        '<p class="ob-ex">매월 <b>' + pd + '일</b> · 이번 달은 <b>' + md(r.start) + ' ~ ' + md(r.end) + '</b></p>' +
-        '<div class="ob-sal"><label><span>월급은 얼마인가요? <em>세후, 통장에 들어오는 금액</em></span><div class="money big"><input class="input" id="obSal" inputmode="numeric" data-live="money" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div></label>' +
-        '<div class="ob-bank"><span>어느 은행으로 받나요?</span>' + bankField('obSalBank', S.obSalBank || ((acct((salaryOf() || {}).accountId) || {}).bank) || '') + '</div>' +
-        S.incomes.filter((x) => !x.salary).map((x) => '<button class="row" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
-        '<div class="dyn">' + (S.obExtra || []).map(extraRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="inc">+ 다른 수입 추가</button></div></div>' + foot(true);
+      const r = C.periodRange(S, C.periodOf(S, today())); const s = salaryOf(); const sal = S.obSalary != null ? S.obSalary : (s || {}).amount;
+      const bank = S.obSalBank || ((acct((s || {}).accountId) || {}).bank) || '';
+      const done = (i, label, v) => '<button class="ob-ans" data-act="obEdit" data-q="' + i + '"><span>' + label + '</span><b>' + v + '</b></button>';
+      const subs = ['이날부터 다음 급여일 전날까지를 한 달로 계산해요.', '세후, 통장에 실제로 들어오는 금액이에요.', '같은 은행 통장을 넣으면 월급이 그 통장으로 들어가요.', '부업, 용돈, 이자처럼 매달 들어오는 돈이 있으면 더해 주세요.'];
+      h += head(OB_Q[q], subs[q]) + '<div class="ob-q ob-in">';
+      if (q === 0) h += '<div class="ob-days">' + dayOpts.map(([v]) => '<button type="button" class="' + (v === pd ? 'on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '</button>').join('') + '</div>';
+      else if (q === 1) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
+      else if (q === 2) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
+      else h += S.incomes.filter((x) => !x.salary).map((x) => '<button class="row ob-inc" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
+        '<div class="dyn">' + (S.obExtra || []).map(extraRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="inc">+ 다른 수입 추가</button></div>';
+      h += '</div>';
+      // 답한 것들 (최근 답이 위로)
+      const ans = [];
+      if (obMax() > 0 && q !== 0) ans.push(done(0, '급여일', '매월 ' + pd + '일 <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
+      if (obMax() > 1 && q !== 1) ans.push(done(1, '월급', sal ? won(sal) + '원' : '나중에 적기'));
+      if (obMax() > 2 && q !== 2) ans.push(done(2, '받는 은행', bank ? bankIcon(bank) + esc(POP_LABEL[bank] || bank) : '나중에 고르기'));
+      if (ans.length) h += '<section class="ob-done">' + ans.reverse().join('') + '</section>';
+      if (q === 1) h += cta('obSalOk', '확인', '<button class="ob-skip" data-act="obSalOk" data-skip="1">월급은 나중에 적을게요</button>');
+      else if (q === 2) h += '<div class="ob-foot"><button class="ob-skip" data-act="obBank" data-b="">나중에 고를게요</button></div>';
+      else if (q === 3) h += cta('obNext', '다음');
     } else if (step === 1) {
-      const s = salaryOf(); const amt = S.obSalary || (s && s.amount); const others = S.incomes.filter((x) => !x.salary); const sa = salAcc();
+      const s = salaryOf(); const amt = S.obSalary || (s && s.amount); const sa = salAcc();
       h += head('계좌 잔액을 입력할까요?', '은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.') +
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
         (S.accounts.length && amt && !(s ? acct(s.accountId) && (!S.obSalBank || acct(s.accountId).bank === S.obSalBank) : accOfBank(S.obSalBank)) ? '<section class="card ob-pick"><b>월급 ' + won(amt) + '원은 어느 통장으로 들어오나요?</b>' + (S.obSalBank ? '<span class="hint">' + esc(S.obSalBank) + ' 통장이 아직 없어요. 넣거나 아래에서 골라 주세요.</span>' : '') + '<div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
-        (S.accounts.length ? foot(true) : '<div class="ob-foot"><button class="btn ghost" data-act="obBack">이전</button></div>');
+        (S.accounts.length ? foot(true) : '');
     } else if (step === 2) {
       h += head('카드값을 입력할까요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
         S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); const ins = S.installments.filter((i) => i.cardId === c.id);
@@ -664,11 +681,13 @@
     return h + '</main>';
   }
   function obReadSal() {
-    const el = document.getElementById('obSal'); if (!el) return;
-    S.obSalary = Math.abs(parseAmt(el.value)) || null; S.obSalBank = (document.querySelector('[name=obSalBank]') || {}).value || null;
+    const el = document.getElementById('obSal'); if (el) S.obSalary = Math.abs(parseAmt(el.value)) || null;
+    if (!document.querySelector('.ob .dyn')) return;
     S.obExtra = Array.from(document.querySelectorAll('.ob .dyn-row[data-t="inc"]')).map((r) => ({ name: r.querySelector('[data-k=name]').value.trim(), amount: Math.abs(parseAmt(r.querySelector('[data-k=val]').value)), day: Number(r.querySelector('[data-k=day]').value), bank: r.querySelector('[data-k=bank]').value || null })).filter((r) => r.name && r.amount);
   }
-  function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; delete S.obSalBank; S.started = true; save(); location.hash = '#/home'; render(); }
+  // 질문에 답하면 아직 안 한 다음 질문으로 (고치러 돌아온 경우엔 다시 맨 앞 질문으로)
+  function obAnswer(q) { S.obMaxQ = Math.max(obMax(), q + 1); S.obQ = S.obMaxQ; save(); render(); const el = document.getElementById('obSal'); if (el) el.focus(); }
+  function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; delete S.obSalBank; delete S.obQ; delete S.obMaxQ; S.started = true; save(); location.hash = '#/home'; render(); }
 
   // ===== 시트: 가계부 기록 =====
   function methodOptions(sel, withCards) {
@@ -1397,10 +1416,13 @@
     cardApp: (d) => cardApp(d.id, d.m),
     dynAdd(d, el) { el.insertAdjacentHTML('beforebegin', d.t === 'disc' ? discRow() : d.t === 'inc' ? extraRow() : perkRow()); const r = el.previousElementSibling; r.querySelector('input').focus(); },
     dynDel(d, el) { el.closest('.dyn-row').remove(); },
-    obDay(d) { obReadSal(); S.settings.payDay = Number(d.d); if (S.onboard == null) S.onboard = 0; save(); render(); },
+    obDay(d) { S.settings.payDay = Number(d.d); obAnswer(0); },
+    obSalOk(d) { if (d.skip) S.obSalary = null; else { obReadSal(); if (!S.obSalary) return toast('월급을 적어 주세요'); } obAnswer(1); },
+    obBank(d) { S.obSalBank = d.b || null; obAnswer(2); },
+    obEdit(d) { obReadSal(); S.obQ = Number(d.q); save(); render(); window.scrollTo(0, 0); const el = document.getElementById('obSal'); if (el) el.focus(); },
     obNext() { obReadSal(); if ((S.onboard || 0) <= 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
     obSalAcc(d) { const old = salAcc(); S.obSalAcc = d.id; S.incomes.forEach((x) => { if (x.accountId === old) x.accountId = d.id; }); save(); render(); },
-    obBack() { obReadSal(); if (!S.onboard) delete S.onboard; else S.onboard -= 1; save(); render(); window.scrollTo(0, 0); },
+    obBack() { obReadSal(); if (!S.onboard) { if (obQ() > 0) S.obQ = obQ() - 1; else delete S.onboard; } else S.onboard -= 1; save(); render(); window.scrollTo(0, 0); },
     obStart() { S.onboard = 0; save(); render(); window.scrollTo(0, 0); },
     obDone: () => obFinish(),
     cardAppSave(d) {
