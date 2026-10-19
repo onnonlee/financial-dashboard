@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.23';
+  const VERSION = '2.24';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -639,8 +639,8 @@
       const done = (i, label, v) => '<button class="ob-ans" data-act="obEdit" data-q="' + i + '"><span>' + label + '</span><b>' + v + '</b></button>';
       const subs = ['이날부터 다음 급여일 전날까지를 한 달로 계산해요.', '세후, 통장에 실제로 들어오는 금액이에요.', '같은 은행 통장을 넣으면 월급이 그 통장으로 들어가요.', '부업, 용돈, 이자처럼 매달 들어오는 돈이 있으면 더해 주세요.'];
       h += head(OB_Q[q], subs[q]) + '<div class="ob-q ob-in">';
-      if (q === 0) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 0 ? pd : '') + '" placeholder="25"><span>일</span></div>' +
-        '<div class="ob-chips ob-quick">' + [1, 5, 10, 15, 20, 21, 25].map((v) => '<button type="button" class="chip' + (obMax() > 0 && v === pd ? ' on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '일</button>').join('') + '</div>';
+      if (q === 0) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 0 && pd !== 31 ? pd : '') + '" placeholder="25"><span>일</span></div>' +
+        '<button type="button" class="ob-last' + (obMax() > 0 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>';
       else if (q === 1) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
       else if (q === 2) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
       else h += S.incomes.filter((x) => !x.salary).map((x) => '<button class="row ob-inc" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
@@ -648,7 +648,7 @@
       h += '</div>';
       // 답한 것들 (최근 답이 위로)
       const ans = [];
-      if (obMax() > 0 && q !== 0) ans.push(done(0, '급여일', '매월 ' + pd + '일 <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
+      if (obMax() > 0 && q !== 0) ans.push(done(0, '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
       if (obMax() > 1 && q !== 1) ans.push(done(1, '월급', sal ? won(sal) + '원' : '나중에 적기'));
       if (obMax() > 2 && q !== 2) ans.push(done(2, '받는 은행', bank ? bankIcon(bank) + esc(POP_LABEL[bank] || bank) : '나중에 고르기'));
       if (ans.length) h += '<section class="ob-done">' + ans.reverse().join('') + '</section>';
@@ -1418,8 +1418,12 @@
     cardApp: (d) => cardApp(d.id, d.m),
     dynAdd(d, el) { el.insertAdjacentHTML('beforebegin', d.t === 'disc' ? discRow() : d.t === 'inc' ? extraRow() : perkRow()); const r = el.previousElementSibling; r.querySelector('input').focus(); },
     dynDel(d, el) { el.closest('.dyn-row').remove(); },
-    obDay(d) { S.settings.payDay = Number(d.d); obAnswer(0); },
-    obDayOk() { const v = Number((document.getElementById('obDayIn') || {}).value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요'); S.settings.payDay = v; obAnswer(0); },
+    obDay(d) { if (sheet) closeSheet(); S.settings.payDay = Number(d.d); obAnswer(0); },
+    obDayOk() { const v = Number((document.getElementById('obDayIn') || {}).value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요');
+      // 29·30일은 '말일'인지 한 번 물어봄 (31일은 말일과 같게 계산)
+      if (v === 29 || v === 30) return openSheet({ title: '매달 말일에 받나요?', body: () => '<p class="hint">' + v + '일이 없는 달(2월 등)은 그달 마지막 날로 계산해요. 31일까지 있는 달에도 말일에 받는다면 \'말일\'을 골라 주세요.</p>',
+        foot: () => '<button class="btn" data-act="obDay" data-d="31">네, 매달 말일이에요</button><button class="btn ghost" data-act="obDay" data-d="' + v + '">아니요, 매월 ' + v + '일이에요</button>' });
+      S.settings.payDay = v; obAnswer(0); },
     obSalOk(d) { if (d.skip) S.obSalary = null; else { obReadSal(); if (!S.obSalary) return toast('월급을 적어 주세요'); } obAnswer(1); },
     obBank(d) { S.obSalBank = d.b || null; obAnswer(2); },
     obEdit(d) { obReadSal(); S.obQ = Number(d.q); save(); render(); window.scrollTo(0, 0); const el = document.getElementById('obSal') || document.getElementById('obDayIn'); if (el) el.focus(); },

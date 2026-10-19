@@ -19,7 +19,8 @@
   const sum = (xs, f) => xs.reduce((a, x) => a + (f ? f(x) : x), 0);
 
   const payDay = (st) => st.settings.payDay || 25;
-  function periodOf(st, d) { return dayOf(d) >= payDay(st) ? addMonths(monthOf(d), 1) : monthOf(d); }
+  // 급여일이 31일(말일)이면 30일까지인 달은 30일이 급여일
+  function periodOf(st, d) { return d >= dateIn(monthOf(d), payDay(st)) ? addMonths(monthOf(d), 1) : monthOf(d); }
   function periodRange(st, P) { return { start: dateIn(addMonths(P, -1), payDay(st)), end: addDays(dateIn(P, payDay(st)), -1) }; }
   // 매달 d일 항목이 주기 P 안에서 오는 날짜
   const dayInPeriod = (st, P, d) => (d >= payDay(st) ? dateIn(addMonths(P, -1), d) : dateIn(P, d));

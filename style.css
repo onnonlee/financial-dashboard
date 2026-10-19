@@ -539,3 +539,5 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .ob-dayin .input { width: 1.5em; flex: none; min-height: 52px; padding: 0; background: transparent !important; box-shadow: none !important; border-radius: 0; font-size: 30px; font-weight: 800; text-align: center; letter-spacing: -1px; }
 .ob-quick { margin-top: 6px; }
 .ob-quick .chip.on { background: var(--blue); color: #fff; }
+.ob-last { align-self: flex-start; margin-top: 4px; padding: 11px 16px; border-radius: 20px; background: var(--card); font-size: 15px; font-weight: 600; color: var(--text); }
+.ob-last.on { background: var(--blue); color: #fff; }

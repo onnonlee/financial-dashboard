@@ -23,6 +23,14 @@ test('11월 급여주기 = 10/25 ~ 11/24', () => {
   assert.strictEqual(C.periodOf(s, '2026-10-24'), '2026-10');
 });
 
+test('급여일 말일(31일)이면 짧은 달은 그달 마지막 날부터', () => {
+  const s = base(); s.settings.payDay = 31;
+  assert.strictEqual(C.periodOf(s, '2026-11-30'), '2026-12');
+  assert.strictEqual(C.periodOf(s, '2026-11-29'), '2026-11');
+  assert.deepStrictEqual(C.periodRange(s, '2026-12'), { start: '2026-11-30', end: '2026-12-30' });
+  assert.deepStrictEqual(C.periodRange(s, '2027-03'), { start: '2027-02-28', end: '2027-03-30' });
+});
+
 test('고정비 금액을 고치면 이번 주기·다음 주기 일정이 같이 바뀜', () => {
   const s = base();
   s.fixed.push({ id: 'rent', name: '월세', amount: 300000, day: 25, pay: { type: 'account', id: 'a' } });
