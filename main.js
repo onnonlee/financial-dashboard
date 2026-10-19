@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.18';
+  const VERSION = '2.19';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -199,8 +199,9 @@
   // 토스 송금 화면과 같은 순서·이름표
   const POP_ORDER = ['농협', '카카오뱅크', '국민', '토스뱅크', '신한', '우리', '기업', '하나', '새마을금고', '부산', 'iM뱅크', '케이뱅크', '신협', '우체국', 'SC제일', '경남', '광주', '수협', '전북', '제주', '씨티', '산업'];
   const POP_LABEL = { 농협: 'NH농협', 국민: 'KB국민', 기업: 'IBK기업', 새마을금고: '새마을', 산업: 'KDB산업' };
+  const bankScope = () => document.querySelector('#sheet:not([hidden])') || document;
   function bankPop(f) {
-    const cur = (document.querySelector('#sheet [name="' + f + '"]') || {}).value;
+    const cur = (bankScope().querySelector('[name="' + f + '"]') || {}).value;
     let el = document.getElementById('bankPop');
     if (!el) { el = document.createElement('div'); el.id = 'bankPop'; document.body.appendChild(el); }
     el.innerHTML = '<div class="bp-scrim" data-act="bankClose"></div><section class="bp" role="dialog" aria-modal="true"><i class="bp-grab"></i><h3>은행을 선택해주세요</h3><div class="bp-grid">' +
@@ -592,18 +593,23 @@
   const FIXED_PRESETS = [['월세', '주거'], ['관리비', '주거'], ['통신비', '통신'], ['인터넷', '통신'], ['보험', '보험'], ['넷플릭스', '구독'], ['유튜브 프리미엄', '구독'], ['쿠팡 와우', '구독'], ['적금', '기타']];
   const salaryOf = () => S.incomes.find((x) => x.salary);
   const salAcc = () => { const s = salaryOf() || S.incomes[0]; const id = (s && s.accountId) || S.obSalAcc; return acct(id) ? id : (S.accounts.find((a) => a.type === 'bank') || S.accounts[0] || {}).id; };
+  // 수입을 적을 때 고른 은행과 같은 은행 통장으로 연결 (입출금 통장 먼저)
+  const accOfBank = (b) => b ? (S.accounts.find((a) => a.bank === b && a.type === 'bank') || S.accounts.find((a) => a.bank === b)) : null;
+  let obRowN = 0;
   function obSalarySave() {
     const amt = S.obSalary; const s = salaryOf();
     if (!S.accounts.length) return;
     if (amt && s) Object.assign(s, { amount: amt, day: S.settings.payDay });
-    else if (amt) S.incomes.push({ id: uid(), name: '급여', amount: amt, day: S.settings.payDay, accountId: salAcc(), salary: true, approx: false, active: true });
+    if (s && accOfBank(S.obSalBank)) s.accountId = accOfBank(S.obSalBank).id;
+    else if (amt) S.incomes.push({ id: uid(), name: '급여', amount: amt, day: S.settings.payDay, accountId: (accOfBank(S.obSalBank) || {}).id || salAcc(), salary: true, approx: false, active: true });
     // 급여일 화면에서 적은 다른 수입은 통장이 생기면 월급 통장으로 넣음 (나중에 고칠 수 있음)
-    for (const r of S.obExtra || []) S.incomes.push({ id: uid(), name: r.name, amount: r.amount, day: r.day, accountId: salAcc(), salary: false, approx: false, active: true });
+    for (const r of S.obExtra || []) S.incomes.push({ id: uid(), name: r.name, amount: r.amount, day: r.day, accountId: (accOfBank(r.bank) || {}).id || salAcc(), salary: false, approx: false, active: true });
     delete S.obExtra;
   }
   const extraRow = (r) => { r = r || {}; return '<div class="dyn-row" data-t="inc"><input class="input" data-k="name" value="' + esc(r.name || '') + '" placeholder="이름 (예: 부업, 용돈, 이자)">' +
     '<div class="dyn-grid"><div class="money"><input class="input" data-k="val" inputmode="numeric" data-live="money" value="' + (r.amount ? won(r.amount) : '') + '" placeholder="금액"><span>원</span></div>' +
     '<select class="input" data-k="day">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === (r.day || S.settings.payDay) ? ' selected' : '') + '>매월 ' + l + '</option>').join('') + '</select></div>' +
+    '<div class="ob-bank"><span>받는 은행</span>' + bankField('ib' + (obRowN++), r.bank || '', ' data-k="bank"') + '</div>' +
     '<button type="button" class="dyn-del" data-act="dynDel">지우기</button></div>'; };
   function onboard() {
     const step = S.onboard || 0; const pd = S.settings.payDay; const last = step === OB_STEPS.length - 1;
@@ -619,6 +625,7 @@
         '<div class="ob-days">' + dayOpts.map(([v]) => '<button type="button" class="' + (v === pd ? 'on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '</button>').join('') + '</div>' +
         '<p class="ob-ex">매월 <b>' + pd + '일</b> · 이번 달은 <b>' + md(r.start) + ' ~ ' + md(r.end) + '</b></p>' +
         '<div class="ob-sal"><label><span>월급은 얼마인가요? <em>세후, 통장에 들어오는 금액</em></span><div class="money big"><input class="input" id="obSal" inputmode="numeric" data-live="money" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div></label>' +
+        '<div class="ob-bank"><span>어느 은행으로 받나요?</span>' + bankField('obSalBank', S.obSalBank || ((acct((salaryOf() || {}).accountId) || {}).bank) || '') + '</div>' +
         S.incomes.filter((x) => !x.salary).map((x) => '<button class="row" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
         '<div class="dyn">' + (S.obExtra || []).map(extraRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="inc">+ 다른 수입 추가</button></div></div>' + foot(true);
     } else if (step === 1) {
@@ -626,7 +633,7 @@
       h += head('계좌 잔액을 입력할까요?', '은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.') +
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
-        (S.accounts.length && (amt || (S.obExtra || []).length || others.length) ? '<section class="card ob-pick"><b>' + (amt ? '월급 ' + won(amt) + '원은' : '수입은') + ' 어느 통장으로 들어오나요?</b><div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
+        (S.accounts.length && amt && !(s ? acct(s.accountId) && (!S.obSalBank || acct(s.accountId).bank === S.obSalBank) : accOfBank(S.obSalBank)) ? '<section class="card ob-pick"><b>월급 ' + won(amt) + '원은 어느 통장으로 들어오나요?</b>' + (S.obSalBank ? '<span class="hint">' + esc(S.obSalBank) + ' 통장이 아직 없어요. 넣거나 아래에서 골라 주세요.</span>' : '') + '<div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
         (S.accounts.length ? foot(true) : '<div class="ob-foot"><button class="btn ghost" data-act="obBack">이전</button></div>');
     } else if (step === 2) {
       h += head('카드값을 입력할까요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
@@ -649,10 +656,10 @@
   }
   function obReadSal() {
     const el = document.getElementById('obSal'); if (!el) return;
-    S.obSalary = Math.abs(parseAmt(el.value)) || null;
-    S.obExtra = Array.from(document.querySelectorAll('.ob .dyn-row[data-t="inc"]')).map((r) => ({ name: r.querySelector('[data-k=name]').value.trim(), amount: Math.abs(parseAmt(r.querySelector('[data-k=val]').value)), day: Number(r.querySelector('[data-k=day]').value) })).filter((r) => r.name && r.amount);
+    S.obSalary = Math.abs(parseAmt(el.value)) || null; S.obSalBank = (document.querySelector('[name=obSalBank]') || {}).value || null;
+    S.obExtra = Array.from(document.querySelectorAll('.ob .dyn-row[data-t="inc"]')).map((r) => ({ name: r.querySelector('[data-k=name]').value.trim(), amount: Math.abs(parseAmt(r.querySelector('[data-k=val]').value)), day: Number(r.querySelector('[data-k=day]').value), bank: r.querySelector('[data-k=bank]').value || null })).filter((r) => r.name && r.amount);
   }
-  function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; S.started = true; save(); location.hash = '#/home'; render(); }
+  function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; delete S.obSalBank; S.started = true; save(); location.hash = '#/home'; render(); }
 
   // ===== 시트: 가계부 기록 =====
   function methodOptions(sel, withCards) {
@@ -1356,8 +1363,8 @@
     bankClose() { bankClose(); },
     bankPick(d) {
       bankClose();
-      const inp = document.querySelector('#sheet [name="' + d.f + '"]'); if (!inp) return; inp.value = d.b;
-      const btn = document.querySelector('#sheet .bank-btn[data-f="' + d.f + '"]'); btn.classList.remove('empty'); btn.innerHTML = bankIcon(d.b) + '<b>' + esc(d.b) + '</b><span class="chev">' + I.right + '</span>';
+      const sc = bankScope(); const inp = sc.querySelector('[name="' + d.f + '"]'); if (!inp) return; inp.value = d.b;
+      const btn = sc.querySelector('.bank-btn[data-f="' + d.f + '"]'); btn.classList.remove('empty'); btn.innerHTML = bankIcon(d.b) + '<b>' + esc(d.b) + '</b><span class="chev">' + I.right + '</span>';
       if (sheet && sheet.setup) sheet.setup.bankSel();
     },
     resetAll() {

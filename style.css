@@ -482,3 +482,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .bill .sum b { font-size: 17px; font-weight: 800; }
 .bill .sum.good b { color: var(--in); }
 .bill .hint { margin: 4px 0 0; font-size: 12px; }
+.ob-bank { display: flex; flex-direction: column; gap: 6px; }
+.ob-bank > span { font-size: 14px; color: var(--text2); font-weight: 600; }
+.ob-sal .bank-btn { background: var(--soft); }
+.ob-sal .dyn-row .bank-btn { background: var(--card); }
