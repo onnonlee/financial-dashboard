@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.2';
+  const VERSION = '2.3';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -471,7 +471,7 @@
         '<div class="kv">' + (od ? kv('현재 사용액', won(used)) + kv('총 한도', won(a.limit)) : '') + (a.rate ? kv('이율', '연 ' + a.rate + '%') + (od ? kv('매월 예상 이자', '약 ' + won(used * a.rate / 1200)) : '') : '') + (a.purpose ? kv('주요 용도', esc(a.purpose)) : '') + '</div>' +
         '<button class="link-btn" data-act="editAccount" data-id="' + a.id + '">계좌 정보 고치기</button></section>';
     }).join('');
-    h += '<button class="btn ghost" data-act="editAccount">계좌 추가</button><p class="hint center">잔액은 마지막에 적은 은행앱 숫자에 그 뒤 가계부 기록과 지난 고정비·대출·카드대금을 더하고 뺀 값이에요.</p>';
+    h += '<div class="btn-row"><button class="btn ghost" data-act="editAccount">계좌 추가</button><button class="btn ghost" data-act="setup">' + I.scan + ' 캡처로 추가</button></div><p class="hint center">잔액은 마지막에 적은 은행앱 숫자에 그 뒤 가계부 기록과 지난 고정비·대출·카드대금을 더하고 뺀 값이에요.</p>';
     return h;
   }
 
@@ -544,7 +544,8 @@
   // ===== 처음 =====
   function welcome() {
     return '<main class="screen welcome"><div class="wl-top"><h1>머니</h1><p>급여일 기준으로 이번 급여로 버틸 수 있는지,<br>카드값·대출·고정비를 한 곳에서 봐요.</p></div>' +
-      '<button class="btn" data-act="editAccount">계좌부터 추가하기</button><button class="btn ghost" data-act="backup">이전 정보 묶음·백업으로 시작</button>' +
+      '<button class="btn" data-act="setup">' + I.scan + ' 은행앱 캡처로 시작</button><button class="btn ghost" data-act="editAccount">계좌 하나만 직접 적기</button><button class="btn ghost" data-act="backup">이전 정보 묶음·백업으로 시작</button>' +
+      '<p class="hint center">은행앱 전체 계좌 화면을 캡처하고 사진의 글자를 복사해 붙여넣으면 계좌가 한 번에 들어가요. 계좌번호는 저장하지 않아요.</p>' +
       '<label class="field"><span class="lab">급여일</span><select class="input" id="wPay">' + dayOpts.slice(0, 28).map(([v, l]) => '<option value="' + v + '"' + (v === S.settings.payDay ? ' selected' : '') + '>매월 ' + l + '</option>').join('') + '</select></label></main>';
   }
 
@@ -897,6 +898,89 @@
     };
   }
 
+  // ===== 캡처로 계좌·카드 한 번에 (처음 시작) =====
+  // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 이름 줄 (토스 내 계좌)
+  // 이름 없는 금액은 묶음 합계로 보고 버림. "합계에 포함되지 않아요" 아래는 기본으로 빼기.
+  const BANKS = ['국민', '토스', '신한', '하나', '우리', '농협', '카카오'];
+  const bankOf = (n) => /카드/.test(n) ? null : /KB|국민/i.test(n) ? '국민' : /토스/.test(n) ? '토스' : /신한|쏠편한|쓸편한/.test(n) ? '신한' : /하나/.test(n) ? '하나' : /우리/.test(n) ? '우리' : /NH|농협/i.test(n) ? '농협' : /카카오/.test(n) ? '카카오' : null;
+  function parseSetup(text) {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const amtRe = /([-−]?\s?\d{1,3}(?:,\d{3})+|[-−]?\s?\d+)\s*원|([-−]?\d{1,3}(?:,\d{3})+)/;
+    const acctNoRe = /\d{2,6}-\d{2,6}(-\d{1,8})*/g;
+    const noise = /송금|보내기|가져오기|불러오기|더보기|이체|개설|편집|둘러보기|찾는다면|혜택|추천|이벤트|광고|^내 계좌$|^입출금$|^저축$|^투자$|^대출$|^기타/;
+    const clean = (l) => l.replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능\s*(금액)?|결제\s*예정\s*(금액)?|이번\s*달|청구\s*(금액)?|이용\s*(금액)?|^금액$/g, '').replace(/[|·•:]/g, ' ').replace(/\s+/g, ' ').trim();
+    const isName = (l) => { const b = clean(l); return !!b && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
+    const out = []; let pend = ''; let excl = false;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i]; const am = l.match(amtRe);
+      if (!am) { if (/합계에\s*포함되지|합산\s*제외|숨긴/.test(l)) excl = true; pend = isName(l) ? clean(l) : (noise.test(clean(l)) ? '' : pend); continue; }
+      if (/총|합계|자산|순자산|전체/.test(l)) { pend = ''; continue; }
+      const amount = parseAmt((am[1] || am[2]).replace('−', '-').replace(/\s/g, ''));
+      if (/한도/.test(l)) { const prev = out[out.length - 1]; if (prev) { prev.limit = Math.abs(amount); if (prev.kind !== 'card') prev.kind = 'overdraft'; } continue; }
+      let name = clean(l.replace(amtRe, ''));
+      if (!name && pend) name = pend;
+      else if (!name && lines[i + 1] && isName(lines[i + 1])) { name = clean(lines[i + 1]); i++; }
+      pend = '';
+      if (!name) continue;
+      if (/카드/.test(name)) excl = false; // 카드앱 캡처가 이어 붙은 것
+      const kind = excl ? 'skip' : /카드/.test(name) ? 'card' : /마이너스|마통|한도대출/.test(name) || amount < 0 ? 'overdraft' : /지역화폐|지역사랑|상품권|동백|온누리|페이머니/.test(name) ? 'local' : 'bank';
+      out.push({ name: name.slice(0, 20), amount, kind, limit: null, payDay: 15 });
+    }
+    out.forEach((r) => { const bk = bankOf(r.name); if (bk) r.name = bk + (/서브/.test(r.name) ? ' 서브' : ''); else r.pickBank = r.kind !== 'card'; });
+    const seen = {};
+    out.forEach((r) => { seen[r.name] = (seen[r.name] || 0) + 1; if (seen[r.name] > 1) r.name += ' ' + seen[r.name]; });
+    return out;
+  }
+  function setupSheet() {
+    let rows = null;
+    const kinds = [['bank', '입출금'], ['overdraft', '마이너스통장'], ['local', '지역화폐'], ['card', '신용카드'], ['skip', '빼기']];
+    const g = (n) => document.querySelector('#sheet [name="' + n + '"]');
+    const sync = () => { if (!rows) return; rows.forEach((r, i) => { if (g('n' + i)) r.name = g('n' + i).value.trim(); if (g('a' + i)) r.amount = parseAmt(g('a' + i).value); if (g('l' + i)) r.limit = parseAmt(g('l' + i).value); if (g('d' + i)) r.payDay = Number(g('d' + i).value); }); };
+    openSheet({
+      title: '캡처로 계좌·카드 추가',
+      body() {
+        if (!rows) return '<p class="hint">은행앱 <b>전체 계좌</b> 화면(카드앱은 <b>결제 예정 금액</b> 화면)을 캡처한 뒤, 사진에서 글자를 길게 눌러 <b>모두 선택 → 복사</b>하고 붙여넣어 주세요. 여러 장이면 이어서 붙여넣으면 돼요.</p>' +
+          '<textarea class="input" name="raw" placeholder="여기에 붙여넣기"></textarea><p class="hint">계좌번호는 저장하지 않아요. 이름과 금액만 읽어요.</p>';
+        if (!rows.length) return '<p class="hint center">이름과 금액을 못 찾았어요.<br>글자를 다시 복사해 주세요.</p>';
+        return '<p class="hint">줄마다 이름과 종류를 확인해 주세요. 금액이 −인 통장은 마이너스통장으로 골라 뒀어요. 한도를 적으면 남은 한도가 쓸 수 있는 돈이 돼요.</p>' + rows.map((r, i) =>
+          '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + '"><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="이름">' +
+          (r.pickBank ? '<div class="chips">' + BANKS.map((bk) => '<button class="chip' + (r.name === bk ? ' on' : '') + '" data-act="setupBank" data-i="' + i + '" data-b="' + bk + '">' + bk + '</button>').join('') + '</div>' : '') +
+          '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
+          (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
+          (r.kind === 'overdraft' ? '<label class="field"><span class="lab">한도' + (r.limit ? '' : ' <em>적어 주세요</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 30,000,000"><span>원</span></div></label>' : '') +
+          (r.kind === 'card' ? '<select class="input" name="d' + i + '">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === r.payDay ? ' selected' : '') + '>결제일 ' + l + '</option>').join('') + '</select>' : '') + '</div>').join('');
+      },
+      foot: () => !rows ? '<button class="btn" data-act="setupRead">읽기</button>' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 붙여넣기</button>',
+    });
+    sheet.setup = {
+      read() { rows = parseSetup(val('raw') || ''); rows.forEach((r) => { if (S.accounts.some((a) => a.name === r.name) || S.cards.some((c) => c.name === r.name)) r.kind = 'skip'; }); paintSheet(); },
+      back() { rows = null; paintSheet(); },
+      kind(i, k) { sync(); rows[i].kind = k; paintSheet(); },
+      bank(i, bk) { sync(); rows[i].name = bk; paintSheet(); },
+      save() {
+        sync();
+        const use = rows.filter((r) => r.kind !== 'skip' && r.name);
+        const accs = use.filter((r) => r.kind !== 'card'); const cards = use.filter((r) => r.kind === 'card');
+        if (!accs.length && !S.accounts.length) return toast('카드값이 나갈 계좌도 하나 넣어 주세요');
+        const w = document.getElementById('wPay'); if (w) S.settings.payDay = Number(w.value);
+        const t = now(); const d = today();
+        for (const r of accs) {
+          const a = { id: uid(), name: r.name, type: r.kind, include: r.kind !== 'local', balanceAt: t, balanceDate: d };
+          if (r.kind === 'overdraft') { a.limit = r.limit || 0; a.balance = -Math.abs(r.amount); } else a.balance = Math.abs(r.amount);
+          S.accounts.push(a);
+        }
+        const payAcc = (S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id;
+        for (const r of cards) {
+          const c = { id: uid(), name: r.name, payDay: r.payDay, accountId: payAcc, app: {} };
+          let m = d.slice(0, 7); if (C.cardPayDate(c, m) < d) m = C.addMonths(m, 1);
+          if (r.amount) c.app[m] = { amount: Math.abs(r.amount), at: t, date: d };
+          S.cards.push(c);
+        }
+        S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('계좌 ' + accs.length + '개 · 카드 ' + cards.length + '개 추가했어요');
+      },
+    };
+  }
+
   // ===== 백업·이전 정보 묶음 =====
   function backupSheet() {
     openSheet({
@@ -995,6 +1079,7 @@
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
     goBook() { location.hash = '#/book'; },
+    setup: () => setupSheet(), setupRead: () => sheet.setup.read(), setupBack: () => sheet.setup.back(), setupSave: () => sheet.setup.save(), setupBank: (d) => sheet.setup.bank(Number(d.i), d.b),
     capture: () => captureSheet(), capRead: () => sheet.cap.read(), capBack: () => sheet.cap.back(), capSave: () => sheet.cap.save(),
     sched: (d) => schedSheet(d.k, d.p),
     schedSave(d) {
@@ -1060,7 +1145,7 @@
     else if (live === 'pick') sheet.cap.pick(Number(el.dataset.i), el.checked);
     if (view.tab === 'input' && !sheet) inputPreview();
   });
-  document.addEventListener('change', (ev) => { if (ev.target.dataset && ev.target.dataset.live === 'hint') recHint(); if (view.tab === 'input' && !sheet) inputPreview(); });
+  document.addEventListener('change', (ev) => { const dl = ev.target.dataset && ev.target.dataset.live; if (dl === 'setupKind') sheet.setup.kind(Number(ev.target.dataset.i), ev.target.value); if (dl === 'hint') recHint(); if (view.tab === 'input' && !sheet) inputPreview(); });
 
   function route() {
     const h = location.hash || '#/home';
