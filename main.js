@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.6';
+  const VERSION = '2.7';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -169,8 +169,17 @@
     const back = SUB.includes(view.tab) ? '<a class="back" href="#/more">' + I.left + '전체</a>' : '';
     return '<div class="page-head">' + back + '<div class="ph-row"><h2>' + H[0] + '</h2>' + (H[1] ? '<span class="chk">' + esc(H[1]) + '</span>' : '') + '</div>' + (H[2] ? '<p>' + H[2] + '</p>' : '') + '</div>';
   }
-  const BANK = [[/국민|KB/i, 'kb', '국민'], [/신한/, 'sh', '신한'], [/하나/, 'hn', '하나'], [/토스/, 'ts', '토스'], [/우리/, 'wr', '우리'], [/농협|NH/i, 'nh', '농협'], [/카카오/, 'kk', '카카오'], [/삼성/, 'ss', '삼성'], [/현대/, 'hd', '현대'], [/롯데/, 'lt', '롯데']];
-  const bankChip = (name) => { const b = BANK.find((x) => x[0].test(name || '')); return '<span class="bank ' + (b ? b[1] : 'etc') + '">' + esc(b ? b[2] : (name || '').slice(0, 2)) + '</span>'; };
+  // 은행 이름 [알아보는 글자, 칩 색, 이름]. 앞쪽 은행이 고르기 목록에 나옴 (카드사는 칩 색만)
+  const BANK = [[/국민|KB|종합통장/i, 'kb', '국민'], [/신한|쏠편한|쓸편한/, 'sh', '신한'], [/하나/, 'hn', '하나'], [/우리/, 'wr', '우리'], [/농협|NH/i, 'nh', '농협'], [/기업|IBK/i, 'ibk', '기업'],
+    [/카카오/, 'kk', '카카오뱅크'], [/토스/, 'ts', '토스뱅크'], [/케이뱅크|K\s?뱅크/i, 'kbank', '케이뱅크'], [/SC|제일/i, 'etc', 'SC제일'], [/씨티/, 'etc', '씨티'], [/부산/, 'etc', '부산'], [/iM|대구/i, 'etc', 'iM뱅크'],
+    [/경남/, 'etc', '경남'], [/광주/, 'etc', '광주'], [/전북/, 'etc', '전북'], [/제주/, 'etc', '제주'], [/수협/, 'etc', '수협'], [/우체국/, 'etc', '우체국'], [/새마을|MG/i, 'etc', '새마을금고'], [/신협/, 'etc', '신협'], [/산업|KDB/i, 'etc', '산업'],
+    [/삼성/, 'ss', '삼성'], [/현대/, 'hd', '현대'], [/롯데/, 'lt', '롯데']];
+  const BANK_NAMES = BANK.slice(0, 22).map((b) => b[2]);
+  const SHORT = { 카카오뱅크: '카카오', 토스뱅크: '토스', 케이뱅크: '케이', 새마을금고: '새마을', SC제일: 'SC', iM뱅크: 'iM' };
+  const bankOf = (n) => { if (!n || /카드/.test(n)) return null; const b = BANK.slice(0, 22).find((x) => x[0].test(n)); return b ? b[2] : null; };
+  const bankOpts = (sel) => '<option value="">은행 고르기</option>' + BANK_NAMES.map((b) => '<option' + (b === sel ? ' selected' : '') + '>' + b + '</option>').join('');
+  const bankChip = (name) => { const b = BANK.find((x) => x[2] === name) || BANK.find((x) => x[0].test(name || '')); return '<span class="bank ' + (b ? b[1] : 'etc') + '">' + esc(b ? SHORT[b[2]] || b[2] : (name || '').slice(0, 2)) + '</span>'; };
+  const acctChip = (a) => bankChip(a.bank || a.name);
 
   // ===== 이번 급여로 버티면 (이전 대시보드의 전체자금예상) =====
   function hero(link) {
@@ -251,7 +260,7 @@
   function acctRow(x) {
     const a = x.account; const od = a.type === 'overdraft';
     const used = od ? Math.max(0, -x.balance) : 0;
-    return row({ act: 'balance', data: { id: a.id }, lead: bankChip(a.name), t: esc(a.name) + (a.include === false ? badge('합계 제외', 'gray') : ''), s: od ? won(used) + ' / ' + won(a.limit) + ' 사용' : ago(a.balanceAt), extra: od && a.limit ? meter(used / a.limit) : '', amt: wonS(x.available), end: od ? '남은 한도' : '' });
+    return row({ act: 'balance', data: { id: a.id }, lead: acctChip(a), t: esc(a.name) + (a.include === false ? badge('합계 제외', 'gray') : ''), s: od ? won(used) + ' / ' + won(a.limit) + ' 사용' : ago(a.balanceAt), extra: od && a.limit ? meter(used / a.limit) : '', amt: wonS(x.available), end: od ? '남은 한도' : '' });
   }
   function recRow(r) {
     const plus = r.type === 'income' || (r.type === 'settle' && r.to);
@@ -446,7 +455,7 @@
       const l = x.loan;
       return row({ act: 'editLoan', data: { id: l.id }, lead: bankChip(l.bank || refName({ type: 'account', id: l.accountId })), t: esc(l.name) + (l.familyPayer ? badge(l.familyPayer + ' 대납', 'blue') : '') + (l.active === false ? badge('끝남', 'gray') : ''),
         cls: 'wrap' + (l.active === false ? ' off' : ''), s: esc(dayText({ day: l.payDay, approx: l.approx, dayText: l.dayText })) + ' · 잔액 ' + won(x.amount) + (l.rate ? ' · ' + l.rate + '%' : '') + (x.paid ? ' · 납입 ' + x.paid + '회 반영' : ''), end: '이자 약 ' + won(x.interest), amt: amtText({ approx: l.approx }, l.monthly || 0) });
-    }).join('') + L.interestFixed.slice().sort((a, b) => a.day - b.day).map((f) => row({ act: 'editFixed', data: { id: f.id }, lead: bankChip(refName(f.pay)), cls: 'wrap', t: esc(f.name), s: esc(dayText(f)) + ' · 이자' + (f.note ? ' · ' + esc(f.note) : ''), amt: amtText(f) })).join('') || '<p class="hint">대출이 없어요</p>') + '</section>';
+    }).join('') + L.interestFixed.slice().sort((a, b) => a.day - b.day).map((f) => row({ act: 'editFixed', data: { id: f.id }, lead: f.pay && f.pay.type === 'account' && acct(f.pay.id) ? acctChip(acct(f.pay.id)) : bankChip(refName(f.pay)), cls: 'wrap', t: esc(f.name), s: esc(dayText(f)) + ' · 이자' + (f.note ? ' · ' + esc(f.note) : ''), amt: amtText(f) })).join('') || '<p class="hint">대출이 없어요</p>') + '</section>';
     // 은행별 월 납입
     const by = {};
     L.loans.filter((x) => x.loan.active !== false).forEach((x) => { const k = (x.loan.bank || '기타') + (x.loan.familyPayer ? ' · ' + x.loan.familyPayer + ' 대납' : ''); by[k] = (by[k] || 0) + (x.loan.monthly || 0); });
@@ -466,7 +475,7 @@
     h += st.accts.map((x) => {
       const a = x.account; const od = a.type === 'overdraft'; const used = od ? Math.max(0, -x.balance) : 0;
       const kv = (k, v) => '<div><span>' + k + '</span><b>' + v + '</b></div>';
-      return '<section class="card"><div class="acct-head"><div><h2>' + bankChip(a.name) + ' ' + esc(a.name) + '</h2><span class="s">' + (od ? '마이너스통장' : a.type === 'local' ? '지역화폐' : '입출금') + ' · ' + ago(a.balanceAt) + '</span></div><button class="btn sm soft" data-act="balance" data-id="' + a.id + '">잔액 고치기</button></div>' +
+      return '<section class="card"><div class="acct-head"><div><h2>' + acctChip(a) + ' ' + esc(a.name) + '</h2><span class="s">' + (od ? '마이너스통장' : a.type === 'local' ? '지역화폐' : '입출금') + ' · ' + ago(a.balanceAt) + '</span></div><button class="btn sm soft" data-act="balance" data-id="' + a.id + '">잔액 고치기</button></div>' +
         '<div class="big-num">' + wonS(x.available) + '원<span>' + (od ? '남은 한도' : '현재 잔액') + '</span></div>' + (od && a.limit ? meter(used / a.limit) : '') +
         '<div class="kv">' + (od ? kv('현재 사용액', won(used)) + kv('총 한도', won(a.limit)) : '') + (a.rate ? kv('이율', '연 ' + a.rate + '%') + (od ? kv('매월 예상 이자', '약 ' + won(used * a.rate / 1200)) : '') : '') + (a.purpose ? kv('주요 용도', esc(a.purpose)) : '') + '</div>' +
         '<button class="link-btn" data-act="editAccount" data-id="' + a.id + '">계좌 정보 고치기</button></section>';
@@ -660,7 +669,8 @@
   function editAccount(id) {
     const a = id ? acct(id) : null;
     const f = [
-      { name: 'name', label: '이름', value: a ? a.name : '', ph: '예: 국민' },
+      { name: 'bank', label: '은행', type: 'html', html: '<label class="field"><span class="lab">은행</span><select class="input" name="bank">' + bankOpts(a ? a.bank || bankOf(a.name) || '' : '') + '</select></label>' },
+      { name: 'name', label: '계좌 이름', value: a ? a.name : '', ph: '예: 종합통장, 생활비 통장' },
       { name: 'type', label: '종류', type: 'select', value: a ? a.type : 'bank', options: [['bank', '입출금'], ['overdraft', '마이너스통장'], ['local', '지역화폐']] },
       { name: 'limit', label: '마이너스통장 한도', type: 'money', value: a ? a.limit : '', ph: '마이너스통장일 때만' },
       { name: 'rate', label: '이율 % (선택)', type: 'number', value: a ? a.rate : '', ph: '예: 5.1' },
@@ -669,9 +679,9 @@
     ];
     if (!a) f.push({ name: 'bal', label: '지금 은행앱 잔액 (마이너스통장은 사용 중인 금액)', type: 'money' });
     formSheet(a ? '계좌 정보' : '계좌 추가', f, () => {
-      const name = val('name').trim(); if (!name) return toast('이름을 적어 주세요');
+      const bank = val('bank'); const name = val('name').trim() || (bank ? bank + ' 통장' : ''); if (!name) return toast('은행을 고르거나 이름을 적어 주세요');
       const x = a || { id: uid() };
-      x.name = name; x.type = val('type'); x.include = val('include'); x.purpose = val('purpose').trim(); x.rate = num(val('rate'));
+      x.name = name; if (bank) x.bank = bank; else delete x.bank; x.type = val('type'); x.include = val('include'); x.purpose = val('purpose').trim(); x.rate = num(val('rate'));
       if (x.type === 'overdraft') x.limit = Math.abs(parseAmt(val('limit'))); else delete x.limit;
       if (!a) { const v = Math.abs(parseAmt(val('bal'))); x.balance = x.type === 'overdraft' ? -v : v; x.balanceAt = now(); x.balanceDate = today(); S.accounts.push(x); S.started = true; }
       return a ? LINKED : true;
@@ -886,7 +896,7 @@
       foot: () => !rows ? '' : '<button class="btn" data-act="capSave">선택한 것 저장</button><button class="btn ghost" data-act="capBack">다시 고르기</button>',
     });
     sheet.ocr = async (files) => {
-      try { const t = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.cap.read(t); }
+      try { const r = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.cap.read(r.text); }
       catch (e) { busy = ''; paintSheet(); toast('사진을 못 읽었어요. 글자 붙여넣기로 해 주세요'); }
     };
     sheet.cap = {
@@ -912,81 +922,130 @@
     const base = new URL('vendor/ocr/', location.href).href;
     if (!window.Tesseract) { onStep('글자 읽기 준비 중 · 처음 한 번만 받아요'); await loadScript(base + 'tesseract.min.js'); }
     if (!ocrWorker) { onStep('글자 읽기 준비 중 · 처음 한 번만 받아요'); ocrWorker = await Tesseract.createWorker('kor', 1, { workerPath: base + 'worker.min.js', corePath: base, langPath: base.replace(/\/$/, ''), gzip: true }); }
-    const out = [];
+    const lines = []; const meta = []; const pics = [];
+    // 한 글자씩 떨어진 한글("국 민")만 붙이고, 숫자 뒤 '월'로 잘못 읽힌 '원'을 고침
+    const fix = (t) => t.replace(/(^|\s)([가-힣]) (?=[가-힣](\s|$))/g, '$1$2').replace(/[—–]/g, '-').replace(/ㆍ/g, '·').replace(/(\d)\s*월\s*$/, '$1원').trim();
     for (let i = 0; i < files.length; i++) {
       onStep('사진 ' + (i + 1) + '/' + files.length + ' 읽는 중');
       const { data } = await ocrWorker.recognize(files[i]);
-      out.push(data.text);
+      try { pics[i] = await createImageBitmap(files[i]); } catch (e) { pics[i] = null; }
+      for (const l of data.lines || []) { const t = fix(l.text); if (!t) continue; lines.push(t); meta.push({ pic: i, box: l.bbox, words: (l.words || []).map((w) => ({ t: w.text, box: w.bbox })) }); }
     }
-    // 한글 사이에 끼는 빈칸("국 민")을 붙임
-    // 한글 사이에 끼는 빈칸("국 민")을 붙이고, 숫자 뒤 '월'로 잘못 읽힌 '원'을 고침
-    return out.join('\n').replace(/([가-힣])[ \t]+(?=[가-힣])/g, '$1').replace(/[—–]/g, '-').replace(/ㆍ/g, '·').replace(/(\d)\s*월(?=\s*$)/gm, '$1원');
+    return { text: lines.join('\n'), meta, pics };
+  }
+
+  // ----- 은행 로고 알아보기: 금액 왼쪽 로고를 잘라 작은 색 지도로 만들고, 아는 로고와 비교 -----
+  // 처음 보는 로고는 고른 은행을 기억해 두고 다음부터 알아서 고름 (이 기기에만 저장)
+  const LOGO_KEY = 'money.v2.logos';
+  // 토스 '내 계좌' 화면의 은행 로고 (8×8 색 지도)
+  const LOGO_PRIORS = { '국민': [[255,241,208,254,242,208,254,242,209,252,244,203,255,241,206,252,243,206,251,243,205,255,241,208,255,242,208,255,242,208,255,242,206,254,241,210,252,243,209,254,241,210,255,239,211,255,242,208,254,242,208,254,242,205,254,240,202,247,182,100,255,213,140,241,156,51,252,242,205,255,242,208,252,243,211,248,183,92,247,150,14,250,148,3,255,239,205,243,152,18,254,240,207,255,242,208,254,243,207,249,186,97,252,207,123,250,157,21,255,224,165,254,152,5,255,230,166,255,240,203,254,242,211,254,241,205,255,240,196,255,235,183,254,239,191,250,160,19,248,210,136,254,241,212,255,242,208,255,242,208,254,243,205,255,240,197,255,242,208,255,242,208,255,242,208,255,242,210,255,242,208,255,242,208,255,241,206,255,241,207,255,242,208,255,242,208,255,242,208,254,242,206]], '토스뱅크': [[225,234,253,223,235,252,220,237,254,220,237,254,220,238,251,220,237,254,220,237,254,216,237,253,218,237,254,220,237,254,218,237,249,75,158,241,93,165,241,220,235,254,224,235,249,220,237,254,218,238,248,217,237,251,1,131,252,26,152,253,0,128,248,19,126,254,205,238,255,220,237,254,220,237,254,84,147,231,22,127,253,29,144,255,10,109,252,17,115,254,39,116,233,220,237,254,224,235,252,224,234,254,205,239,255,174,222,253,0,95,253,18,101,245,221,233,254,220,237,254,216,238,254,218,238,249,220,237,254,217,237,254,221,236,251,220,237,254,220,237,254,216,238,253,94,141,222,216,238,250,220,237,254,220,237,254,220,236,251,220,237,254,220,237,254,152,195,246,253,254,255,254,254,254,141,181,238,72,129,210,74,129,211,130,172,232,250,255,255,255,254,254]], '신한': [[234,238,254,234,239,252,234,238,254,234,238,254,234,238,254,234,238,254,234,238,254,234,239,252,234,238,251,234,238,255,178,200,249,40,88,217,38,89,213,121,149,218,237,237,254,234,238,254,236,237,254,179,203,247,240,246,255,40,94,216,249,254,253,125,148,213,86,124,205,234,238,254,232,238,254,37,100,216,189,216,245,179,206,241,97,138,212,45,98,210,40,98,219,234,238,254,235,237,254,42,105,214,36,105,216,92,136,213,245,248,253,47,106,206,35,106,217,234,238,254,234,238,254,128,166,224,238,247,255,138,170,227,35,111,215,241,246,254,61,119,206,234,238,254,234,238,254,234,238,253,100,143,210,78,131,200,33,118,219,58,126,201,233,238,252,234,238,254,234,238,254,234,238,254,233,238,253,234,237,254,232,238,254,232,238,253,236,238,252,234,238,253]], '하나': [[228,243,241,228,242,241,228,243,241,221,242,237,225,243,238,228,242,241,228,242,241,228,243,241,228,243,241,228,243,241,227,242,240,220,150,144,205,75,70,228,243,241,227,242,240,228,242,241,227,243,241,5,144,120,48,143,124,113,187,171,123,191,177,85,166,150,13,142,119,228,243,241,228,242,241,231,242,243,222,246,241,214,248,243,202,242,235,225,244,241,224,245,241,228,243,241,228,243,241,228,243,241,228,242,241,19,141,119,39,146,125,226,244,241,228,243,241,228,243,241,228,243,241,228,243,241,228,243,241,26,142,120,117,193,176,225,244,240,228,243,241,228,243,241,228,243,241,228,243,241,228,243,241,228,242,239,25,141,119,228,243,241,228,243,241,228,242,241,228,243,241,228,243,241,228,243,241,229,242,240,228,241,240,228,243,241,228,243,241,228,243,241]], '우리': [[227,245,254,227,245,254,224,246,253,225,245,254,226,246,253,227,245,254,227,245,254,226,245,254,227,244,254,226,245,253,195,237,251,9,129,201,3,129,201,162,214,241,225,245,252,227,245,254,226,245,254,197,237,255,3,131,201,8,144,207,19,144,209,0,131,201,104,173,214,227,245,254,226,245,254,21,152,210,82,194,229,154,223,243,159,222,241,89,204,230,27,156,213,227,245,254,227,245,254,111,208,234,250,254,254,254,254,254,255,254,255,253,254,251,131,211,238,227,245,254,226,245,253,77,148,186,8,129,203,0,131,202,9,130,202,11,129,204,36,129,190,227,245,254,224,246,253,228,244,253,25,128,197,1,130,203,0,130,203,8,130,197,228,244,255,227,245,254,227,245,254,227,245,254,227,245,254,225,245,254,223,245,254,225,245,254,227,245,254,228,243,254]], '농협': [[229,241,252,229,241,251,229,241,252,229,241,252,229,241,252,229,241,252,229,241,252,229,241,252,230,239,251,228,241,252,228,241,249,229,240,251,228,241,251,229,240,252,229,241,249,229,240,253,229,240,252,221,242,254,228,240,252,216,243,255,217,242,255,228,241,252,224,244,254,226,242,254,227,243,251,17,108,177,198,233,249,2,107,182,7,106,178,224,242,253,160,211,237,225,242,255,224,244,254,67,134,177,15,116,173,2,116,178,25,114,176,217,244,254,159,212,239,225,242,254,224,243,249,139,182,202,223,244,249,115,171,201,123,174,200,228,241,251,190,224,240,228,240,251,229,241,251,229,241,251,225,243,252,226,242,251,226,241,252,228,241,253,229,241,252,229,240,253,229,241,252,229,241,252,229,241,252,229,241,252,229,241,252,229,241,252,229,241,252,229,241,252]] };
+  // 글자가 시작하는 x (로고 바로 오른쪽). 로고가 글자로 잘못 읽혀 붙는 줄이 있어서 사진마다 가운데 값을 씀
+  function textLeft(ocr, at, nameAt) {
+    const m = ocr.meta[at]; if (!m) return null;
+    const w = m.words.find((x) => /\d{2}/.test(x.t)); const n = nameAt != null ? ocr.meta[nameAt] : null;
+    return Math.max(w ? w.box.x0 : m.box.x0, n && n.words[0] ? n.words[0].box.x0 : 0);
+  }
+  function cropLogo(ocr, at, nameAt, left) {
+    const m = ocr.meta[at]; const pic = m && ocr.pics[m.pic]; if (!pic) return null;
+    const x1 = (left || textLeft(ocr, at, nameAt)) - 6;
+    const n = nameAt != null ? ocr.meta[nameAt] : null;
+    const y0 = Math.max(0, m.box.y0 - 20); const y1 = Math.min(pic.height, (n ? n.box.y1 : m.box.y1) + 20);
+    if (x1 < 24 || y1 - y0 < 24) return null;
+    const cv = document.createElement('canvas'); cv.width = x1; cv.height = y1 - y0;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(pic, 0, y0, x1, y1 - y0, 0, 0, x1, y1 - y0);
+    const px = g.getImageData(0, 0, cv.width, cv.height).data; const bg = [px[0], px[1], px[2]];
+    let a = cv.width, b = cv.height, c = -1, d = -1;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) { const k = (y * cv.width + x) * 4; if (Math.abs(px[k] - bg[0]) + Math.abs(px[k + 1] - bg[1]) + Math.abs(px[k + 2] - bg[2]) > 30) { if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; } }
+    const bw = c - a, bh = d - b; if (bw < 16 || bh < 16 || bw > bh * 1.6 || bh > bw * 1.6) return null;
+    // 테두리(선택 표시 등)를 피하려고 가운데 80%만 씀
+    const ix = a + bw * 0.1, iy = b + bh * 0.1, iw = bw * 0.8, ih = bh * 0.8;
+    const sm = document.createElement('canvas'); sm.width = sm.height = 8; const sg = sm.getContext('2d', { willReadFrequently: true });
+    sg.drawImage(cv, ix, iy, iw, ih, 0, 0, 8, 8); const sp = sg.getImageData(0, 0, 8, 8).data; const sig = [];
+    for (let k = 0; k < sp.length; k += 4) sig.push(sp[k], sp[k + 1], sp[k + 2]);
+    const th = document.createElement('canvas'); th.width = th.height = 64; th.getContext('2d').drawImage(cv, a, b, bw, bh, 0, 0, 64, 64);
+    return { sig, url: th.toDataURL('image/png') };
+  }
+  const logoDist = (p, q) => { let s = 0; for (let k = 0; k < p.length; k++) s += Math.abs(p[k] - q[k]); return s / p.length; };
+  function matchLogo(sig) {
+    const known = Object.assign({}, LOGO_PRIORS); const mine = readJSON(LOGO_KEY) || {};
+    for (const b of Object.keys(mine)) known[b] = (known[b] || []).concat(mine[b]);
+    // 가장 가까운 은행이 충분히 가깝고, 두 번째 은행과도 확실히 차이 날 때만 고름
+    const by = {};
+    for (const b of Object.keys(known)) for (const q of known[b]) { const dd = logoDist(sig, q); if (by[b] == null || dd < by[b]) by[b] = dd; }
+    const r = Object.entries(by).sort((x, y) => x[1] - y[1]);
+    return r[0] && r[0][1] < 24 && (!r[1] || r[1][1] - r[0][1] > 6) ? r[0][0] : null;
+  }
+  function learnLogo(bank, sig) {
+    const mine = readJSON(LOGO_KEY) || {}; const list = mine[bank] || [];
+    if (list.some((q) => logoDist(q, sig) < 8)) return;
+    list.unshift(sig); mine[bank] = list.slice(0, 4);
+    try { localStorage.setItem(LOGO_KEY, JSON.stringify(mine)); } catch (e) { /* 편의 기능 */ }
   }
   const photoBtn = (busy) => busy ? '<div class="ocr-busy"><span class="spin"></span>' + esc(busy) + '</div>'
     : '<label class="btn photo-btn">' + I.scan + ' 캡처 사진 고르기<input type="file" accept="image/*" multiple data-live="ocr" hidden></label>';
 
   // ===== 캡처로 계좌·카드 한 번에 (처음 시작) =====
-  // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 이름 줄 (토스 내 계좌)
+  // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 계좌 이름 줄 (토스 내 계좌, 왼쪽에 은행 로고)
   // 이름 없는 금액은 묶음 합계로 보고 버림. "합계에 포함되지 않아요" 아래는 기본으로 빼기.
-  const BANKS = ['국민', '토스', '신한', '하나', '우리', '농협', '카카오'];
-  const bankOf = (n) => /카드/.test(n) ? null : /KB|국민|종합통장/i.test(n) ? '국민' : /토스/.test(n) ? '토스' : /신한|쏠편한|쓸편한/.test(n) ? '신한' : /하나/.test(n) ? '하나' : /우리/.test(n) ? '우리' : /NH|농협/i.test(n) ? '농협' : /카카오/.test(n) ? '카카오' : null;
   function parseSetup(text) {
-    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = text.split(/\r?\n/).map((l) => l.trim());
     // 쉼표를 하나 놓친 숫자(-3989,877원)도 읽음
     const amtRe = /([-−]?\s?\d[\d,]*)\s*원|([-−]?\d{1,3}(?:,\d{3})+)/;
     const acctNoRe = /\d{2,6}-\d{2,6}(-\d{1,8})*/g;
     const noise = /송금|보내기|가져오기|불러오기|더보기|이체|개설|편집|둘러보기|찾는다면|혜택|추천|이벤트|광고|^내 계좌$|^입출금$|^저축$|^투자$|^대출$|^기타/;
     // 버튼 글자(송금 등)와 로고를 잘못 읽은 한 글자 조각은 버림
-    const clean = (l) => l.replace(/송금|보내기|채우기|꺼내기/g, ' ').replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능\s*(금액)?|결제\s*예정\s*(금액)?|이번\s*달|청구\s*(금액)?|이용\s*(금액)?|^금액$/g, '').replace(/[|·•:<>』「」*]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter((w) => w.length > 1).join(' ');
-    const isName = (l) => { const b = clean(l); return !!b && /[가-힣A-Za-z]{2}/.test(b) && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
-    const out = []; let pend = ''; let excl = false;
+    const clean = (l) => l.replace(/송금|보내기|채우기|꺼내기/g, ' ').replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능\s*(금액)?|결제\s*예정\s*(금액)?|이번\s*달|청구\s*(금액)?|이용\s*(금액)?|^금액$/g, '').replace(/[|·•:<>』「」*]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter((w) => w.length > 1).join(' ').replace(/^[^가-힣A-Za-z]+/, '');
+    const isName = (l) => { const b = clean(l || ''); return !!b && /[가-힣A-Za-z]{2}/.test(b) && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
+    const out = []; let pend = null; let excl = false;
     for (let i = 0; i < lines.length; i++) {
-      const l = lines[i]; const am = l.match(amtRe);
-      if (!am) { if (/합계에\s*포함되지|합산\s*제외|숨긴/.test(l)) excl = true; pend = isName(l) ? clean(l) : (noise.test(clean(l)) ? '' : pend); continue; }
-      if (/총|합계|자산|순자산|전체/.test(l)) { pend = ''; continue; }
+      const l = lines[i]; if (!l) continue; const am = l.match(amtRe);
+      if (!am) { if (/합계에\s*포함되지|합산\s*제외|숨긴/.test(l)) excl = true; pend = isName(l) ? { name: clean(l), at: i } : (noise.test(clean(l)) ? null : pend); continue; }
+      if (/총|합계|자산|순자산|전체/.test(l)) { pend = null; continue; }
       if (/^\d{2,6}-\d{2,6}/.test(l) && !/원/.test(l)) continue; // 계좌번호 줄
       const amount = parseAmt((am[1] || am[2]).replace('−', '-').replace(/\s/g, ''));
       if (/한도/.test(l)) { const prev = out[out.length - 1]; if (prev) { prev.limit = Math.abs(amount); if (prev.kind !== 'card') prev.kind = 'overdraft'; } continue; }
       let name = clean(l.replace(amtRe, '')); if (!/[가-힣A-Za-z]{2}/.test(name)) name = '';
+      let nameAt = null; const at = i;
       // 금액 줄에 붙은 짧은 글자는 버튼일 때가 많아서, 다음 줄이 이름이면 그걸 씀 (토스 내 계좌)
-      if (name && name.replace(/\s/g, '').length <= 3 && !bankOf(name) && lines[i + 1] && isName(lines[i + 1])) name = '';
-      if (!name && pend) name = pend;
-      else if (!name && lines[i + 1] && isName(lines[i + 1])) { name = clean(lines[i + 1]); i++; }
-      pend = '';
+      if (name && name.replace(/\s/g, '').length <= 3 && !bankOf(name) && isName(lines[i + 1])) name = '';
+      if (!name && pend) { name = pend.name; nameAt = pend.at; } else if (!name && isName(lines[i + 1])) { name = clean(lines[i + 1]); nameAt = i + 1; i++; }
+      pend = null;
       if (!name) continue;
       if (/카드/.test(name)) excl = false; // 카드앱 캡처가 이어 붙은 것
       const kind = excl ? 'skip' : /카드/.test(name) ? 'card' : /마이너스|마통|한도대출/.test(name) || amount < 0 ? 'overdraft' : /지역화폐|지역사랑|상품권|동백|온누리|페이머니/.test(name) ? 'local' : 'bank';
-      out.push({ name: name.slice(0, 20), amount, kind, limit: null, payDay: 15 });
+      out.push({ name: name.slice(0, 24), amount, kind, limit: null, payDay: 15, bank: bankOf(name) || '', at, nameAt });
     }
     // 바로 뒤 몇 줄을 더한 값과 같은 금액은 묶음 합계로 보고 버림 (글자를 잘못 읽어 '총 자산'을 놓쳤을 때)
     for (let i = out.length - 2; i >= 0; i--) { let sum = 0; for (let j = i + 1; j < out.length; j++) { sum += out[j].amount; if (j > i + 1 && sum === out[i].amount) { out.splice(i, 1); break; } } }
-    // 여러 장 캡처가 겹치면 같은 이름·금액은 한 번만
-    // (같은 금액인데 한쪽 이름을 못 읽었으면 못 읽은 쪽을 버림)
-    for (let i = out.length - 1; i > 0; i--) if (out.slice(0, i).some((r) => r.amount === out[i].amount && (r.name === out[i].name || !bankOf(out[i].name)))) out.splice(i, 1);
-    for (let i = out.length - 2; i >= 0; i--) if (!bankOf(out[i].name) && out.slice(i + 1).some((r) => r.amount === out[i].amount && bankOf(r.name))) out.splice(i, 1);
-    out.forEach((r) => { const bk = bankOf(r.name); if (bk) r.name = bk + (/서브/.test(r.name) ? ' 서브' : ''); else r.pickBank = r.kind !== 'card'; });
-    const seen = {};
-    out.forEach((r) => { seen[r.name] = (seen[r.name] || 0) + 1; if (seen[r.name] > 1) r.name += ' ' + seen[r.name]; });
+    // 여러 장 캡처가 겹치면 같은 이름·금액은 한 번만 (같은 금액인데 한쪽 이름이 깨졌으면 깨진 쪽을 버림)
+    const ok = (r) => /^[가-힣A-Za-z0-9 ()\-]+$/.test(r.name);
+    for (let i = out.length - 1; i > 0; i--) if (out.slice(0, i).some((r) => r.amount === out[i].amount && (r.name === out[i].name || !ok(out[i])))) out.splice(i, 1);
+    for (let i = out.length - 2; i >= 0; i--) if (!ok(out[i]) && out.slice(i + 1).some((r) => r.amount === out[i].amount && ok(r))) out.splice(i, 1);
     return out;
   }
   function setupSheet() {
     let rows = null; let busy = '';
     const kinds = [['bank', '입출금'], ['overdraft', '마이너스통장'], ['local', '지역화폐'], ['card', '신용카드'], ['skip', '빼기']];
     const g = (n) => document.querySelector('#sheet [name="' + n + '"]');
-    const sync = () => { if (!rows) return; rows.forEach((r, i) => { if (g('n' + i)) r.name = g('n' + i).value.trim(); if (g('a' + i)) r.amount = parseAmt(g('a' + i).value); if (g('l' + i)) r.limit = parseAmt(g('l' + i).value); if (g('d' + i)) r.payDay = Number(g('d' + i).value); }); };
+    const sync = () => { if (!rows) return; rows.forEach((r, i) => { if (g('n' + i)) r.name = g('n' + i).value.trim(); if (g('b' + i)) r.bank = g('b' + i).value; if (g('a' + i)) r.amount = parseAmt(g('a' + i).value); if (g('l' + i)) r.limit = parseAmt(g('l' + i).value); if (g('d' + i)) r.payDay = Number(g('d' + i).value); }); };
+    const isAcct = (r) => r.kind !== 'skip' && r.kind !== 'card';
     openSheet({
       title: '캡처로 계좌·카드 추가',
       body() {
-        if (!rows) return '<p class="hint">은행앱 <b>전체 계좌</b> 화면(카드앱은 <b>결제 예정 금액</b> 화면)을 캡처해서 골라 주세요. 여러 장도 한 번에 고를 수 있어요.</p>' + photoBtn(busy) +
+        if (!rows) return '<p class="hint">은행앱이나 토스의 <b>전체 계좌</b> 화면(카드앱은 <b>결제 예정 금액</b> 화면)을 캡처해서 골라 주세요. 여러 장도 한 번에 고를 수 있어요.</p>' + photoBtn(busy) +
           '<p class="hint">사진은 이 아이폰 안에서만 읽고 어디에도 보내지 않아요. 계좌번호는 저장하지 않아요.</p>' +
           '<details class="paste"><summary>글자를 직접 붙여넣기</summary><textarea class="input" name="raw" placeholder="사진에서 글자를 길게 눌러 모두 선택 → 복사한 뒤 붙여넣기"></textarea><button class="btn ghost" data-act="setupRead">붙여넣은 글자 읽기</button></details>';
-        if (!rows.length) return '<p class="hint center">이름과 금액을 못 찾았어요.<br>글자를 다시 복사해 주세요.</p>';
+        if (!rows.length) return '<p class="hint center">계좌와 금액을 못 찾았어요.<br>다른 캡처로 다시 골라 주세요.</p>';
         const needL = rows.filter((r) => r.kind === 'overdraft' && !r.limit).length;
-        const needB = rows.filter((r) => r.kind !== 'skip' && r.pickBank && !BANKS.includes(r.name.replace(/ \d+$/, ''))).length;
+        const needB = rows.filter((r) => isAcct(r) && !r.bank).length;
+        const byLogo = rows.filter((r) => isAcct(r) && r.byLogo).length;
         return (needL || needB ? '<div class="ask">' + (needL ? '<b>마이너스통장 ' + needL + '개의 한도를 적어 주세요.</b><span>캡처에는 한도가 안 나와서 물어봐요. 은행앱에서 그 통장을 누르면 보여요. 한도를 알아야 쓸 수 있는 돈(남은 한도)을 계산해요.</span>' : '') +
-          (needB ? '<b>' + needB + '개는 어느 은행인지 골라 주세요.</b><span>로고로만 구분되는 통장이라 글자로는 몰라요.</span>' : '') + '</div>' : '<p class="hint">줄마다 이름과 종류를 확인해 주세요.</p>') + rows.map((r, i) =>
-          '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + (r.kind === 'overdraft' && !r.limit && r.need ? ' need' : '') + '"><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="이름">' +
-          (r.pickBank ? '<div class="chips">' + BANKS.map((bk) => '<button class="chip' + (r.name === bk ? ' on' : '') + '" data-act="setupBank" data-i="' + i + '" data-b="' + bk + '">' + bk + '</button>').join('') + '</div>' : '') +
+          (needB ? '<b>' + needB + '개는 은행을 골라 주세요.</b><span>로고 옆 목록에서 고르면 그 로고를 기억해서 다음부터는 알아서 골라요.</span>' : '') + '</div>' : '<p class="hint">은행·계좌 이름·금액을 확인해 주세요.</p>') +
+          (byLogo ? '<p class="hint">로고를 보고 은행 ' + byLogo + '개를 골라 뒀어요. 틀리면 바꿔 주세요.</p>' : '') + rows.map((r, i) =>
+          '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + (r.kind === 'overdraft' && !r.limit && r.need ? ' need' : '') + '">' +
+          (r.kind === 'card' ? '' : '<div class="sr-bank">' + (r.logo ? '<img class="logo" src="' + r.logo.url + '" alt="">' : '<span class="logo none">' + (r.bank ? bankChip(r.bank) : '?') + '</span>') +
+            '<select class="input' + (r.bank ? '' : ' empty') + '" name="b' + i + '" data-live="setupB">' + bankOpts(r.bank) + '</select></div>') +
+          '<label class="field"><span class="lab">' + (r.kind === 'card' ? '카드 이름' : '계좌 이름') + '</span><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="예: 종합통장"></label>' +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
           (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
           (r.kind === 'overdraft' ? '<p class="od-note">마이너스 ' + won(r.amount) + '원 사용 중</p><label class="field"><span class="lab">마이너스통장 한도' + (r.limit ? '' : ' <em class="req">필수</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 10,000,000"><span>원</span></div></label>' : '') +
@@ -995,27 +1054,40 @@
       foot: () => !rows ? '' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 고르기</button>',
     });
     sheet.ocr = async (files) => {
-      try { const text = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.setup.read(text); }
+      try { const r = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.setup.read(r); }
       catch (e) { busy = ''; paintSheet(); toast('사진을 못 읽었어요. 글자 붙여넣기로 해 주세요'); }
     };
     sheet.setup = {
-      read(text) { rows = parseSetup(typeof text === 'string' ? text : val('raw') || ''); rows.forEach((r) => { if (S.accounts.some((a) => a.name === r.name) || S.cards.some((c) => c.name === r.name)) r.kind = 'skip'; }); paintSheet(); },
+      read(ocr) {
+        const fromPhoto = ocr && typeof ocr === 'object';
+        rows = parseSetup(fromPhoto ? ocr.text : val('raw') || '');
+        const left = {};
+        if (fromPhoto) { const xs = {}; rows.forEach((r) => { const m = ocr.meta[r.at]; const x = textLeft(ocr, r.at, r.nameAt); if (m && x) (xs[m.pic] = xs[m.pic] || []).push(x); }); for (const k of Object.keys(xs)) { const v = xs[k].sort((a, b) => a - b); left[k] = v[Math.floor(v.length / 2)]; } }
+        rows.forEach((r) => {
+          if (fromPhoto && r.kind !== 'card') { try { r.logo = cropLogo(ocr, r.at, r.nameAt, ocr.meta[r.at] && left[ocr.meta[r.at].pic]); } catch (e) { r.logo = null; } }
+          if (!r.bank && r.logo) { r.bank = matchLogo(r.logo.sig) || ''; r.byLogo = !!r.bank; }
+          if (S.accounts.some((a) => a.name === r.name && (a.bank || '') === r.bank) || S.cards.some((c) => c.name === r.name)) r.kind = 'skip';
+        });
+        paintSheet();
+      },
       back() { rows = null; paintSheet(); },
       kind(i, k) { sync(); rows[i].kind = k; paintSheet(); },
-      bank(i, bk) { sync(); rows[i].name = bk; paintSheet(); },
+      bankSel() { sync(); paintSheet(); },
       save() {
         sync();
         const noLimit = rows.filter((r) => r.kind === 'overdraft' && !r.limit);
         if (noLimit.length) { noLimit.forEach((r) => { r.need = true; }); paintSheet(); const el = document.querySelector('#sheet .setup-row.need'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return toast('마이너스통장 한도를 적어 주세요'); }
-        const use = rows.filter((r) => r.kind !== 'skip' && r.name);
+        const use = rows.filter((r) => r.kind !== 'skip' && (r.name || r.bank));
         const accs = use.filter((r) => r.kind !== 'card'); const cards = use.filter((r) => r.kind === 'card');
         if (!accs.length && !S.accounts.length) return toast('카드값이 나갈 계좌도 하나 넣어 주세요');
         const w = document.getElementById('wPay'); if (w) S.settings.payDay = Number(w.value);
         const t = now(); const d = today();
         for (const r of accs) {
-          const a = { id: uid(), name: r.name, type: r.kind, include: r.kind !== 'local', balanceAt: t, balanceDate: d };
+          const a = { id: uid(), name: r.name || r.bank + ' 통장', type: r.kind, include: r.kind !== 'local', balanceAt: t, balanceDate: d };
+          if (r.bank) a.bank = r.bank;
           if (r.kind === 'overdraft') { a.limit = r.limit || 0; a.balance = -Math.abs(r.amount); } else a.balance = Math.abs(r.amount);
           S.accounts.push(a);
+          if (r.bank && r.logo) learnLogo(r.bank, r.logo.sig);
         }
         const payAcc = (S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id;
         for (const r of cards) {
@@ -1133,7 +1205,7 @@
         foot: () => '<button class="btn ghost" data-act="exportJSON">먼저 백업 내보내기</button><button class="btn danger" data-act="resetGo">모두 지우고 처음부터</button>' });
     },
     resetGo() { try { [KEY, OLDKEY, 'money.v2.last'].forEach((k) => localStorage.removeItem(k)); } catch (e) { /* 지울 게 없음 */ } S = C.emptyState(); last = {}; closeSheet(); location.hash = '#/home'; render(); toast('모두 지웠어요'); },
-    setup: () => setupSheet(), setupRead: () => sheet.setup.read(), setupBack: () => sheet.setup.back(), setupSave: () => sheet.setup.save(), setupBank: (d) => sheet.setup.bank(Number(d.i), d.b),
+    setup: () => setupSheet(), setupRead: () => sheet.setup.read(), setupBack: () => sheet.setup.back(), setupSave: () => sheet.setup.save(), 
     capture: () => captureSheet(), capRead: () => sheet.cap.read(), capBack: () => sheet.cap.back(), capSave: () => sheet.cap.save(),
     sched: (d) => schedSheet(d.k, d.p),
     schedSave(d) {
@@ -1200,7 +1272,7 @@
     if (view.tab === 'input' && !sheet) inputPreview();
   });
   document.addEventListener('change', (ev) => { const dl = ev.target.dataset && ev.target.dataset.live;
-    if (dl === 'ocr' && sheet && sheet.ocr && ev.target.files.length) { sheet.ocr(Array.from(ev.target.files)); return; } if (dl === 'setupKind') sheet.setup.kind(Number(ev.target.dataset.i), ev.target.value); if (dl === 'hint') recHint(); if (view.tab === 'input' && !sheet) inputPreview(); });
+    if (dl === 'ocr' && sheet && sheet.ocr && ev.target.files.length) { sheet.ocr(Array.from(ev.target.files)); return; } if (dl === 'setupKind') sheet.setup.kind(Number(ev.target.dataset.i), ev.target.value); if (dl === 'setupB') sheet.setup.bankSel(); if (dl === 'hint') recHint(); if (view.tab === 'input' && !sheet) inputPreview(); });
 
   function route() {
     const h = location.hash || '#/home';
