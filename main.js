@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.5';
+  const VERSION = '2.6';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -883,7 +883,7 @@
         return '<label class="field"><span class="lab">결제수단 (모두 같게)</span><select class="input" name="imethod">' + methodOptions(method, true) + '</select></label><p class="hint">중복 의심은 빼 두었어요.</p><div class="sub-list">' +
           rows.map((r, i) => '<label class="row check"><input type="checkbox" data-live="pick" data-i="' + i + '"' + (r.pick ? ' checked' : '') + '><span class="grow"><span class="t">' + esc(r.memo || '이름 없음') + '</span><span class="s">' + md(r.date) + (r.dup ? ' · 중복 의심' : '') + (r.cancel ? ' · 취소' : '') + '</span></span><span class="amt">' + won(r.amount) + '</span></label>').join('') + '</div>';
       },
-      foot: () => !rows ? '' : '<button class="btn" data-act="capSave">선택한 것 저장</button><button class="btn ghost" data-act="capBack">다시 붙여넣기</button>',
+      foot: () => !rows ? '' : '<button class="btn" data-act="capSave">선택한 것 저장</button><button class="btn ghost" data-act="capBack">다시 고르기</button>',
     });
     sheet.ocr = async (files) => {
       try { const t = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.cap.read(t); }
@@ -929,22 +929,27 @@
   // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 이름 줄 (토스 내 계좌)
   // 이름 없는 금액은 묶음 합계로 보고 버림. "합계에 포함되지 않아요" 아래는 기본으로 빼기.
   const BANKS = ['국민', '토스', '신한', '하나', '우리', '농협', '카카오'];
-  const bankOf = (n) => /카드/.test(n) ? null : /KB|국민/i.test(n) ? '국민' : /토스/.test(n) ? '토스' : /신한|쏠편한|쓸편한/.test(n) ? '신한' : /하나/.test(n) ? '하나' : /우리/.test(n) ? '우리' : /NH|농협/i.test(n) ? '농협' : /카카오/.test(n) ? '카카오' : null;
+  const bankOf = (n) => /카드/.test(n) ? null : /KB|국민|종합통장/i.test(n) ? '국민' : /토스/.test(n) ? '토스' : /신한|쏠편한|쓸편한/.test(n) ? '신한' : /하나/.test(n) ? '하나' : /우리/.test(n) ? '우리' : /NH|농협/i.test(n) ? '농협' : /카카오/.test(n) ? '카카오' : null;
   function parseSetup(text) {
     const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const amtRe = /([-−]?\s?\d{1,3}(?:,\d{3})+|[-−]?\s?\d+)\s*원|([-−]?\d{1,3}(?:,\d{3})+)/;
+    // 쉼표를 하나 놓친 숫자(-3989,877원)도 읽음
+    const amtRe = /([-−]?\s?\d[\d,]*)\s*원|([-−]?\d{1,3}(?:,\d{3})+)/;
     const acctNoRe = /\d{2,6}-\d{2,6}(-\d{1,8})*/g;
     const noise = /송금|보내기|가져오기|불러오기|더보기|이체|개설|편집|둘러보기|찾는다면|혜택|추천|이벤트|광고|^내 계좌$|^입출금$|^저축$|^투자$|^대출$|^기타/;
-    const clean = (l) => l.replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능\s*(금액)?|결제\s*예정\s*(금액)?|이번\s*달|청구\s*(금액)?|이용\s*(금액)?|^금액$/g, '').replace(/[|·•:]/g, ' ').replace(/\s+/g, ' ').trim();
+    // 버튼 글자(송금 등)와 로고를 잘못 읽은 한 글자 조각은 버림
+    const clean = (l) => l.replace(/송금|보내기|채우기|꺼내기/g, ' ').replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능\s*(금액)?|결제\s*예정\s*(금액)?|이번\s*달|청구\s*(금액)?|이용\s*(금액)?|^금액$/g, '').replace(/[|·•:<>』「」*]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter((w) => w.length > 1).join(' ');
     const isName = (l) => { const b = clean(l); return !!b && /[가-힣A-Za-z]{2}/.test(b) && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
     const out = []; let pend = ''; let excl = false;
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i]; const am = l.match(amtRe);
       if (!am) { if (/합계에\s*포함되지|합산\s*제외|숨긴/.test(l)) excl = true; pend = isName(l) ? clean(l) : (noise.test(clean(l)) ? '' : pend); continue; }
       if (/총|합계|자산|순자산|전체/.test(l)) { pend = ''; continue; }
+      if (/^\d{2,6}-\d{2,6}/.test(l) && !/원/.test(l)) continue; // 계좌번호 줄
       const amount = parseAmt((am[1] || am[2]).replace('−', '-').replace(/\s/g, ''));
       if (/한도/.test(l)) { const prev = out[out.length - 1]; if (prev) { prev.limit = Math.abs(amount); if (prev.kind !== 'card') prev.kind = 'overdraft'; } continue; }
-      let name = clean(l.replace(amtRe, ''));
+      let name = clean(l.replace(amtRe, '')); if (!/[가-힣A-Za-z]{2}/.test(name)) name = '';
+      // 금액 줄에 붙은 짧은 글자는 버튼일 때가 많아서, 다음 줄이 이름이면 그걸 씀 (토스 내 계좌)
+      if (name && name.replace(/\s/g, '').length <= 3 && !bankOf(name) && lines[i + 1] && isName(lines[i + 1])) name = '';
       if (!name && pend) name = pend;
       else if (!name && lines[i + 1] && isName(lines[i + 1])) { name = clean(lines[i + 1]); i++; }
       pend = '';
@@ -976,15 +981,18 @@
           '<p class="hint">사진은 이 아이폰 안에서만 읽고 어디에도 보내지 않아요. 계좌번호는 저장하지 않아요.</p>' +
           '<details class="paste"><summary>글자를 직접 붙여넣기</summary><textarea class="input" name="raw" placeholder="사진에서 글자를 길게 눌러 모두 선택 → 복사한 뒤 붙여넣기"></textarea><button class="btn ghost" data-act="setupRead">붙여넣은 글자 읽기</button></details>';
         if (!rows.length) return '<p class="hint center">이름과 금액을 못 찾았어요.<br>글자를 다시 복사해 주세요.</p>';
-        return '<p class="hint">줄마다 이름과 종류를 확인해 주세요. 금액이 −인 통장은 마이너스통장으로 골라 뒀어요. 한도를 적으면 남은 한도가 쓸 수 있는 돈이 돼요.</p>' + rows.map((r, i) =>
-          '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + '"><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="이름">' +
+        const needL = rows.filter((r) => r.kind === 'overdraft' && !r.limit).length;
+        const needB = rows.filter((r) => r.kind !== 'skip' && r.pickBank && !BANKS.includes(r.name.replace(/ \d+$/, ''))).length;
+        return (needL || needB ? '<div class="ask">' + (needL ? '<b>마이너스통장 ' + needL + '개의 한도를 적어 주세요.</b><span>캡처에는 한도가 안 나와서 물어봐요. 은행앱에서 그 통장을 누르면 보여요. 한도를 알아야 쓸 수 있는 돈(남은 한도)을 계산해요.</span>' : '') +
+          (needB ? '<b>' + needB + '개는 어느 은행인지 골라 주세요.</b><span>로고로만 구분되는 통장이라 글자로는 몰라요.</span>' : '') + '</div>' : '<p class="hint">줄마다 이름과 종류를 확인해 주세요.</p>') + rows.map((r, i) =>
+          '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + (r.kind === 'overdraft' && !r.limit && r.need ? ' need' : '') + '"><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="이름">' +
           (r.pickBank ? '<div class="chips">' + BANKS.map((bk) => '<button class="chip' + (r.name === bk ? ' on' : '') + '" data-act="setupBank" data-i="' + i + '" data-b="' + bk + '">' + bk + '</button>').join('') + '</div>' : '') +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
           (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
-          (r.kind === 'overdraft' ? '<label class="field"><span class="lab">한도' + (r.limit ? '' : ' <em>적어 주세요</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 30,000,000"><span>원</span></div></label>' : '') +
+          (r.kind === 'overdraft' ? '<p class="od-note">마이너스 ' + won(r.amount) + '원 사용 중</p><label class="field"><span class="lab">마이너스통장 한도' + (r.limit ? '' : ' <em class="req">필수</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 10,000,000"><span>원</span></div></label>' : '') +
           (r.kind === 'card' ? '<select class="input" name="d' + i + '">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === r.payDay ? ' selected' : '') + '>결제일 ' + l + '</option>').join('') + '</select>' : '') + '</div>').join('');
       },
-      foot: () => !rows ? '' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 붙여넣기</button>',
+      foot: () => !rows ? '' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 고르기</button>',
     });
     sheet.ocr = async (files) => {
       try { const text = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.setup.read(text); }
@@ -997,6 +1005,8 @@
       bank(i, bk) { sync(); rows[i].name = bk; paintSheet(); },
       save() {
         sync();
+        const noLimit = rows.filter((r) => r.kind === 'overdraft' && !r.limit);
+        if (noLimit.length) { noLimit.forEach((r) => { r.need = true; }); paintSheet(); const el = document.querySelector('#sheet .setup-row.need'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); return toast('마이너스통장 한도를 적어 주세요'); }
         const use = rows.filter((r) => r.kind !== 'skip' && r.name);
         const accs = use.filter((r) => r.kind !== 'card'); const cards = use.filter((r) => r.kind === 'card');
         if (!accs.length && !S.accounts.length) return toast('카드값이 나갈 계좌도 하나 넣어 주세요');
