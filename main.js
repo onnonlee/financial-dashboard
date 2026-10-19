@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.19';
+  const VERSION = '2.20';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -611,13 +611,22 @@
     '<select class="input" data-k="day">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === (r.day || S.settings.payDay) ? ' selected' : '') + '>매월 ' + l + '</option>').join('') + '</select></div>' +
     '<div class="ob-bank"><span>받는 은행</span>' + bankField('ib' + (obRowN++), r.bank || '', ' data-k="bank"') + '</div>' +
     '<button type="button" class="dyn-del" data-act="dynDel">지우기</button></div>'; };
+  // 맨 처음 소개 화면: 앱이 뭘 해주는지 보여주고 '시작하기'로 급여 단계부터
+  function intro() {
+    const feat = (ic, cls, t, d) => '<div class="in-feat"><span class="m-ic ' + cls + '">' + ic + '</span><div><b>' + t + '</b><span>' + d + '</span></div></div>';
+    return '<main class="screen hello"><div class="in-hero"><img src="icons/icon-180.png" alt="" class="in-logo"><h1>급여일부터 급여일까지,<br>내 돈 흐름을 한눈에</h1><p>이번 급여로 버틸 수 있는지 매일 확인해요.</p></div>' +
+      '<div class="in-card"><span>지금 쓸 수 있는 돈</span><b>1,284,500원</b><div class="in-chips"><i>이번 급여로 여유 320,000원</i><i>10/24 예상 잔액 412,000원</i></div><div class="in-bar"><s style="width:62%"></s></div><small>보기 예시예요</small></div>' +
+      '<div class="in-feats">' + feat(I.flow, 'blue', '이번 달 남는 돈 미리 보기', '월급·카드값·고정비·대출을 날짜별로 계산해요') + feat(I.scan, 'green', '캡처 한 장으로 계좌 입력', '은행앱 화면을 찍으면 잔액이 한 번에 들어가요') + feat(I.book, 'indigo', '할부·약정까지 기억', '끝나는 할인, 남은 할부를 대신 챙겨요') + '</div>' +
+      '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button><p class="hint center">다섯 단계, 몇 분이면 끝나요. 데이터는 이 아이폰에만 저장돼요.</p></div></main>';
+  }
   function onboard() {
+    if (S.onboard == null) return intro();
     const step = S.onboard || 0; const pd = S.settings.payDay; const last = step === OB_STEPS.length - 1;
     const head = (t, p) => '<div class="ob-head"><h1>' + t + '</h1><p>' + p + '</p></div>';
     const list = (rows) => rows.length ? '<section class="card ob-list">' + rows.join('') + '</section>' : '';
     const item = (act, id, t, sub, amt, extra) => '<button class="row" data-act="' + act + '" data-id="' + id + '"' + (extra || '') + '><span class="grow"><span class="t">' + t + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' + amt + '</button>';
     const foot = (has, opt) => '<div class="ob-foot"><button class="btn" data-act="' + (last ? 'obDone' : 'obNext') + '">' + (last ? (has ? '시작하기' : '대출 없이 시작하기') : (has || !opt ? '다음' : '없어요, 다음')) + '</button>' +
-      (step ? '<button class="btn ghost" data-act="obBack">이전</button>' : '<button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button>') + '</div>';
+      '<button class="btn ghost" data-act="obBack">이전</button></div>';
     let h = '<main class="screen ob"><div class="ob-prog">' + OB_STEPS.map((t, i) => '<span class="' + (i < step ? 'done' : i === step ? 'on' : '') + '"><i></i>' + t + '</span>').join('') + '</div>';
     if (step === 0) {
       const r = C.periodRange(S, C.periodOf(S, today())); const sal = S.obSalary || (salaryOf() || {}).amount;
@@ -1391,7 +1400,8 @@
     obDay(d) { obReadSal(); S.settings.payDay = Number(d.d); if (S.onboard == null) S.onboard = 0; save(); render(); },
     obNext() { obReadSal(); if ((S.onboard || 0) <= 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
     obSalAcc(d) { const old = salAcc(); S.obSalAcc = d.id; S.incomes.forEach((x) => { if (x.accountId === old) x.accountId = d.id; }); save(); render(); },
-    obBack() { S.onboard = Math.max(0, (S.onboard || 0) - 1); save(); render(); window.scrollTo(0, 0); },
+    obBack() { obReadSal(); if (!S.onboard) delete S.onboard; else S.onboard -= 1; save(); render(); window.scrollTo(0, 0); },
+    obStart() { S.onboard = 0; save(); render(); window.scrollTo(0, 0); },
     obDone: () => obFinish(),
     cardAppSave(d) {
       const c = card(d.id); const v = val('amt'); const p = val('paid');
