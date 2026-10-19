@@ -365,3 +365,17 @@ a.tint:active { transform: scale(.99); }
 .setup-row.off { opacity: .5; }
 .setup-row .chips { flex-wrap: wrap; }
 .btn-row { display: flex; gap: 8px; } .btn-row .btn { flex: 1; }
+
+/* 캡처 사진 고르기 (기기 안에서 글자 읽기) */
+.sheet-foot:empty { display: none; }
+.photo-btn { cursor: pointer; margin: 12px 0 8px; }
+.ocr-busy { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; margin: 12px 0 8px; border-radius: 16px; background: var(--blue-bg); color: var(--blue); font-weight: 600; font-size: 15px; }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+details.paste { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.paste summary { font-size: 14px; color: var(--text2); font-weight: 600; cursor: pointer; list-style: none; }
+details.paste summary::-webkit-details-marker { display: none; }
+details.paste summary::after { content: ' ›'; color: var(--text3); }
+details.paste[open] summary { margin-bottom: 10px; }
+details.paste .btn { margin-top: 8px; }

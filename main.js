@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.4';
+  const VERSION = '2.5';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -872,19 +872,25 @@
     return out;
   }
   function captureSheet(text) {
-    let rows = null; let method = last.method || (S.cards[0] ? 'card:' + S.cards[0].id : 'account:' + S.accounts[0].id);
+    let rows = null; let busy = ''; let method = last.method || (S.cards[0] ? 'card:' + S.cards[0].id : 'account:' + S.accounts[0].id);
     openSheet({
       title: '캡처로 가져오기',
       body() {
-        if (!rows) return '<p class="hint">카드·은행앱 사용내역을 캡처한 뒤 사진의 글자를 길게 눌러 <b>모두 선택 → 복사</b>하고 붙여넣어 주세요.</p><textarea class="input" name="raw" placeholder="여기에 붙여넣기">' + esc(text || '') + '</textarea>';
+        if (!rows) return '<p class="hint">카드·은행앱 <b>사용내역</b> 화면을 캡처해서 골라 주세요. 여러 장도 한 번에 고를 수 있어요.</p>' + photoBtn(busy) +
+          '<p class="hint">사진은 이 아이폰 안에서만 읽고 어디에도 보내지 않아요.</p>' +
+          '<details class="paste"' + (text ? ' open' : '') + '><summary>글자를 직접 붙여넣기</summary><textarea class="input" name="raw" placeholder="여기에 붙여넣기">' + esc(text || '') + '</textarea><button class="btn ghost" data-act="capRead">붙여넣은 글자 읽기</button></details>';
         if (!rows.length) return '<p class="hint center">읽을 수 있는 금액을 못 찾았어요.</p>';
         return '<label class="field"><span class="lab">결제수단 (모두 같게)</span><select class="input" name="imethod">' + methodOptions(method, true) + '</select></label><p class="hint">중복 의심은 빼 두었어요.</p><div class="sub-list">' +
           rows.map((r, i) => '<label class="row check"><input type="checkbox" data-live="pick" data-i="' + i + '"' + (r.pick ? ' checked' : '') + '><span class="grow"><span class="t">' + esc(r.memo || '이름 없음') + '</span><span class="s">' + md(r.date) + (r.dup ? ' · 중복 의심' : '') + (r.cancel ? ' · 취소' : '') + '</span></span><span class="amt">' + won(r.amount) + '</span></label>').join('') + '</div>';
       },
-      foot: () => !rows ? '<button class="btn" data-act="capRead">읽기</button>' : '<button class="btn" data-act="capSave">선택한 것 저장</button><button class="btn ghost" data-act="capBack">다시 붙여넣기</button>',
+      foot: () => !rows ? '' : '<button class="btn" data-act="capSave">선택한 것 저장</button><button class="btn ghost" data-act="capBack">다시 붙여넣기</button>',
     });
+    sheet.ocr = async (files) => {
+      try { const t = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.cap.read(t); }
+      catch (e) { busy = ''; paintSheet(); toast('사진을 못 읽었어요. 글자 붙여넣기로 해 주세요'); }
+    };
     sheet.cap = {
-      read() { rows = parseCapture(val('raw') || '').map((r) => { r.dup = !!C.findDuplicate(S, r); r.pick = !r.dup && !r.cancel; return r; }); paintSheet(); },
+      read(t) { rows = parseCapture(typeof t === 'string' ? t : val('raw') || '').map((r) => { r.dup = !!C.findDuplicate(S, r); r.pick = !r.dup && !r.cancel; return r; }); paintSheet(); },
       back() { rows = null; paintSheet(); },
       pick(i, on) { rows[i].pick = on; },
       save() {
@@ -899,6 +905,26 @@
     };
   }
 
+  // ===== 캡처 사진에서 글자 읽기 (이 기기 안에서 처리, 사진은 어디에도 안 보냄) =====
+  let ocrWorker = null;
+  const loadScript = (src) => new Promise((ok, no) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = no; document.head.appendChild(el); });
+  async function readPhotos(files, onStep) {
+    const base = new URL('vendor/ocr/', location.href).href;
+    if (!window.Tesseract) { onStep('글자 읽기 준비 중 · 처음 한 번만 받아요'); await loadScript(base + 'tesseract.min.js'); }
+    if (!ocrWorker) { onStep('글자 읽기 준비 중 · 처음 한 번만 받아요'); ocrWorker = await Tesseract.createWorker('kor', 1, { workerPath: base + 'worker.min.js', corePath: base, langPath: base.replace(/\/$/, ''), gzip: true }); }
+    const out = [];
+    for (let i = 0; i < files.length; i++) {
+      onStep('사진 ' + (i + 1) + '/' + files.length + ' 읽는 중');
+      const { data } = await ocrWorker.recognize(files[i]);
+      out.push(data.text);
+    }
+    // 한글 사이에 끼는 빈칸("국 민")을 붙임
+    // 한글 사이에 끼는 빈칸("국 민")을 붙이고, 숫자 뒤 '월'로 잘못 읽힌 '원'을 고침
+    return out.join('\n').replace(/([가-힣])[ \t]+(?=[가-힣])/g, '$1').replace(/[—–]/g, '-').replace(/ㆍ/g, '·').replace(/(\d)\s*월(?=\s*$)/gm, '$1원');
+  }
+  const photoBtn = (busy) => busy ? '<div class="ocr-busy"><span class="spin"></span>' + esc(busy) + '</div>'
+    : '<label class="btn photo-btn">' + I.scan + ' 캡처 사진 고르기<input type="file" accept="image/*" multiple data-live="ocr" hidden></label>';
+
   // ===== 캡처로 계좌·카드 한 번에 (처음 시작) =====
   // 두 모양을 다 읽음: ① 이름 줄 다음 금액 줄 (은행앱) ② 금액 줄 다음 이름 줄 (토스 내 계좌)
   // 이름 없는 금액은 묶음 합계로 보고 버림. "합계에 포함되지 않아요" 아래는 기본으로 빼기.
@@ -910,7 +936,7 @@
     const acctNoRe = /\d{2,6}-\d{2,6}(-\d{1,8})*/g;
     const noise = /송금|보내기|가져오기|불러오기|더보기|이체|개설|편집|둘러보기|찾는다면|혜택|추천|이벤트|광고|^내 계좌$|^입출금$|^저축$|^투자$|^대출$|^기타/;
     const clean = (l) => l.replace(acctNoRe, '').replace(/\*+/g, '').replace(/[·•|]\s*주계좌|주계좌/g, '').replace(/잔액|출금가능\s*(금액)?|결제\s*예정\s*(금액)?|이번\s*달|청구\s*(금액)?|이용\s*(금액)?|^금액$/g, '').replace(/[|·•:]/g, ' ').replace(/\s+/g, ' ').trim();
-    const isName = (l) => { const b = clean(l); return !!b && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
+    const isName = (l) => { const b = clean(l); return !!b && /[가-힣A-Za-z]{2}/.test(b) && !amtRe.test(l) && !/^[\d\s.:\-]+$/.test(b) && !noise.test(b); };
     const out = []; let pend = ''; let excl = false;
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i]; const am = l.match(amtRe);
@@ -927,21 +953,28 @@
       const kind = excl ? 'skip' : /카드/.test(name) ? 'card' : /마이너스|마통|한도대출/.test(name) || amount < 0 ? 'overdraft' : /지역화폐|지역사랑|상품권|동백|온누리|페이머니/.test(name) ? 'local' : 'bank';
       out.push({ name: name.slice(0, 20), amount, kind, limit: null, payDay: 15 });
     }
+    // 바로 뒤 몇 줄을 더한 값과 같은 금액은 묶음 합계로 보고 버림 (글자를 잘못 읽어 '총 자산'을 놓쳤을 때)
+    for (let i = out.length - 2; i >= 0; i--) { let sum = 0; for (let j = i + 1; j < out.length; j++) { sum += out[j].amount; if (j > i + 1 && sum === out[i].amount) { out.splice(i, 1); break; } } }
+    // 여러 장 캡처가 겹치면 같은 이름·금액은 한 번만
+    // (같은 금액인데 한쪽 이름을 못 읽었으면 못 읽은 쪽을 버림)
+    for (let i = out.length - 1; i > 0; i--) if (out.slice(0, i).some((r) => r.amount === out[i].amount && (r.name === out[i].name || !bankOf(out[i].name)))) out.splice(i, 1);
+    for (let i = out.length - 2; i >= 0; i--) if (!bankOf(out[i].name) && out.slice(i + 1).some((r) => r.amount === out[i].amount && bankOf(r.name))) out.splice(i, 1);
     out.forEach((r) => { const bk = bankOf(r.name); if (bk) r.name = bk + (/서브/.test(r.name) ? ' 서브' : ''); else r.pickBank = r.kind !== 'card'; });
     const seen = {};
     out.forEach((r) => { seen[r.name] = (seen[r.name] || 0) + 1; if (seen[r.name] > 1) r.name += ' ' + seen[r.name]; });
     return out;
   }
   function setupSheet() {
-    let rows = null;
+    let rows = null; let busy = '';
     const kinds = [['bank', '입출금'], ['overdraft', '마이너스통장'], ['local', '지역화폐'], ['card', '신용카드'], ['skip', '빼기']];
     const g = (n) => document.querySelector('#sheet [name="' + n + '"]');
     const sync = () => { if (!rows) return; rows.forEach((r, i) => { if (g('n' + i)) r.name = g('n' + i).value.trim(); if (g('a' + i)) r.amount = parseAmt(g('a' + i).value); if (g('l' + i)) r.limit = parseAmt(g('l' + i).value); if (g('d' + i)) r.payDay = Number(g('d' + i).value); }); };
     openSheet({
       title: '캡처로 계좌·카드 추가',
       body() {
-        if (!rows) return '<p class="hint">은행앱 <b>전체 계좌</b> 화면(카드앱은 <b>결제 예정 금액</b> 화면)을 캡처한 뒤, 사진에서 글자를 길게 눌러 <b>모두 선택 → 복사</b>하고 붙여넣어 주세요. 여러 장이면 이어서 붙여넣으면 돼요.</p>' +
-          '<textarea class="input" name="raw" placeholder="여기에 붙여넣기"></textarea><p class="hint">계좌번호는 저장하지 않아요. 이름과 금액만 읽어요.</p>';
+        if (!rows) return '<p class="hint">은행앱 <b>전체 계좌</b> 화면(카드앱은 <b>결제 예정 금액</b> 화면)을 캡처해서 골라 주세요. 여러 장도 한 번에 고를 수 있어요.</p>' + photoBtn(busy) +
+          '<p class="hint">사진은 이 아이폰 안에서만 읽고 어디에도 보내지 않아요. 계좌번호는 저장하지 않아요.</p>' +
+          '<details class="paste"><summary>글자를 직접 붙여넣기</summary><textarea class="input" name="raw" placeholder="사진에서 글자를 길게 눌러 모두 선택 → 복사한 뒤 붙여넣기"></textarea><button class="btn ghost" data-act="setupRead">붙여넣은 글자 읽기</button></details>';
         if (!rows.length) return '<p class="hint center">이름과 금액을 못 찾았어요.<br>글자를 다시 복사해 주세요.</p>';
         return '<p class="hint">줄마다 이름과 종류를 확인해 주세요. 금액이 −인 통장은 마이너스통장으로 골라 뒀어요. 한도를 적으면 남은 한도가 쓸 수 있는 돈이 돼요.</p>' + rows.map((r, i) =>
           '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + '"><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="이름">' +
@@ -951,10 +984,14 @@
           (r.kind === 'overdraft' ? '<label class="field"><span class="lab">한도' + (r.limit ? '' : ' <em>적어 주세요</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 30,000,000"><span>원</span></div></label>' : '') +
           (r.kind === 'card' ? '<select class="input" name="d' + i + '">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === r.payDay ? ' selected' : '') + '>결제일 ' + l + '</option>').join('') + '</select>' : '') + '</div>').join('');
       },
-      foot: () => !rows ? '<button class="btn" data-act="setupRead">읽기</button>' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 붙여넣기</button>',
+      foot: () => !rows ? '' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 붙여넣기</button>',
     });
+    sheet.ocr = async (files) => {
+      try { const text = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; sheet.setup.read(text); }
+      catch (e) { busy = ''; paintSheet(); toast('사진을 못 읽었어요. 글자 붙여넣기로 해 주세요'); }
+    };
     sheet.setup = {
-      read() { rows = parseSetup(val('raw') || ''); rows.forEach((r) => { if (S.accounts.some((a) => a.name === r.name) || S.cards.some((c) => c.name === r.name)) r.kind = 'skip'; }); paintSheet(); },
+      read(text) { rows = parseSetup(typeof text === 'string' ? text : val('raw') || ''); rows.forEach((r) => { if (S.accounts.some((a) => a.name === r.name) || S.cards.some((c) => c.name === r.name)) r.kind = 'skip'; }); paintSheet(); },
       back() { rows = null; paintSheet(); },
       kind(i, k) { sync(); rows[i].kind = k; paintSheet(); },
       bank(i, bk) { sync(); rows[i].name = bk; paintSheet(); },
@@ -1152,7 +1189,8 @@
     else if (live === 'pick') sheet.cap.pick(Number(el.dataset.i), el.checked);
     if (view.tab === 'input' && !sheet) inputPreview();
   });
-  document.addEventListener('change', (ev) => { const dl = ev.target.dataset && ev.target.dataset.live; if (dl === 'setupKind') sheet.setup.kind(Number(ev.target.dataset.i), ev.target.value); if (dl === 'hint') recHint(); if (view.tab === 'input' && !sheet) inputPreview(); });
+  document.addEventListener('change', (ev) => { const dl = ev.target.dataset && ev.target.dataset.live;
+    if (dl === 'ocr' && sheet && sheet.ocr && ev.target.files.length) { sheet.ocr(Array.from(ev.target.files)); return; } if (dl === 'setupKind') sheet.setup.kind(Number(ev.target.dataset.i), ev.target.value); if (dl === 'hint') recHint(); if (view.tab === 'input' && !sheet) inputPreview(); });
 
   function route() {
     const h = location.hash || '#/home';
