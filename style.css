@@ -384,11 +384,7 @@ details.paste .btn { margin-top: 8px; }
 .od-note { margin: 0; font-size: 13px; color: var(--text3); }
 .req { font-style: normal; font-size: 11px; font-weight: 700; color: var(--warn); background: var(--warn-bg); padding: 1px 6px; border-radius: 6px; margin-left: 4px; }
 .setup-row.need { box-shadow: inset 0 0 0 2px var(--warn); }
-.sr-bank { display: flex; align-items: center; gap: 10px; }
-.sr-bank .logo { width: 44px; height: 44px; border-radius: 12px; flex: none; object-fit: cover; background: var(--card); }
-.sr-bank .logo.none { display: inline-flex; align-items: center; justify-content: center; color: var(--text3); font-weight: 700; }
-.sr-bank .logo.none .bank { margin: 0; }
-.sr-bank select.empty { box-shadow: inset 0 0 0 1.5px var(--warn); color: var(--warn); }
+.sr-bank { display: block; }
 
 /* 은행 아이콘과 고르기 타일 */
 .bico { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 11px; font-size: 12px; font-weight: 800; letter-spacing: -0.3px; flex: none; overflow: hidden; vertical-align: middle; }
@@ -427,6 +423,3 @@ details.paste .btn { margin-top: 8px; }
 .bico.xl { width: 40px; height: 40px; border-radius: 12px; font-size: 12px; }
 .bico.xl.img { border-radius: 0; }
 .bico.xl.img img { object-fit: contain; }
-.sr-bank .grow { flex: 1; min-width: 0; }
-.sr-bank { align-items: flex-start; }
-.sr-bank .logo { margin-top: 5px; }

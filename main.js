@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.12';
+  const VERSION = '2.13';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -982,7 +982,7 @@
     if (x1 < 24 || y1 - y0 < 24) return null;
     return logoIn(pic, 0, y0, x1, y1 - y0);
   }
-  // 사진의 한 영역에서 배경과 다른 네모난 덩어리(로고)를 찾아 색 지도와 작은 그림으로 만듦
+  // 사진의 한 영역에서 배경과 다른 네모난 덩어리(로고)를 찾아 색 지도로 만듦
   function logoIn(pic, rx, ry, rw, rh) {
     rx = Math.max(0, Math.round(rx)); ry = Math.max(0, Math.round(ry)); rw = Math.min(pic.width - rx, Math.round(rw)); rh = Math.min(pic.height - ry, Math.round(rh));
     if (rw < 24 || rh < 24) return null;
@@ -997,8 +997,7 @@
     const sm = document.createElement('canvas'); sm.width = sm.height = 8; const sg = sm.getContext('2d', { willReadFrequently: true });
     sg.drawImage(cv, ix, iy, iw, ih, 0, 0, 8, 8); const sp = sg.getImageData(0, 0, 8, 8).data; const sig = [];
     for (let k = 0; k < sp.length; k += 4) sig.push(sp[k], sp[k + 1], sp[k + 2]);
-    const th = document.createElement('canvas'); th.width = th.height = 64; th.getContext('2d').drawImage(cv, a, b, bw, bh, 0, 0, 64, 64);
-    return { sig, url: th.toDataURL('image/png') };
+    return { sig };
   }
   const logoDist = (p, q) => { let s = 0; for (let k = 0; k < p.length; k++) s += Math.abs(p[k] - q[k]); return s / p.length; };
   function matchLogo(sig) {
@@ -1078,7 +1077,7 @@
           (needB ? '<b>' + needB + '개는 은행을 골라 주세요.</b><span>로고 옆 목록에서 고르면 그 로고를 기억해서 다음부터는 알아서 골라요.</span>' : '') + '</div>' : '<p class="hint">은행·계좌 이름·금액을 확인해 주세요.</p>') +
           (byLogo ? '<p class="hint">로고를 보고 은행 ' + byLogo + '개를 골라 뒀어요. 틀리면 바꿔 주세요.</p>' : '') + rows.map((r, i) =>
           '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + (r.kind === 'overdraft' && !r.limit && r.need ? ' need' : '') + '">' +
-          (r.kind === 'card' ? '' : '<div class="sr-bank">' + (r.logo ? '<img class="logo" src="' + r.logo.url + '" alt="캡처 로고">' : '') + '<div class="grow">' + bankField('b' + i, r.bank) + '</div></div>') +
+          (r.kind === 'card' ? '' : '<div class="sr-bank">' + bankField('b' + i, r.bank) + '</div>') +
           '<label class="field"><span class="lab">' + (r.kind === 'card' ? '카드 이름' : '계좌 이름') + '</span><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="예: 종합통장"></label>' +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
           (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
