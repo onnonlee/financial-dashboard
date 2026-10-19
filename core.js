@@ -25,6 +25,14 @@
   const dayInPeriod = (st, P, d) => (d >= payDay(st) ? dateIn(addMonths(P, -1), d) : dateIn(P, d));
   const activeIn = (x, P) => x.active !== false && (!x.from || P >= x.from) && (!x.until || P <= x.until);
   const findBy = (xs, id) => xs.find((x) => x.id === id);
+  // 고정비 금액: 기본 요금(base)이 있으면 그 달에 적용되는 할인을 차례로 빼서 계산 (통신사 할인 → 카드 청구할인 % 순서)
+  const inRange = (x, P) => (!x.from || P >= x.from) && (!x.until || P <= x.until);
+  function fixedAmount(f, P) {
+    if (!f.base) return f.amount;
+    let a = f.base;
+    for (const d of f.discounts || []) if (inRange(d, P)) a -= d.pct ? Math.round(a * d.pct / 100) : d.amount || 0;
+    return Math.max(0, a);
+  }
 
   // ---------- 카드 ----------
   // 사용한 달 + offset(기본 1) = 결제월
@@ -60,7 +68,7 @@
     }
     for (const f of st.fixed) {
       if (!activeIn(f, P) || !f.pay || f.pay.type !== 'account') continue;
-      push({ key: 'fixed:' + f.id + ':' + P, src: 'fixed', id: f.id, name: f.name, dir: 'out', amount: f.amount, approx: !!f.approx, date: dayInPeriod(st, P, f.day), acct: f.pay.id, cat: f.cat || '고정비' });
+      push({ key: 'fixed:' + f.id + ':' + P, src: 'fixed', id: f.id, name: f.name, dir: 'out', amount: fixedAmount(f, P), approx: !!f.approx, date: dayInPeriod(st, P, f.day), acct: f.pay.id, cat: f.cat || '고정비' });
     }
     const { start, end } = periodRange(st, P);
     for (const c of st.cards) {
@@ -86,7 +94,7 @@
       if (!activeIn(f, P)) continue;
       const key = 'fixed:' + f.id + ':' + P; const o = ov(st, key);
       if (o.skip) continue;
-      items.push({ key, src: 'fixed', id: f.id, name: f.name, date: o.date || date, amount: o.amount != null ? o.amount : f.amount, approx: !!f.approx, reflected: o.reflected });
+      items.push({ key, src: 'fixed', id: f.id, name: f.name, date: o.date || date, amount: o.amount != null ? o.amount : fixedAmount(f, P), approx: !!f.approx, reflected: o.reflected });
     }
     for (const i of st.installments) {
       if (i.cardId !== cardId) continue;
@@ -267,6 +275,6 @@
   }
 
   const api = { addMonths, addDays, dateIn, daysBetween, monthDiff, periodOf, periodRange, dayInPeriod, payMonthOf, cardPayDate,
-    schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState };
+    schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState, fixedAmount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Core = api;
 })(this);

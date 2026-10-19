@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.16';
+  const VERSION = '2.18';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -117,6 +117,7 @@
   const navOf = (t) => SUB.includes(t) ? 'more' : t;
   function render() {
     const app = document.getElementById('app');
+    for (const f of S.fixed) if (f.base) f.amount = C.fixedAmount(f, curP());
     if (onboarding()) { app.innerHTML = onboard(); return; }
     if (!view.P) view.P = curP();
     const fn = { more: moreScreen, input: inputScreen, home: homeScreen, book: bookScreen, flow: flowScreen, fixed: fixedScreen, loans: loansScreen, accounts: accountsScreen, cards: cardsScreen, income: incomeScreen, debts: debtsScreen, settings: settingsScreen }[view.tab] || homeScreen;
@@ -435,10 +436,11 @@
   function fixedInfo(id) {
     const x = S.fixed.find((y) => y.id === id); if (!x) return;
     const inf = x.info || {};
-    const has = INFO_KEYS.some((k) => inf[k]) || !!inf.extra;
+    const has = INFO_KEYS.some((k) => inf[k]) || !!inf.extra || !!x.base || !!(x.perks || []).length;
     openSheet({
       title: x.name,
       body: () => '<div class="info-top"><b>' + amtText(x) + '</b><span>매월 ' + esc(dayText(x)) + ' · ' + esc(refName(x.pay)) + (x.cat ? ' · ' + esc(x.cat) : '') + '</span></div>' +
+        billHtml(x) +
         (inf.extra ? '<div class="info-extra"><span>특이사항</span><p>' + esc(inf.extra) + '</p></div>' : '') +
         (INFO_KEYS.some((k) => inf[k]) ? '<div class="info-list">' + INFO_KEYS.filter((k) => inf[k]).map((k) => '<div><span>' + INFO_LAB[k] + '</span><b>' + esc(k === 'contractEnd' ? inf[k].replace(/-/g, '.') + (daysTo(inf[k]) >= 0 ? ' (D-' + daysTo(inf[k]) + ')' : ' (끝남)') : inf[k]) + '</b></div>').join('') + '</div>'
           : has ? '' : '<p class="hint">가입한 곳, 요금제, 약정 끝나는 날, 해지 방법, 특이사항을 적어 두면 나중에 찾을 필요가 없어요.</p>') +
@@ -589,13 +591,20 @@
   const OB_STEPS = ['급여', '계좌', '카드', '고정비', '대출'];
   const FIXED_PRESETS = [['월세', '주거'], ['관리비', '주거'], ['통신비', '통신'], ['인터넷', '통신'], ['보험', '보험'], ['넷플릭스', '구독'], ['유튜브 프리미엄', '구독'], ['쿠팡 와우', '구독'], ['적금', '기타']];
   const salaryOf = () => S.incomes.find((x) => x.salary);
-  const salAcc = () => { const s = salaryOf(); const id = (s && s.accountId) || S.obSalAcc; return acct(id) ? id : (S.accounts.find((a) => a.type === 'bank') || S.accounts[0] || {}).id; };
+  const salAcc = () => { const s = salaryOf() || S.incomes[0]; const id = (s && s.accountId) || S.obSalAcc; return acct(id) ? id : (S.accounts.find((a) => a.type === 'bank') || S.accounts[0] || {}).id; };
   function obSalarySave() {
     const amt = S.obSalary; const s = salaryOf();
-    if (!amt) return;
-    if (s) Object.assign(s, { amount: amt, day: S.settings.payDay });
-    else if (S.accounts.length) S.incomes.push({ id: uid(), name: '급여', amount: amt, day: S.settings.payDay, accountId: salAcc(), salary: true, approx: false, active: true });
+    if (!S.accounts.length) return;
+    if (amt && s) Object.assign(s, { amount: amt, day: S.settings.payDay });
+    else if (amt) S.incomes.push({ id: uid(), name: '급여', amount: amt, day: S.settings.payDay, accountId: salAcc(), salary: true, approx: false, active: true });
+    // 급여일 화면에서 적은 다른 수입은 통장이 생기면 월급 통장으로 넣음 (나중에 고칠 수 있음)
+    for (const r of S.obExtra || []) S.incomes.push({ id: uid(), name: r.name, amount: r.amount, day: r.day, accountId: salAcc(), salary: false, approx: false, active: true });
+    delete S.obExtra;
   }
+  const extraRow = (r) => { r = r || {}; return '<div class="dyn-row" data-t="inc"><input class="input" data-k="name" value="' + esc(r.name || '') + '" placeholder="이름 (예: 부업, 용돈, 이자)">' +
+    '<div class="dyn-grid"><div class="money"><input class="input" data-k="val" inputmode="numeric" data-live="money" value="' + (r.amount ? won(r.amount) : '') + '" placeholder="금액"><span>원</span></div>' +
+    '<select class="input" data-k="day">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === (r.day || S.settings.payDay) ? ' selected' : '') + '>매월 ' + l + '</option>').join('') + '</select></div>' +
+    '<button type="button" class="dyn-del" data-act="dynDel">지우기</button></div>'; };
   function onboard() {
     const step = S.onboard || 0; const pd = S.settings.payDay; const last = step === OB_STEPS.length - 1;
     const head = (t, p) => '<div class="ob-head"><h1>' + t + '</h1><p>' + p + '</p></div>';
@@ -609,14 +618,15 @@
       h += head('급여일이 언제인가요?', '월급 받는 날을 골라 주세요. 이날부터 다음 급여일 전날까지를 한 달로 계산해요.') +
         '<div class="ob-days">' + dayOpts.map(([v]) => '<button type="button" class="' + (v === pd ? 'on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '</button>').join('') + '</div>' +
         '<p class="ob-ex">매월 <b>' + pd + '일</b> · 이번 달은 <b>' + md(r.start) + ' ~ ' + md(r.end) + '</b></p>' +
-        '<label class="ob-sal"><span>월급은 얼마인가요? <em>세후, 통장에 들어오는 금액</em></span><div class="money big"><input class="input" id="obSal" inputmode="numeric" data-live="money" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div></label>' + foot(true);
+        '<div class="ob-sal"><label><span>월급은 얼마인가요? <em>세후, 통장에 들어오는 금액</em></span><div class="money big"><input class="input" id="obSal" inputmode="numeric" data-live="money" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div></label>' +
+        S.incomes.filter((x) => !x.salary).map((x) => '<button class="row" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
+        '<div class="dyn">' + (S.obExtra || []).map(extraRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="inc">+ 다른 수입 추가</button></div></div>' + foot(true);
     } else if (step === 1) {
       const s = salaryOf(); const amt = S.obSalary || (s && s.amount); const others = S.incomes.filter((x) => !x.salary); const sa = salAcc();
       h += head('계좌 잔액을 입력할까요?', '은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.') +
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
-        (S.accounts.length && amt ? '<section class="card ob-pick"><b>월급 ' + won(amt) + '원은 어느 통장으로 들어오나요?</b><div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
-        (S.accounts.length ? list(others.map((x) => item('editIncome', x.id, esc(x.name), '매월 ' + x.day + '일 · ' + esc((acct(x.accountId) || {}).name || ''), '<span class="amt in">+' + won(x.amount) + '</span>'))) + '<button class="ob-link" data-act="editIncome">+ 월급 말고 매달 들어오는 돈 넣기</button>' : '') +
+        (S.accounts.length && (amt || (S.obExtra || []).length || others.length) ? '<section class="card ob-pick"><b>' + (amt ? '월급 ' + won(amt) + '원은' : '수입은') + ' 어느 통장으로 들어오나요?</b><div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
         (S.accounts.length ? foot(true) : '<div class="ob-foot"><button class="btn ghost" data-act="obBack">이전</button></div>');
     } else if (step === 2) {
       h += head('카드값을 입력할까요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
@@ -637,8 +647,12 @@
     }
     return h + '</main>';
   }
-  function obReadSal() { const el = document.getElementById('obSal'); if (el) S.obSalary = Math.abs(parseAmt(el.value)) || null; }
-  function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; S.started = true; save(); location.hash = '#/home'; render(); }
+  function obReadSal() {
+    const el = document.getElementById('obSal'); if (!el) return;
+    S.obSalary = Math.abs(parseAmt(el.value)) || null;
+    S.obExtra = Array.from(document.querySelectorAll('.ob .dyn-row[data-t="inc"]')).map((r) => ({ name: r.querySelector('[data-k=name]').value.trim(), amount: Math.abs(parseAmt(r.querySelector('[data-k=val]').value)), day: Number(r.querySelector('[data-k=day]').value) })).filter((r) => r.name && r.amount);
+  }
+  function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; S.started = true; save(); location.hash = '#/home'; render(); }
 
   // ===== 시트: 가계부 기록 =====
   function methodOptions(sel, withCards) {
@@ -804,15 +818,62 @@
       S.cards = S.cards.filter((y) => y !== c); return true;
     } : null);
   }
+  // ----- 요금 계산: 기본 요금 − 할인(기간·%) = 매달 내는 돈, 따로 받는 혜택은 비교만 -----
+  const discRow = (d) => { d = d || {}; return '<div class="dyn-row" data-t="disc"><input class="input" data-k="name" value="' + esc(d.name || '') + '" placeholder="할인 이름 (예: 통신사 할인, 카드 청구할인)">' +
+    '<div class="dyn-grid"><input class="input" data-k="val" inputmode="decimal" value="' + (d.pct || d.amount || '') + '" placeholder="금액">' +
+    '<select class="input" data-k="unit"><option value="won"' + (d.pct ? '' : ' selected') + '>원</option><option value="pct"' + (d.pct ? ' selected' : '') + '>%</option></select></div>' +
+    '<div class="dyn-grid"><label><span>언제부터 (선택)</span><input class="input" type="month" data-k="from" value="' + (d.from || '') + '"></label><label><span>언제까지 (선택)</span><input class="input" type="month" data-k="until" value="' + (d.until || '') + '"></label></div>' +
+    '<button type="button" class="dyn-del" data-act="dynDel">이 할인 지우기</button></div>'; };
+  const perkRow = (b) => { b = b || {}; return '<div class="dyn-row" data-t="perk"><input class="input" data-k="name" value="' + esc(b.name || '') + '" placeholder="혜택 이름 (예: 꿀머니, 쿠폰)">' +
+    '<div class="money"><input class="input" data-k="val" inputmode="numeric" data-live="money" value="' + (b.amount ? won(b.amount) : '') + '" placeholder="한 달에 받는 금액"><span>원</span></div>' +
+    '<div class="dyn-grid"><label><span>언제부터 (선택)</span><input class="input" type="month" data-k="from" value="' + (b.from || '') + '"></label><label><span>언제까지 (선택)</span><input class="input" type="month" data-k="until" value="' + (b.until || '') + '"></label></div>' +
+    '<button type="button" class="dyn-del" data-act="dynDel">이 혜택 지우기</button></div>'; };
+  const readRows = (t) => Array.from(document.querySelectorAll('#sheet .dyn-row[data-t="' + t + '"]')).map((r) => {
+    const g = (k) => (r.querySelector('[data-k="' + k + '"]') || {}).value || ''; const v = g('val');
+    const o = { name: g('name').trim() }; if (g('from')) o.from = g('from'); if (g('until')) o.until = g('until');
+    if (t === 'disc' && g('unit') === 'pct') o.pct = Number(v.replace(/[^0-9.]/g, '')) || 0; else o.amount = Math.abs(parseAmt(v));
+    return o;
+  }).filter((o) => o.name && (o.pct || o.amount));
+  const inR = (x, P) => (!x.from || P >= x.from) && (!x.until || P <= x.until);
+  const rangeText = (x) => x.from && x.until ? mName(x.from) + '~' + mName(x.until) : x.until ? mName(x.until) + '까지' : x.from ? mName(x.from) + '부터' : '';
+  // 이번 달 요금 계산 + 혜택 비교 (고정비 정보 화면)
+  function billHtml(x) {
+    const P = curP(); let h = '';
+    if (x.base) {
+      let a = x.base; const rows = [['기본 요금', won(x.base) + '원', '']];
+      for (const d of x.discounts || []) { const on = inR(d, P); const cut = on ? (d.pct ? Math.round(a * d.pct / 100) : d.amount) : 0; a -= cut; rows.push([esc(d.name) + (d.pct ? ' ' + d.pct + '%' : ''), on ? '−' + won(cut) + '원' : '0원', on ? rangeText(d) : (d.until && P > d.until ? '끝남' : rangeText(d))]); }
+      h += '<div class="bill"><b class="bill-t">' + mName(P) + ' 요금 계산</b>' + rows.map(([t, v, n]) => '<div><span>' + t + (n ? ' <em>' + n + '</em>' : '') + '</span><b>' + v + '</b></div>').join('') + '<div class="sum"><span>실제 내는 돈</span><b>' + won(C.fixedAmount(x, P)) + '원</b></div></div>';
+    }
+    const perks = x.perks || [];
+    if (perks.length) {
+      const now = perks.filter((b) => inR(b, P)); const got = now.reduce((s2, b) => s2 + b.amount, 0); const net = got - C.fixedAmount(x, P);
+      h += '<div class="bill"><b class="bill-t">따로 받는 혜택</b>' + perks.map((b) => '<div><span>' + esc(b.name) + (rangeText(b) ? ' <em>' + rangeText(b) + '</em>' : '') + '</span><b>' + won(b.amount) + '원</b></div>').join('') +
+        '<div class="sum ' + (net >= 0 ? 'good' : '') + '"><span>' + mName(P) + ' 혜택 반영하면</span><b>월 ' + won(Math.abs(net)) + '원 ' + (net >= 0 ? '이득' : '부담') + '</b></div>';
+      const fr = perks.map((b) => b.from).filter(Boolean).sort()[0]; const to = perks.map((b) => b.until).filter(Boolean).sort().pop();
+      if (fr && to && to >= fr) {
+        let pay = 0, rec = 0, n = 0; for (let m = fr; m <= to; m = C.addMonths(m, 1)) { pay += C.fixedAmount(x, m); rec += perks.filter((b) => inR(b, m)).reduce((s2, b) => s2 + b.amount, 0); n++; }
+        h += '<div><span>' + mName(fr) + '~' + mName(to) + ' ' + n + '개월 동안 내는 돈</span><b>' + won(pay) + '원</b></div><div><span>그동안 받는 혜택</span><b>' + won(rec) + '원</b></div>' +
+          '<div class="sum ' + (rec >= pay ? 'good' : '') + '"><span>' + n + '개월 합치면</span><b>' + won(Math.abs(rec - pay)) + '원 ' + (rec >= pay ? '이득' : '부담') + '</b></div>';
+      }
+      h += '<p class="hint">혜택은 카드값·흐름에서 빼지 않고 비교로만 보여줘요.</p></div>';
+    }
+    return h;
+  }
   function editFixed(id, pre) {
     const x = id ? S.fixed.find((y) => y.id === id) : null; pre = pre || {};
     const info = (x && x.info) || {};
     if (!payOpts().length) return toast('계좌나 카드를 먼저 추가해 주세요');
     formSheet(x ? '고정비 고치기' : '고정비 추가', [
       { name: 'name', label: '이름', value: x ? x.name : pre.name || '', ph: '예: 월세, 넷플릭스' },
-      { name: 'amount', label: '금액', type: 'money', value: x ? x.amount : '' },
+      { name: 'amount', label: x && x.base ? '금액 (아래 요금 계산으로 자동)' : '금액', type: 'money', value: x ? x.amount : '' },
       { name: 'day', label: '매월 날짜', type: 'select', value: x ? x.day : 25, options: dayOpts },
       { name: 'dayText', label: '날짜 표시 (선택)', value: x ? x.dayText || '' : '', ph: '예: 24일-25일, 말일' },
+      { type: 'html', html: '<details class="calc"' + (x && (x.base || (x.perks || []).length) ? ' open' : '') + '><summary>요금 계산·할인·혜택 <em>통신비처럼 할인이 붙을 때</em></summary>' +
+        '<p class="hint">기본 요금과 할인을 적으면 매달 내는 돈을 알아서 계산해요. 할인은 적힌 순서대로 빼요(카드 청구할인 %는 맨 아래에).</p>' +
+        field({ name: 'base', label: '기본 요금', type: 'money', value: x && x.base ? x.base : '', ph: '예: 40,500' }) +
+        '<div class="dyn" data-for="disc">' + ((x && x.discounts) || []).map(discRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="disc">+ 할인 넣기</button></div>' +
+        '<p class="group-lab">따로 받는 혜택 <em>포인트·쿠폰처럼 요금에서 안 빠지는 것</em></p>' +
+        '<div class="dyn" data-for="perk">' + ((x && x.perks) || []).map(perkRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="perk">+ 혜택 넣기</button></div></details>' },
       { name: 'pay', label: '내는 곳', type: 'select', value: x ? refVal(x.pay) : payOpts()[0][0], options: payOpts() },
       { name: 'cat', label: '분류', type: 'select', value: x ? x.cat || '기타' : pre.cat || '구독', options: S.categories.map((c) => [c, c]) },
       { name: 'approx', label: '금액·날짜가 조금씩 달라요', type: 'switch', value: x ? x.approx : false, hint: '"약 ○원", "○일 전후"로 보여요' },
@@ -829,9 +890,12 @@
       { name: 'contact', label: '사이트·고객센터', value: info.contact || '', ph: '예: 114, tworld.co.kr' },
       { type: 'html', html: '<label class="field"><span class="lab">특이사항</span><textarea class="input" name="extra" rows="4" placeholder="예: 인터넷과 결합할인 중 · 해지하면 할인 끝남&#10;가족 명의로 묶여 있음, 위약금 약 5만원">' + esc(info.extra || '') + '</textarea></label>' },
     ], () => {
-      const name = val('name').trim(); const amount = Math.abs(parseAmt(val('amount')));
-      if (!name || !amount) return toast('이름과 금액을 적어 주세요');
+      const name = val('name').trim(); const base = Math.abs(parseAmt(val('base'))); const discounts = readRows('disc'); const perks = readRows('perk');
+      const amount = base ? C.fixedAmount({ base, discounts }, curP()) : Math.abs(parseAmt(val('amount')));
+      if (!name || !(amount || base)) return toast('이름과 금액을 적어 주세요');
       const y = x || { id: uid(), from: curP() };
+      if (base) { y.base = base; y.discounts = discounts; } else { delete y.base; delete y.discounts; }
+      if (perks.length) y.perks = perks; else delete y.perks;
       Object.assign(y, { name, amount, day: Number(val('day')), dayText: val('dayText').trim(), pay: refOf(val('pay')), cat: val('cat'), approx: val('approx'), from: val('from') || (x ? null : curP()), until: val('until') || null, note: val('note').trim(), active: val('active') });
       const inf = {}; for (const k of INFO_KEYS.concat('extra')) { const v = (val(k) || '').trim(); if (v) inf[k] = v; }
       if (Object.keys(inf).length) y.info = inf; else delete y.info;
@@ -1315,9 +1379,11 @@
     schedSkip(d) { const o = Object.assign({}, S.over[d.k]); o.skip = !o.skip; S.over[d.k] = o; save(); closeSheet(); render(); toast(o.skip ? '이번 달은 건너뛰어요' : '다시 넣었어요'); },
     schedReset(d) { delete S.over[d.k]; save(); closeSheet(); render(); toast('기본값으로 되돌렸어요'); },
     cardApp: (d) => cardApp(d.id, d.m),
+    dynAdd(d, el) { el.insertAdjacentHTML('beforebegin', d.t === 'disc' ? discRow() : d.t === 'inc' ? extraRow() : perkRow()); const r = el.previousElementSibling; r.querySelector('input').focus(); },
+    dynDel(d, el) { el.closest('.dyn-row').remove(); },
     obDay(d) { obReadSal(); S.settings.payDay = Number(d.d); if (S.onboard == null) S.onboard = 0; save(); render(); },
     obNext() { obReadSal(); if ((S.onboard || 0) <= 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
-    obSalAcc(d) { S.obSalAcc = d.id; const s = salaryOf(); if (s) s.accountId = d.id; save(); render(); },
+    obSalAcc(d) { const old = salAcc(); S.obSalAcc = d.id; S.incomes.forEach((x) => { if (x.accountId === old) x.accountId = d.id; }); save(); render(); },
     obBack() { S.onboard = Math.max(0, (S.onboard || 0) - 1); save(); render(); window.scrollTo(0, 0); },
     obDone: () => obFinish(),
     cardAppSave(d) {

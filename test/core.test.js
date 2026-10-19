@@ -128,4 +128,13 @@ test('할부 월별 추이', () => {
   assert.deepStrictEqual(t.map((r) => r.total), [60000, 40000]);
 });
 
+test('고정비 기본요금과 기간 할인', () => {
+  const s = base();
+  // 가짜 숫자: 기본 50,000 · 통신사 2,000원 할인 11월까지 · 카드 청구할인 10%
+  s.fixed.push({ id: 'ph', name: '통신비', amount: 0, base: 50000, discounts: [{ name: '통신사', amount: 2000, until: '2026-11' }, { name: '카드', pct: 10 }], day: 25, pay: { type: 'account', id: 'a' } });
+  assert.strictEqual(C.fixedAmount(s.fixed[0], '2026-11'), 43200);
+  assert.strictEqual(C.fixedAmount(s.fixed[0], '2026-12'), 45000);
+  assert.strictEqual(C.flow(s, '2026-12', '2026-10-21').lines.fixed, 45000);
+});
+
 console.log('\n' + passed + '개 통과');

@@ -445,8 +445,11 @@ details.paste .btn { margin-top: 8px; }
 .info-extra span { color: var(--text3); font-size: 13px; font-weight: 600; }
 .info-extra p { font-size: 15px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertical; }
-.ob-sal { display: flex; flex-direction: column; gap: 10px; background: var(--card); border-radius: 22px; padding: 18px; }
-.ob-sal > span { font-size: 17px; font-weight: 700; }
+.ob-sal { display: flex; flex-direction: column; gap: 12px; background: var(--card); border-radius: 22px; padding: 18px; }
+.ob-sal label { display: flex; flex-direction: column; gap: 10px; }
+.ob-sal .dyn-row { background: var(--soft); }
+.ob-sal .dyn-row .input { background: var(--card) !important; }
+.ob-sal label > span { font-size: 17px; font-weight: 700; }
 .ob-sal em { display: block; font-style: normal; font-size: 13px; font-weight: 500; color: var(--text3); margin-top: 3px; }
 .ob-pick { display: flex; flex-direction: column; gap: 12px; }
 .ob-pick b { font-size: 16px; }
@@ -454,3 +457,28 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .ob-pick .chip.on { background: var(--blue); color: #fff; }
 .ob-pick .chip .bico { width: 20px; height: 20px; border-radius: 6px; font-size: 8px; }
 .ob-link { text-align: left; padding: 4px 4px; font-size: 15px; font-weight: 600; color: var(--blue); }
+.calc { background: var(--soft); border-radius: 16px; padding: 4px 14px 14px; }
+.calc summary { padding: 12px 0 6px; font-weight: 700; font-size: 15px; list-style: none; cursor: pointer; }
+.calc summary::-webkit-details-marker { display: none; }
+.calc summary em { display: block; font-style: normal; font-weight: 500; font-size: 13px; color: var(--text3); margin-top: 2px; }
+.calc[open] { display: flex; flex-direction: column; gap: 12px; }
+.calc .input { background: var(--card); }
+.dyn { display: flex; flex-direction: column; gap: 10px; }
+.dyn-row { display: flex; flex-direction: column; gap: 8px; background: var(--card); border-radius: 14px; padding: 12px; }
+.dyn-row .input { background: var(--soft) !important; }
+.dyn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dyn-grid label { display: flex; flex-direction: column; gap: 4px; }
+.dyn-grid label span { font-size: 12px; color: var(--text3); }
+.dyn-del { align-self: flex-end; font-size: 13px; color: var(--text3); padding: 2px 4px; }
+.dyn-add { text-align: left; font-size: 15px; font-weight: 600; color: var(--blue); padding: 4px 2px; }
+.bill { display: flex; flex-direction: column; background: var(--soft); border-radius: 16px; padding: 6px 14px 10px; }
+.bill-t { font-size: 14px; color: var(--text2); padding: 8px 0 4px; }
+.bill > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.bill > div:last-of-type { border-bottom: 0; }
+.bill span { font-size: 14px; color: var(--text2); }
+.bill span em { font-style: normal; font-size: 12px; color: var(--text3); margin-left: 2px; }
+.bill b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bill .sum span { color: var(--text); font-weight: 700; }
+.bill .sum b { font-size: 17px; font-weight: 800; }
+.bill .sum.good b { color: var(--in); }
+.bill .hint { margin: 4px 0 0; font-size: 12px; }
