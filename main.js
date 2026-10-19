@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.13';
+  const VERSION = '2.14';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -117,7 +117,7 @@
   const navOf = (t) => SUB.includes(t) ? 'more' : t;
   function render() {
     const app = document.getElementById('app');
-    if (!S.accounts.length && !S.started) { app.innerHTML = welcome(); return; }
+    if (onboarding()) { app.innerHTML = onboard(); return; }
     if (!view.P) view.P = curP();
     const fn = { more: moreScreen, input: inputScreen, home: homeScreen, book: bookScreen, flow: flowScreen, fixed: fixedScreen, loans: loansScreen, accounts: accountsScreen, cards: cardsScreen, income: incomeScreen, debts: debtsScreen, settings: settingsScreen }[view.tab] || homeScreen;
     const st = C.status(S, today());
@@ -580,13 +580,33 @@
       '<p class="hint center">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가<br>버전 ' + VERSION + '</p>';
   }
 
-  // ===== 처음 =====
-  function welcome() {
-    return '<main class="screen welcome"><div class="wl-top"><h1>머니</h1><p>급여일 기준으로 이번 급여로 버틸 수 있는지,<br>카드값·대출·고정비를 한 곳에서 봐요.</p></div>' +
-      '<button class="btn" data-act="setup">' + I.scan + ' 은행앱 캡처로 시작</button><button class="btn ghost" data-act="editAccount">계좌 하나만 직접 적기</button><button class="btn ghost" data-act="backup">이전 정보 묶음·백업으로 시작</button>' +
-      '<p class="hint center">은행앱 전체 계좌 화면을 캡처하고 사진의 글자를 복사해 붙여넣으면 계좌가 한 번에 들어가요. 계좌번호는 저장하지 않아요.</p>' +
-      '<label class="field"><span class="lab">급여일</span><select class="input" id="wPay">' + dayOpts.slice(0, 28).map(([v, l]) => '<option value="' + v + '"' + (v === S.settings.payDay ? ' selected' : '') + '>매월 ' + l + '</option>').join('') + '</select></label></main>';
+  // ===== 처음 시작: 급여일 → 계좌 잔액 → 카드값 순서로 한 단계씩 =====
+  const onboarding = () => S.onboard != null || (!S.started && !S.accounts.length);
+  const nextPayMonth = (c) => { const d = today(); let m = d.slice(0, 7); if (C.cardPayDate(c, m) < d) m = C.addMonths(m, 1); return m; };
+  function onboard() {
+    const step = S.onboard || 0; const pd = S.settings.payDay;
+    const steps = ['급여일', '계좌 잔액', '카드값'];
+    let h = '<main class="screen ob"><div class="ob-prog">' + steps.map((t, i) => '<span class="' + (i < step ? 'done' : i === step ? 'on' : '') + '"><i></i>' + t + '</span>').join('') + '</div>';
+    if (step === 0) {
+      const s0 = C.periodRange(S, C.periodOf(S, today()));
+      h += '<div class="ob-head"><h1>월급이 며칠에 들어와요?</h1><p>급여일부터 다음 급여일 전날까지를 한 달로 보고 계산해요.</p></div>' +
+        '<div class="ob-days">' + dayOpts.map(([v]) => '<button type="button" class="' + (v === pd ? 'on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '</button>').join('') + '</div>' +
+        '<p class="ob-ex">이번 급여주기 <b>' + md(s0.start) + ' ~ ' + md(s0.end) + '</b></p>' +
+        '<div class="ob-foot"><button class="btn" data-act="obNext">다음</button><button class="btn ghost" data-act="backup">이전 정보 묶음·백업으로 시작</button></div>';
+    } else if (step === 1) {
+      h += '<div class="ob-head"><h1>계좌 잔액을 넣어요</h1><p>은행앱이나 토스의 전체 계좌 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.</p></div>' +
+        (S.accounts.length ? '<section class="card ob-list">' + S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return '<button class="row" data-act="editAccount" data-id="' + x.id + '"><span class="grow"><span class="t">' + acctChip(x) + ' ' + esc(x.name) + '</span>' + (x.type === 'overdraft' ? '<span class="s">마이너스통장 · 한도 ' + won(x.limit || 0) + '원</span>' : '') + '</span><span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span></button>'; }).join('') + '</section>' : '') +
+        '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
+        '<div class="ob-foot">' + (S.accounts.length ? '<button class="btn" data-act="obNext">다음</button>' : '') + '<button class="btn ghost" data-act="obBack">이전</button></div>';
+    } else {
+      h += '<div class="ob-head"><h1>이번 카드값을 넣어요</h1><p>카드앱의 결제 예정 금액을 적어요. 카드가 없으면 바로 시작해도 돼요.</p></div>' +
+        (S.cards.length ? '<section class="card ob-list">' + S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); return '<button class="row" data-act="cardApp" data-id="' + c.id + '" data-m="' + m + '"><span class="grow"><span class="t">' + bankChip(c.name) + ' ' + esc(c.name) + '</span><span class="s">' + md(b.payDate) + ' 결제</span></span>' + (b.app ? '<span class="amt">' + won(b.app.amount) + '</span>' : '<span class="badge warn">카드값 적기</span>') + '</button>'; }).join('') + '</section>' : '') +
+        '<div class="ob-add"><button class="btn ghost" data-act="setup">' + I.scan + ' 카드앱 캡처로 넣기</button><button class="btn ghost" data-act="editCard">카드 직접 추가</button></div>' +
+        '<div class="ob-foot"><button class="btn" data-act="obDone">' + (S.cards.length ? '시작하기' : '카드 없이 시작하기') + '</button><button class="btn ghost" data-act="obBack">이전</button></div>';
+    }
+    return h + '</main>';
   }
+  function obFinish() { delete S.onboard; S.started = true; save(); location.hash = '#/home'; render(); }
 
   // ===== 시트: 가계부 기록 =====
   function methodOptions(sel, withCards) {
@@ -712,7 +732,7 @@
       const x = a || { id: uid() };
       x.name = name; if (bank) x.bank = bank; else delete x.bank; x.type = val('type'); x.include = val('include'); x.purpose = val('purpose').trim(); x.rate = num(val('rate'));
       if (x.type === 'overdraft') x.limit = Math.abs(parseAmt(val('limit'))); else delete x.limit;
-      if (!a) { const v = Math.abs(parseAmt(val('bal'))); x.balance = x.type === 'overdraft' ? -v : v; x.balanceAt = now(); x.balanceDate = today(); S.accounts.push(x); S.started = true; }
+      if (!a) { const v = Math.abs(parseAmt(val('bal'))); x.balance = x.type === 'overdraft' ? -v : v; x.balanceAt = now(); x.balanceDate = today(); S.accounts.push(x); if (!onboarding()) S.started = true; }
       return a ? LINKED : true;
     }, a ? () => {
       const used = S.records.some((r) => (r.from && r.from.id === a.id) || (r.to && r.to.id === a.id)) || S.fixed.some((x) => x.pay && x.pay.id === a.id) || S.loans.some((l) => l.accountId === a.id) || S.cards.some((c) => c.accountId === a.id) || S.incomes.some((x) => x.accountId === a.id);
@@ -1113,7 +1133,6 @@
         const use = rows.filter((r) => r.kind !== 'skip' && (r.name || r.bank));
         const accs = use.filter((r) => r.kind !== 'card'); const cards = use.filter((r) => r.kind === 'card');
         if (!accs.length && !S.accounts.length) return toast('카드값이 나갈 계좌도 하나 넣어 주세요');
-        const w = document.getElementById('wPay'); if (w) S.settings.payDay = Number(w.value);
         const t = now(); const d = today();
         for (const r of accs) {
           const a = { id: uid(), name: r.name || r.bank + ' 통장', type: r.kind, include: r.kind !== 'local', balanceAt: t, balanceDate: d };
@@ -1129,7 +1148,8 @@
           if (r.amount) c.app[m] = { amount: Math.abs(r.amount), at: t, date: d };
           S.cards.push(c);
         }
-        S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('계좌 ' + accs.length + '개 · 카드 ' + cards.length + '개 추가했어요');
+        const ob = onboarding(); if (!ob) S.started = true; else if (S.onboard == null) S.onboard = 1;
+        save(); closeSheet(); if (!ob) location.hash = '#/home'; render(); toast('계좌 ' + accs.length + '개 · 카드 ' + cards.length + '개 추가했어요');
       },
     };
   }
@@ -1150,7 +1170,7 @@
     if (d && d.v === 2) { if (!confirm('지금 데이터를 이 백업으로 바꿀까요?')) return; S = d; }
     else if (d && d.version && Array.isArray(d.txns)) { if (!confirm('예전 버전 백업이에요. 지금 데이터를 바꿀까요?')) return; S = fromV1(d); }
     else return toast('이 내용은 읽을 수 없어요');
-    S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('가져왔어요');
+    delete S.onboard; S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('가져왔어요');
   }
   function mergeSeed(d) {
     const findAcc = (n) => S.accounts.find((a) => a.name === n);
@@ -1173,7 +1193,7 @@
     for (const l of d.loans || []) { if (S.loans.some((y) => y.name === l.name)) continue; const a = findAcc(l.payFrom); if (!a) continue; S.loans.push({ id: uid(), bank: l.bank || '', name: l.name, balance: l.balance || 0, balanceDate: t, rate: l.rate || null, monthly: l.monthly || 0, approx: !!l.approx, payDay: l.payDay, accountId: a.id, familyPayer: l.familyPayer || null, note: l.note || '', active: true }); add.대출++; }
     for (const b of d.debts || []) { if (S.debts.some((y) => y.who === b.person && y.reason === b.reason)) continue; S.debts.push({ id: uid(), dir: b.dir, who: b.person, reason: b.reason || '', amount: b.principal, due: b.dueDate || null, inForecast: false }); add['갚을·받을 돈']++; }
     for (const i of d.installments || []) { if (S.installments.some((y) => y.name === i.name)) continue; const c = findCard(i.card); if (!c) continue; S.installments.push({ id: uid(), name: i.name, cardId: c.id, startMonth: i.startPayMonth, months: i.months, amount: i.amount, note: i.note || '' }); add.할부++; }
-    S.started = true; save(); closeSheet(); render();
+    delete S.onboard; S.started = true; save(); closeSheet(); render();
     openSheet({ title: '이전 정보를 더했어요', body: () => '<div class="kv">' + Object.entries(add).map(([k, n]) => '<div><span>' + k + '</span><b>' + n + '개</b></div>').join('') + '</div><p class="hint">' + mName(P) + ' 급여주기부터 흐름에 들어가요. 계좌 잔액은 입력 탭에서 은행앱 숫자를 적어 주세요.</p>', foot: () => '<a class="btn" href="#/input">입력 탭으로</a>' });
   }
   function exportJSON() {
@@ -1259,6 +1279,10 @@
     schedSkip(d) { const o = Object.assign({}, S.over[d.k]); o.skip = !o.skip; S.over[d.k] = o; save(); closeSheet(); render(); toast(o.skip ? '이번 달은 건너뛰어요' : '다시 넣었어요'); },
     schedReset(d) { delete S.over[d.k]; save(); closeSheet(); render(); toast('기본값으로 되돌렸어요'); },
     cardApp: (d) => cardApp(d.id, d.m),
+    obDay(d) { S.settings.payDay = Number(d.d); if (S.onboard == null) S.onboard = 0; save(); render(); },
+    obNext() { S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
+    obBack() { S.onboard = Math.max(0, (S.onboard || 0) - 1); save(); render(); window.scrollTo(0, 0); },
+    obDone: () => obFinish(),
     cardAppSave(d) {
       const c = card(d.id); const v = val('amt'); const p = val('paid');
       if (String(v).trim() !== '') { const amt = Math.abs(parseAmt(v)); const prev = c.app && c.app[d.m]; if (!prev || prev.amount !== amt) c.app = Object.assign({}, c.app, { [d.m]: { amount: amt, at: now(), date: today() } }); }
@@ -1288,7 +1312,7 @@
       S.records.push(r); save(); closeSheet(); render(); toast('정산했어요 · 남은 금액과 잔액이 바뀌었어요');
     },
     setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }], () => { S.settings.payDay = Number(val('d')); view.P = null; return LINKED; }); },
-    backup: () => { const w = document.getElementById('wPay'); if (w) S.settings.payDay = Number(w.value); backupSheet(); },
+    backup: () => backupSheet(),
     importPaste() { const t = (val('seed') || '').trim(); if (!t) return toast('내용을 붙여넣어 주세요'); takeImport(t); },
     importFile: () => document.getElementById('importFile').click(),
     exportJSON,
@@ -1299,7 +1323,6 @@
     if (!el) { if (ev.target.id === 'scrim') closeSheet(); return; }
     const fn = A[el.dataset.act]; if (!fn) return;
     if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.preventDefault();
-    if (el.dataset.act === 'editAccount' && !S.accounts.length) { const w = document.getElementById('wPay'); if (w) S.settings.payDay = Number(w.value); }
     fn(el.dataset, el, ev);
   });
   document.addEventListener('input', (ev) => {
