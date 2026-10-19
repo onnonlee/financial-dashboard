@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.11';
+  const VERSION = '2.12';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -177,16 +177,17 @@
   const BANK_NAMES = BANK.slice(0, 22).map((b) => b[2]);
   const SHORT = { 카카오뱅크: '카카오', 토스뱅크: '토스', 케이뱅크: '케이', 새마을금고: '새마을', SC제일: 'SC', iM뱅크: 'iM' };
   const bankOf = (n) => { if (!n || /카드/.test(n)) return null; const b = BANK.slice(0, 22).find((x) => x[0].test(n)); return b ? b[2] : null; };
-  // 은행 아이콘: 캡처에서 본 진짜 로고가 있으면 그걸(이 기기에만 저장), 없으면 은행 색 + 글자
+  // 은행 아이콘: 은행 로고, 없으면(카드사 등) 색 + 글자
   const LOOK = { 국민: ['#FFBC00', '#4a3500', 'KB'], 신한: ['#0046FF', '#fff', '신한'], 하나: ['#00927C', '#fff', '하나'], 우리: ['#0B6FB8', '#fff', '우리'], 농협: ['#00A54F', '#fff', 'NH'], 기업: ['#0056A6', '#fff', 'IBK'],
     카카오뱅크: ['#FFE500', '#3a2a00', 'kakao'], 토스뱅크: ['#0064FF', '#fff', 'toss'], 케이뱅크: ['#1D1E5F', '#fff', 'K'], SC제일: ['#0A7A3E', '#fff', 'SC'], 씨티: ['#0A3D7A', '#fff', 'citi'], 부산: ['#D7141A', '#fff', 'BNK'],
     iM뱅크: ['#00A3E0', '#fff', 'iM'], 경남: ['#D7141A', '#fff', 'BNK'], 광주: ['#0060AF', '#fff', 'JB'], 전북: ['#0060AF', '#fff', 'JB'], 제주: ['#2A62D9', '#fff', '제주'], 수협: ['#0072BC', '#fff', 'Sh'],
     우체국: ['#E2231A', '#fff', '우체국'], 새마을금고: ['#0A4EA2', '#fff', 'MG'], 신협: ['#0072C6', '#fff', 'CU'], 산업: ['#00479B', '#fff', 'KDB'], 삼성: ['#1428A0', '#fff', '삼성'], 현대: ['#222', '#fff', '현대'], 롯데: ['#E60012', '#fff', '롯데'] };
-  const LOGO_IMG = 'money.v2.logoimg';
-  let logoImgs = readJSON(LOGO_IMG) || {};
+  // 은행 로고 (토스 송금 '은행 선택' 화면에서 잘라 banks/ 폴더에 둠)
+  const LOGO_FILE = { 국민: 'kb', 신한: 'shinhan', 하나: 'hana', 우리: 'woori', 농협: 'nh', 기업: 'ibk', 카카오뱅크: 'kakao', 토스뱅크: 'toss', 케이뱅크: 'kbank', SC제일: 'sc', 씨티: 'citi', 부산: 'busan',
+    iM뱅크: 'im', 경남: 'kyongnam', 광주: 'kwangju', 전북: 'jeonbuk', 제주: 'jeju', 수협: 'suhyup', 우체국: 'post', 새마을금고: 'mg', 신협: 'cu', 산업: 'kdb' };
   function bankIcon(bank, cls) {
     const k = bank && LOOK[bank] ? bank : bankOf(bank || '') || (BANK.find((x) => x[0].test(bank || '')) || [])[2];
-    if (k && logoImgs[k]) return '<span class="bico img' + (cls ? ' ' + cls : '') + '"><img src="' + logoImgs[k] + '" alt="' + esc(k) + '"></span>';
+    if (k && LOGO_FILE[k]) return '<span class="bico img' + (cls ? ' ' + cls : '') + '"><img src="banks/' + LOGO_FILE[k] + '.png" alt="' + esc(k) + '"></span>';
     const L = LOOK[k] || ['var(--soft)', 'var(--text2)', (bank || '?').slice(0, 2)];
     return '<span class="bico' + (cls ? ' ' + cls : '') + (L[2].length > 3 ? ' long' : '') + '" style="background:' + L[0] + ';color:' + L[1] + '">' + esc(L[2]) + '</span>';
   }
@@ -203,7 +204,7 @@
     if (!el) { el = document.createElement('div'); el.id = 'bankPop'; document.body.appendChild(el); }
     el.innerHTML = '<div class="bp-scrim" data-act="bankClose"></div><section class="bp" role="dialog" aria-modal="true"><i class="bp-grab"></i><h3>은행을 선택해주세요</h3><div class="bp-grid">' +
       POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === cur ? ' on' : '') + '" data-act="bankPick" data-f="' + f + '" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') +
-      '</div>' + (BANK_NAMES.some((b) => !logoImgs[b]) ? '<button type="button" class="bp-more" data-act="logoFill">진짜 로고로 바꾸기 (토스 화면 캡처)</button>' : '') + '</section>';
+      '</div></section>';
     el.hidden = false; requestAnimationFrame(() => el.classList.add('on'));
   }
   function bankClose() { const el = document.getElementById('bankPop'); if (!el) return; el.classList.remove('on'); el.hidden = true; }
@@ -573,8 +574,6 @@
   // ===== 설정 =====
   function settingsScreen() {
     return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
-      '<section class="card">' + head('은행 로고', '') + row({ act: 'logoFill', t: '은행 로고 캡처로 채우기', s: '토스 은행 선택 화면 캡처로 로고를 한 번에 넣어요', amt: BANK_NAMES.filter((b) => logoImgs[b]).length + '/' + BANK_NAMES.length }) +
-      (Object.keys(logoImgs).length ? row({ act: 'logoReset', t: '기본 모양으로 되돌리기', s: '캡처에서 가져온 로고를 지워요', amt: '' }) : '') + '</section>' +
       '<section class="card">' + head('데이터', '') + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
       (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') +
       row({ act: 'resetAll', t: '<span class="danger">처음부터 다시 시작</span>', s: '이 기기의 데이터를 모두 지우고 처음 화면으로 가요', amt: '' }) + '</section>' +
@@ -984,7 +983,7 @@
     return logoIn(pic, 0, y0, x1, y1 - y0);
   }
   // 사진의 한 영역에서 배경과 다른 네모난 덩어리(로고)를 찾아 색 지도와 작은 그림으로 만듦
-  function logoIn(pic, rx, ry, rw, rh, wide) {
+  function logoIn(pic, rx, ry, rw, rh) {
     rx = Math.max(0, Math.round(rx)); ry = Math.max(0, Math.round(ry)); rw = Math.min(pic.width - rx, Math.round(rw)); rh = Math.min(pic.height - ry, Math.round(rh));
     if (rw < 24 || rh < 24) return null;
     const cv = document.createElement('canvas'); cv.width = rw; cv.height = rh;
@@ -992,21 +991,13 @@
     const px = g.getImageData(0, 0, cv.width, cv.height).data; const bg = [px[0], px[1], px[2]];
     let a = cv.width, b = cv.height, c = -1, d = -1;
     for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) { const k = (y * cv.width + x) * 4; if (Math.abs(px[k] - bg[0]) + Math.abs(px[k + 1] - bg[1]) + Math.abs(px[k + 2] - bg[2]) > 30) { if (x < a) a = x; if (x > c) c = x; if (y < b) b = y; if (y > d) d = y; } }
-    const bw = c - a, bh = d - b; if (bw < 16 || (bh < 16 && !(wide && bh >= 8)) || bw > bh * (wide ? 4 : 1.6) || bh > bw * 1.6) return null;
+    const bw = c - a, bh = d - b; if (bw < 16 || bh < 16 || bw > bh * 1.6 || bh > bw * 1.6) return null;
     // 테두리(선택 표시 등)를 피하려고 가운데 80%만 씀
     const ix = a + bw * 0.1, iy = b + bh * 0.1, iw = bw * 0.8, ih = bh * 0.8;
     const sm = document.createElement('canvas'); sm.width = sm.height = 8; const sg = sm.getContext('2d', { willReadFrequently: true });
     sg.drawImage(cv, ix, iy, iw, ih, 0, 0, 8, 8); const sp = sg.getImageData(0, 0, 8, 8).data; const sig = [];
     for (let k = 0; k < sp.length; k += 4) sig.push(sp[k], sp[k + 1], sp[k + 2]);
-    const T = wide ? 128 : 64; const th = document.createElement('canvas'); th.width = th.height = T; const tg = th.getContext('2d');
-    if (wide) {
-      // 칸 배경색은 투명하게 지우고 로고만 가운데에 놓음
-      const f = 100 / Math.max(bw, bh); tg.drawImage(cv, a, b, bw, bh, 64 - bw * f / 2, 64 - bh * f / 2, bw * f, bh * f);
-      const im = tg.getImageData(0, 0, 128, 128); const q = im.data;
-      for (let k = 0; k < q.length; k += 4) { const df = Math.abs(q[k] - bg[0]) + Math.abs(q[k + 1] - bg[1]) + Math.abs(q[k + 2] - bg[2]); if (df < 24) q[k + 3] = 0; else if (df < 48) q[k + 3] = Math.round(255 * (df - 24) / 24); }
-      tg.putImageData(im, 0, 0);
-    }
-    else tg.drawImage(cv, a, b, bw, bh, 0, 0, 64, 64);
+    const th = document.createElement('canvas'); th.width = th.height = 64; th.getContext('2d').drawImage(cv, a, b, bw, bh, 0, 0, 64, 64);
     return { sig, url: th.toDataURL('image/png') };
   }
   const logoDist = (p, q) => { let s = 0; for (let k = 0; k < p.length; k++) s += Math.abs(p[k] - q[k]); return s / p.length; };
@@ -1130,7 +1121,7 @@
           if (r.bank) a.bank = r.bank;
           if (r.kind === 'overdraft') { a.limit = r.limit || 0; a.balance = -Math.abs(r.amount); } else a.balance = Math.abs(r.amount);
           S.accounts.push(a);
-          if (r.bank && r.logo) { learnLogo(r.bank, r.logo.sig); if (!logoImgs[r.bank]) logoImgs[r.bank] = r.logo.url; }
+          if (r.bank && r.logo) learnLogo(r.bank, r.logo.sig);
         }
         const payAcc = (S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id;
         for (const r of cards) {
@@ -1139,67 +1130,9 @@
           if (r.amount) c.app[m] = { amount: Math.abs(r.amount), at: t, date: d };
           S.cards.push(c);
         }
-        try { localStorage.setItem(LOGO_IMG, JSON.stringify(logoImgs)); } catch (e) { /* 편의 기능 */ }
         S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('계좌 ' + accs.length + '개 · 카드 ' + cards.length + '개 추가했어요');
       },
     };
-  }
-
-  // ===== 은행 로고 채우기: 토스 송금 '은행 선택' 화면 캡처에서 이름 위 로고를 잘라 이 기기에 저장 =====
-  function findBankLogos(ocr) {
-    const found = {};
-    for (const m of ocr.meta) {
-      const pic = ocr.pics[m.pic]; if (!pic) continue;
-      // 한 줄에 칸 여러 개가 같이 읽히고 이름이 글자별로 쪼개지기도 해서, 가까운 글자끼리 묶어 칸 이름으로 봄
-      const groups = [];
-      for (const w of m.words) {
-        const g = groups[groups.length - 1]; const h = w.box.y1 - w.box.y0;
-        if (g && w.box.x0 - g.x1 < h * 1.2) { g.t += w.t; g.x1 = w.box.x1; g.y0 = Math.max(g.y0, w.box.y0); g.h = Math.min(g.h, h); }
-        else groups.push({ t: w.t, x0: w.box.x0, x1: w.box.x1, y0: w.box.y0, h });
-      }
-      for (const g of groups) {
-        const t = (g.t || '').replace(/\s/g, '');
-        if (!t || /증권|투자|저축|페이|조합|선택/.test(t)) continue;
-        const bank = bankOf(t); if (!bank || found[bank]) continue;
-        const h = Math.max(12, g.h); const cx = (g.x0 + g.x1) / 2;
-        // 이름 바로 위 칸에서 로고를 찾음 (이름 앞에 잘못 읽힌 영문 글자는 키가 커서 가장 낮은 글자 높이·위치를 씀)
-        const lg = logoIn(pic, cx - h * 2.2, g.y0 - h * 3.6, h * 4.4, h * 3.3, true);
-        if (lg) found[bank] = lg;
-      }
-    }
-    return found;
-  }
-  function logoSheet() {
-    let found = null; let busy = '';
-    openSheet({
-      title: '은행 로고 채우기',
-      body() {
-        if (!found) return '<p class="hint">토스에서 <b>송금 → 계좌번호 입력 → 은행 선택</b> 화면을 캡처해서 골라 주세요. 아래로 내려 두 장 찍으면 22개 은행이 다 나와요.</p>' + photoBtn(busy) +
-          '<p class="hint">사진은 이 아이폰 안에서만 읽고, 로고도 이 기기에만 저장돼요.</p>';
-        const got = BANK_NAMES.filter((b) => found[b]); const miss = BANK_NAMES.filter((b) => !found[b]);
-        if (!got.length) return '<p class="hint center">은행 이름과 로고를 못 찾았어요.<br>은행 선택 화면으로 다시 골라 주세요.</p>';
-        return '<p class="hint">로고 ' + got.length + '개를 찾았어요. 맞는지 확인해 주세요.</p><div class="bank-grid">' +
-          got.map((b) => '<div class="bank-tile"><span class="bico img lg"><img src="' + found[b].url + '" alt="' + esc(b) + '"></span><span>' + b + '</span></div>').join('') + '</div>' +
-          (miss.length ? '<p class="hint">못 찾은 은행: ' + miss.join(', ') + '<br>다른 캡처를 더 고르면 채워져요.</p>' : '');
-      },
-      foot: () => !found ? '' : (Object.keys(found).length ? '<button class="btn" data-act="logoSave">로고 ' + Object.keys(found).length + '개 저장</button>' : '') + '<button class="btn ghost" data-act="logoBack">다시 고르기</button>',
-    });
-    sheet.ocr = async (files) => {
-      try { const r = await readPhotos(files, (m) => { busy = m; paintSheet(); }); busy = ''; found = findBankLogos(r); paintSheet(); }
-      catch (e) { busy = ''; paintSheet(); toast('사진을 못 읽었어요. 다시 골라 주세요'); }
-    };
-    sheet.logo = {
-      back() { found = null; paintSheet(); },
-      save() {
-        for (const b of Object.keys(found)) { logoImgs[b] = found[b].url; learnLogo(b, found[b].sig); }
-        try { localStorage.setItem(LOGO_IMG, JSON.stringify(logoImgs)); } catch (e) { toast('저장 공간이 부족해요'); return; }
-        const n = Object.keys(found).length; closeSheet(); render(); toast('은행 로고 ' + n + '개를 채웠어요');
-      },
-    };
-  }
-  function logoReset() {
-    logoImgs = {}; try { localStorage.removeItem(LOGO_IMG); } catch (e) { /* 편의 기능 */ }
-    render(); toast('은행 로고를 기본 모양으로 되돌렸어요');
   }
 
   // ===== 백업·이전 정보 묶음 =====
@@ -1314,7 +1247,6 @@
         foot: () => '<button class="btn ghost" data-act="exportJSON">먼저 백업 내보내기</button><button class="btn danger" data-act="resetGo">모두 지우고 처음부터</button>' });
     },
     resetGo() { try { [KEY, OLDKEY, 'money.v2.last'].forEach((k) => localStorage.removeItem(k)); } catch (e) { /* 지울 게 없음 */ } S = C.emptyState(); last = {}; closeSheet(); location.hash = '#/home'; render(); toast('모두 지웠어요'); },
-    logoFill: () => { bankClose(); logoSheet(); }, logoSave: () => sheet.logo.save(), logoBack: () => sheet.logo.back(), logoReset: () => logoReset(),
     setup: () => setupSheet(), setupRead: () => sheet.setup.read(), setupBack: () => sheet.setup.back(), setupSave: () => sheet.setup.save(), 
     capture: () => captureSheet(), capRead: () => sheet.cap.read(), capBack: () => sheet.cap.back(), capSave: () => sheet.cap.save(),
     sched: (d) => schedSheet(d.k, d.p),

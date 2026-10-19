@@ -427,7 +427,6 @@ details.paste .btn { margin-top: 8px; }
 .bico.xl { width: 40px; height: 40px; border-radius: 12px; font-size: 12px; }
 .bico.xl.img { border-radius: 0; }
 .bico.xl.img img { object-fit: contain; }
-.bp-more { display: block; width: 100%; margin-top: 16px; padding: 12px; font-size: 14px; color: var(--blue); font-weight: 600; }
 .sr-bank .grow { flex: 1; min-width: 0; }
 .sr-bank { align-items: flex-start; }
 .sr-bank .logo { margin-top: 5px; }
