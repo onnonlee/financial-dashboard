@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.0 (10.19)';
+  const VERSION = '2.1';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -113,12 +113,14 @@
     if (!view.P) view.P = curP();
     const fn = { input: inputScreen, home: homeScreen, book: bookScreen, flow: flowScreen, fixed: fixedScreen, loans: loansScreen, accounts: accountsScreen, cards: cardsScreen, income: incomeScreen, debts: debtsScreen, settings: settingsScreen }[view.tab] || homeScreen;
     const st = C.status(S, today());
-    app.innerHTML = '<header class="hdr"><div class="hdr-top"><div><h1>' + mName(st.P) + ' 급여주기</h1><p>' + md(st.start) + ' – ' + md(st.end) + ' · ' + st.daysLeft + '일 남음</p></div>' +
-      '<a class="icon-btn' + (view.tab === 'settings' ? ' on' : '') + '" href="#/settings" aria-label="설정">' + I.gear + '</a></div>' +
-      '<nav class="tabs" aria-label="화면">' + TABS.map(([k, l]) => '<a href="#/' + k + '"' + (view.tab === k ? ' class="on" aria-current="page"' : '') + '>' + l + '</a>').join('') + '</nav></header>' +
-      '<main class="screen">' + fn() + '</main>' +
+    const t0 = today(); const nc = st.nextCards[0];
+    app.innerHTML = '<header class="masthead"><div class="mast"><div><h1>월간 금융 흐름</h1><p>' + mName(st.P) + ' 급여주기 · ' + md(st.start) + ' – ' + md(st.end) + ' · ' + st.daysLeft + '일 남음</p>' +
+      '<small>기준일 ' + t0.slice(0, 4) + '년 ' + Number(t0.slice(5, 7)) + '월 ' + Number(t0.slice(8)) + '일' + (nc ? ' · 카드기준 ' + mName(nc.payMonth) : '') + '</small></div>' +
+      '<a class="mast-btn' + (view.tab === 'settings' ? ' on' : '') + '" href="#/settings" aria-label="설정">' + I.gear + '</a></div></header>' +
+      '<nav class="tabs" aria-label="화면"><div class="tabs-in">' + TABS.map(([k, l]) => '<a href="#/' + k + '"' + (view.tab === k ? ' class="on" aria-current="page"' : '') + '>' + l + '</a>').join('') + '</div></nav>' +
+      '<main class="screen">' + pageHead(st) + fn() + '</main>' +
       (view.tab === 'input' || view.tab === 'settings' ? '' : '<button class="fab" data-act="addRecord" aria-label="가계부 기록">' + I.plus + '</button>');
-    const nav = app.querySelector('.tabs'); const on = nav && nav.querySelector('.on');
+    const nav = app.querySelector('.tabs-in'); const on = nav && nav.querySelector('.on');
     if (on) nav.scrollLeft = on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2;
     if (view.tab === 'input') inputPreview();
   }
@@ -134,6 +136,33 @@
   const badge = (t, c) => ' <span class="badge' + (c ? ' ' + c : '') + '">' + esc(t) + '</span>';
   const meter = (r) => '<span class="meter"><i style="width:' + Math.min(100, Math.max(0, r * 100)) + '%"' + (r > 0.9 ? ' class="hot"' : '') + '></i></span>';
 
+  // 탭마다 제목 + 확인 날짜 배지 + 한 줄 설명 (이전 대시보드처럼)
+  const shortDate = (ms) => { if (!ms) return ''; const d = new Date(ms); return (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; };
+  function checkBadge() {
+    const ca = Math.max(0, ...S.cards.map((c) => Math.max(0, ...Object.values(c.app || {}).map((x) => x.at || 0))));
+    const aa = Math.max(0, ...S.accounts.map((a) => a.balanceAt || 0));
+    return [ca ? shortDate(ca) + ' 카드' : '', aa ? shortDate(aa) + ' 계좌 확인' : ''].filter(Boolean).join(' · ');
+  }
+  function pageHead() {
+    const H = {
+      input: ['데이터 입력', '', '여기만 고치면 다른 탭의 계산이 모두 같이 바뀌어요.'],
+      home: ['현재 현황', checkBadge(), '지금 필요한 금액과 계좌·카드 상태를 모아서 보여줘요.'],
+      book: ['가계부', '', '쓴 돈을 적으면 잔액·카드값·월간 흐름에 바로 들어가요.'],
+      flow: ['월간 흐름', '급여일 기준', '입금은 위에, 출금은 아래 날짜순이에요. 항목을 누르면 그 달만 바꿀 수 있어요.'],
+      fixed: ['구독·고정비', '', '통장 출금과 카드 청구를 나눠서 보여줘요.'],
+      loans: ['대출·예상 이자', checkBadge().split(' · ').pop() || '', '납입일 순서로 정리하고, 같은 은행은 함께 묶었어요.'],
+      accounts: ['계좌 현황', checkBadge().split(' · ').pop() || '', '통장별 잔액·남은 한도와 전체 사용 가능 금액이에요.'],
+      cards: ['카드·할부', '', '카드앱 현재액에 아직 안 보이는 것만 더해요.'],
+      income: ['수입 항목', '', '해당 월 흐름에 들어가는 수입을 모아서 보여줘요.'],
+      debts: ['갚을·받을 돈', '', '임시출금, 빌린 돈, 받을 돈을 따로 관리해요.'],
+      settings: ['설정', '', ''],
+    }[view.tab];
+    if (!H) return '';
+    return '<div class="page-head"><div class="ph-row"><h2>' + H[0] + '</h2>' + (H[1] ? '<span class="chk">' + esc(H[1]) + '</span>' : '') + '</div>' + (H[2] ? '<p>' + H[2] + '</p>' : '') + '</div>';
+  }
+  const BANK = [[/국민|KB/i, 'kb', '국민'], [/신한/, 'sh', '신한'], [/하나/, 'hn', '하나'], [/토스/, 'ts', '토스'], [/우리/, 'wr', '우리'], [/농협|NH/i, 'nh', '농협'], [/카카오/, 'kk', '카카오'], [/삼성/, 'ss', '삼성'], [/현대/, 'hd', '현대'], [/롯데/, 'lt', '롯데']];
+  const bankChip = (name) => { const b = BANK.find((x) => x[0].test(name || '')); return '<span class="bank ' + (b ? b[1] : 'etc') + '">' + esc(b ? b[2] : (name || '').slice(0, 2)) + '</span>'; };
+
   // ===== 이번 급여로 버티면 (이전 대시보드의 전체자금예상) =====
   function hero(link) {
     const st = C.status(S, today());
@@ -142,8 +171,8 @@
     const f = C.flow(S, P, today());
     const short = f.left < 0; const L = f.lines;
     const lines = [['수입', L.income, 'in'], ['카드값', -L.card], ['통장 고정비', -L.fixed], ['대출·이자', -L.loan], ['가계부 통장 지출', -L.living], ['정산·기타', -L.other]].filter((x, i) => i < 4 || x[1]);
-    return '<' + (link ? 'a href="#/flow"' : 'section') + ' class="hero' + (short ? ' short' : '') + '"><span class="hero-label">' + (ahead ? md(C.addDays(st.end, 1)) + ' 급여로 버티면' : '이번 급여로 버티면') + '</span>' +
-      '<span class="hero-num">' + won(f.left) + '원 ' + (short ? '부족해요' : '남아요') + '</span>' +
+    return '<' + (link ? 'a href="#/flow"' : 'section') + ' class="hero tint ' + (short ? 'red' : 'amber') + '"><span class="hero-label">전체자금예상 <span class="pill-s">' + (short ? '부족' : '여유') + '</span></span>' +
+      '<span class="hero-num">' + (short ? '− ' : '+ ') + won(f.left) + '원</span><span class="hero-sub">' + (ahead ? md(C.addDays(st.end, 1)) + ' 급여로 ' + mName(P) + ' 버티면' : mName(P) + ' 수입과 전체 지출 기준') + '</span>' +
       '<div class="hero-lines">' + lines.map(([l, n, c]) => '<div><span>' + l + '</span><b' + (c ? ' class="' + c + '"' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + won(n) + '</b></div>').join('') + '</div></' + (link ? 'a' : 'section') + '>';
   }
 
@@ -151,9 +180,12 @@
   function homeScreen() {
     const t = today(); const st = C.status(S, t);
     let h = hero(true);
-    h += '<div class="stats"><a class="stat" href="#/accounts"><span>쓸 수 있는 돈</span><b>' + wonS(st.spendable) + '</b></a>' +
-      '<a class="stat" href="#/flow"><span>' + md(st.end) + ' 예상</span><b' + (st.forecast < 0 ? ' class="warn"' : '') + '>' + wonS(st.forecast) + '</b></a>' +
-      '<a class="stat" href="#/cards"><span>다음 카드값</span><b>' + won(st.nextCardTotal) + '</b></a></div>';
+    const aa = Math.max(0, ...S.accounts.map((a) => a.balanceAt || 0));
+    const nc = st.nextCards[0]; const ca = nc && nc.app ? nc.app.at : 0;
+    const tile = (cls, href, label, badge, num, sub) => '<a class="tint ' + cls + '" href="' + href + '"><span class="tl">' + label + (badge ? ' <span class="pill-s">' + badge + '</span>' : '') + '</span><b>' + num + '</b><span class="ts">' + sub + '</span></a>';
+    h = tile('blue', '#/accounts', '계좌 잔액', aa ? shortDate(aa) + ' 확인' : '', wonS(st.spendable) + '원', '은행별 잔액·남은 한도 합계') +
+      tile('indigo', '#/cards', (nc ? mName(nc.payMonth) + ' ' : '') + '카드 출금 예상액', ca ? shortDate(ca) + ' 확인' : '', won(st.nextCardTotal) + '원', nc ? md(nc.payDate) + ' 출금 · ' + st.nextCards.map((b) => esc(b.card.name)).join(' + ') : '') +
+      h + tile(st.forecast < 0 ? 'red' : 'teal', '#/flow', '실제 잔액 예상', md(st.end), wonS(st.forecast) + '원', '지금 잔액에서 ' + md(st.end) + '까지 남은 입출금을 반영한 값');
 
     // 가계부 요약: 입력한 게 바로 보임
     const f = C.flow(S, st.P, t);
@@ -187,7 +219,7 @@
   function acctRow(x) {
     const a = x.account; const od = a.type === 'overdraft';
     const used = od ? Math.max(0, -x.balance) : 0;
-    return row({ act: 'balance', data: { id: a.id }, t: esc(a.name) + (a.include === false ? badge('합계 제외', 'gray') : ''), s: od ? won(used) + ' / ' + won(a.limit) + ' 사용' : ago(a.balanceAt), extra: od && a.limit ? meter(used / a.limit) : '', amt: wonS(x.available), end: od ? '남은 한도' : '' });
+    return row({ act: 'balance', data: { id: a.id }, lead: bankChip(a.name), t: esc(a.name) + (a.include === false ? badge('합계 제외', 'gray') : ''), s: od ? won(used) + ' / ' + won(a.limit) + ' 사용' : ago(a.balanceAt), extra: od && a.limit ? meter(used / a.limit) : '', amt: wonS(x.available), end: od ? '남은 한도' : '' });
   }
   function recRow(r) {
     const plus = r.type === 'income' || (r.type === 'settle' && r.to);
@@ -285,7 +317,7 @@
     const P = view.P; const t = today(); const f = C.flow(S, P, t);
     const L = f.lines; const short = f.left < 0;
     let h = periodBar();
-    h += '<section class="hero' + (short ? ' short' : '') + '"><span class="hero-label">' + mName(P) + ' 수입과 전체 지출 기준</span><span class="hero-num">' + won(f.left) + '원 ' + (short ? '부족' : '여유') + '</span>' +
+    h += '<section class="hero tint ' + (short ? 'red' : 'amber') + '"><span class="hero-label">전체자금예상 <span class="pill-s">' + (short ? '부족' : '여유') + '</span></span><span class="hero-num">' + (short ? '− ' : '+ ') + won(f.left) + '원</span><span class="hero-sub">' + mName(P) + ' 월 수입과 전체 지출 기준</span>' +
       '<div class="hero-lines">' + [['월 유입', L.income, 'in'], ['해당 월 카드값', -L.card], ['통장 고정비', -L.fixed], ['대출·이자·상환', -L.loan], ['가계부 통장 지출', -L.living], ['정산·기타', -L.other]].filter((x, i) => i < 4 || x[1]).map(([l, n, c]) => '<div><span>' + l + '</span><b' + (c ? ' class="' + c + '"' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + won(n) + '</b></div>').join('') + '</div></section>';
     const ins = f.schedule.filter((x) => x.dir === 'in'); const outs = f.schedule.filter((x) => x.dir === 'out');
     const all = C.schedule(S, P, t).filter((x) => x.skip);
@@ -321,9 +353,9 @@
     const loans = L.loans.slice().sort((a, b) => (a.loan.payDay || 0) - (b.loan.payDay || 0));
     h += '<section class="card">' + head('납입일 순 대출 일정', '월 ' + won(L.monthlySelf + L.monthlyFamily)) + (loans.map((x) => {
       const l = x.loan;
-      return row({ act: 'editLoan', data: { id: l.id }, cls: l.active === false ? 'off' : '', lead: '<span class="date">' + esc(dayText({ day: l.payDay, approx: l.approx, dayText: l.dayText })) + '</span>', t: esc(l.name) + (l.familyPayer ? badge(l.familyPayer + ' 대납', 'blue') : '') + (l.active === false ? badge('끝남', 'gray') : ''),
-        s: (l.bank ? esc(l.bank) + ' · ' : '') + '잔액 ' + won(x.amount) + (l.rate ? ' · ' + l.rate + '%' : '') + ' · 이자 약 ' + won(x.interest) + (x.paid ? ' · 납입 ' + x.paid + '회 반영' : ''), amt: amtText({ approx: l.approx }, l.monthly || 0) });
-    }).join('') + L.interestFixed.slice().sort((a, b) => a.day - b.day).map((f) => row({ act: 'editFixed', data: { id: f.id }, lead: '<span class="date">' + esc(dayText(f)) + '</span>', t: esc(f.name), s: esc(refName(f.pay)) + ' · 이자' + (f.note ? ' · ' + esc(f.note) : ''), amt: amtText(f) })).join('') || '<p class="hint">대출이 없어요</p>') + '</section>';
+      return row({ act: 'editLoan', data: { id: l.id }, lead: bankChip(l.bank || refName({ type: 'account', id: l.accountId })), t: esc(l.name) + (l.familyPayer ? badge(l.familyPayer + ' 대납', 'blue') : '') + (l.active === false ? badge('끝남', 'gray') : ''),
+        cls: 'wrap' + (l.active === false ? ' off' : ''), s: esc(dayText({ day: l.payDay, approx: l.approx, dayText: l.dayText })) + ' · 잔액 ' + won(x.amount) + (l.rate ? ' · ' + l.rate + '%' : '') + (x.paid ? ' · 납입 ' + x.paid + '회 반영' : ''), end: '이자 약 ' + won(x.interest), amt: amtText({ approx: l.approx }, l.monthly || 0) });
+    }).join('') + L.interestFixed.slice().sort((a, b) => a.day - b.day).map((f) => row({ act: 'editFixed', data: { id: f.id }, lead: bankChip(refName(f.pay)), cls: 'wrap', t: esc(f.name), s: esc(dayText(f)) + ' · 이자' + (f.note ? ' · ' + esc(f.note) : ''), amt: amtText(f) })).join('') || '<p class="hint">대출이 없어요</p>') + '</section>';
     // 은행별 월 납입
     const by = {};
     L.loans.filter((x) => x.loan.active !== false).forEach((x) => { const k = (x.loan.bank || '기타') + (x.loan.familyPayer ? ' · ' + x.loan.familyPayer + ' 대납' : ''); by[k] = (by[k] || 0) + (x.loan.monthly || 0); });
@@ -343,7 +375,7 @@
     h += st.accts.map((x) => {
       const a = x.account; const od = a.type === 'overdraft'; const used = od ? Math.max(0, -x.balance) : 0;
       const kv = (k, v) => '<div><span>' + k + '</span><b>' + v + '</b></div>';
-      return '<section class="card"><div class="acct-head"><div><h2>' + esc(a.name) + '</h2><span class="s">' + (od ? '마이너스통장' : a.type === 'local' ? '지역화폐' : '입출금') + ' · ' + ago(a.balanceAt) + '</span></div><button class="btn sm soft" data-act="balance" data-id="' + a.id + '">잔액 고치기</button></div>' +
+      return '<section class="card"><div class="acct-head"><div><h2>' + bankChip(a.name) + ' ' + esc(a.name) + '</h2><span class="s">' + (od ? '마이너스통장' : a.type === 'local' ? '지역화폐' : '입출금') + ' · ' + ago(a.balanceAt) + '</span></div><button class="btn sm soft" data-act="balance" data-id="' + a.id + '">잔액 고치기</button></div>' +
         '<div class="big-num">' + wonS(x.available) + '원<span>' + (od ? '남은 한도' : '현재 잔액') + '</span></div>' + (od && a.limit ? meter(used / a.limit) : '') +
         '<div class="kv">' + (od ? kv('현재 사용액', won(used)) + kv('총 한도', won(a.limit)) : '') + (a.rate ? kv('이율', '연 ' + a.rate + '%') + (od ? kv('매월 예상 이자', '약 ' + won(used * a.rate / 1200)) : '') : '') + (a.purpose ? kv('주요 용도', esc(a.purpose)) : '') + '</div>' +
         '<button class="link-btn" data-act="editAccount" data-id="' + a.id + '">계좌 정보 고치기</button></section>';
@@ -358,7 +390,7 @@
     let h = '';
     for (const b of st.nextCards) {
       const c = b.card;
-      h += '<section class="card"><div class="acct-head"><div><h2>' + esc(c.name) + '</h2><span class="s">' + md(b.payDate) + ' ' + esc((acct(c.accountId) || {}).name || '') + ' 출금</span></div><button class="icon-btn" data-act="editCard" data-id="' + c.id + '" aria-label="카드 정보">' + I.gear + '</button></div>' +
+      h += '<section class="card"><div class="acct-head"><div><h2>' + bankChip(c.name) + ' ' + esc(c.name) + '</h2><span class="s">' + md(b.payDate) + ' ' + esc((acct(c.accountId) || {}).name || '') + ' 출금</span></div><button class="icon-btn" data-act="editCard" data-id="' + c.id + '" aria-label="카드 정보">' + I.gear + '</button></div>' +
         '<div class="big-num">' + won(b.total) + '원<span>' + mName(b.payMonth) + ' 결제 예상</span></div>' +
         '<div class="kv"><div><span>카드앱 현재액 · ' + (b.app ? ago(b.app.at) : '확인 전') + '</span><b>' + (b.app ? won(b.app.amount) : '–') + '</b></div><div><span>아직 안 보이는 것</span><b>+' + won(b.pendingTotal) + '</b></div>' + (b.instTotal ? '<div><span>그중 할부</span><b>' + won(b.instTotal) + '</b></div>' : '') + '</div>' +
         (b.pending.length ? '<div class="sub-list">' + b.pending.map((it) => row({ act: 'toggleRefl', data: { k: it.key, id: b.cardId, m: b.payMonth }, t: esc(it.name), s: (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + ' · 누르면 반영됨', amt: won(it.amount) })).join('') + '</div>' : '') +
