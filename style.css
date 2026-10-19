@@ -389,3 +389,30 @@ details.paste .btn { margin-top: 8px; }
 .sr-bank .logo.none { display: inline-flex; align-items: center; justify-content: center; color: var(--text3); font-weight: 700; }
 .sr-bank .logo.none .bank { margin: 0; }
 .sr-bank select.empty { box-shadow: inset 0 0 0 1.5px var(--warn); color: var(--warn); }
+
+/* 은행 아이콘과 고르기 타일 */
+.bico { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 11px; font-size: 12px; font-weight: 800; letter-spacing: -0.3px; flex: none; overflow: hidden; vertical-align: middle; }
+.bico.long { font-size: 10px; letter-spacing: -0.5px; }
+.bico.img { background: var(--card); }
+.bico img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bico.q { background: var(--soft); color: var(--text3); font-size: 16px; }
+.bico.lg { width: 44px; height: 44px; border-radius: 14px; font-size: 13px; }
+.bico.lg.long { font-size: 11px; }
+.row .t .bico { width: 24px; height: 24px; border-radius: 7px; font-size: 9px; margin-right: 4px; }
+.acct-head h2 .bico { width: 28px; height: 28px; border-radius: 9px; font-size: 10px; margin-right: 6px; vertical-align: -6px; }
+.bank-btn { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 0 12px 0 9px; border-radius: 14px; background: var(--card); text-align: left; }
+.bank-btn b { flex: 1; font-size: 16px; font-weight: 600; }
+.bank-btn .chev { color: var(--text3); display: inline-flex; transform: rotate(90deg); }
+.bank-btn.empty { box-shadow: inset 0 0 0 1.5px var(--warn); }
+.bank-btn.empty b { color: var(--warn); }
+.field > .bank-btn { background: var(--soft); }
+.bank-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 0 2px; }
+.bank-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 8px; border-radius: 14px; background: var(--card); }
+.field .bank-tile { background: var(--soft); }
+.bank-tile span { font-size: 12px; color: var(--text2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.bank-tile.on { box-shadow: inset 0 0 0 2px var(--blue); }
+.bank-tile.on span { color: var(--blue); font-weight: 700; }
+.bank-tile:active { transform: scale(.96); }
+.sr-bank .grow { flex: 1; min-width: 0; }
+.sr-bank { align-items: flex-start; }
+.sr-bank .logo { margin-top: 5px; }

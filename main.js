@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.7';
+  const VERSION = '2.8';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -177,8 +177,24 @@
   const BANK_NAMES = BANK.slice(0, 22).map((b) => b[2]);
   const SHORT = { 카카오뱅크: '카카오', 토스뱅크: '토스', 케이뱅크: '케이', 새마을금고: '새마을', SC제일: 'SC', iM뱅크: 'iM' };
   const bankOf = (n) => { if (!n || /카드/.test(n)) return null; const b = BANK.slice(0, 22).find((x) => x[0].test(n)); return b ? b[2] : null; };
-  const bankOpts = (sel) => '<option value="">은행 고르기</option>' + BANK_NAMES.map((b) => '<option' + (b === sel ? ' selected' : '') + '>' + b + '</option>').join('');
-  const bankChip = (name) => { const b = BANK.find((x) => x[2] === name) || BANK.find((x) => x[0].test(name || '')); return '<span class="bank ' + (b ? b[1] : 'etc') + '">' + esc(b ? SHORT[b[2]] || b[2] : (name || '').slice(0, 2)) + '</span>'; };
+  // 은행 아이콘: 캡처에서 본 진짜 로고가 있으면 그걸(이 기기에만 저장), 없으면 은행 색 + 글자
+  const LOOK = { 국민: ['#FFBC00', '#4a3500', 'KB'], 신한: ['#0046FF', '#fff', '신한'], 하나: ['#00927C', '#fff', '하나'], 우리: ['#0B6FB8', '#fff', '우리'], 농협: ['#00A54F', '#fff', 'NH'], 기업: ['#0056A6', '#fff', 'IBK'],
+    카카오뱅크: ['#FFE500', '#3a2a00', 'kakao'], 토스뱅크: ['#0064FF', '#fff', 'toss'], 케이뱅크: ['#1D1E5F', '#fff', 'K'], SC제일: ['#0A7A3E', '#fff', 'SC'], 씨티: ['#0A3D7A', '#fff', 'citi'], 부산: ['#D7141A', '#fff', 'BNK'],
+    iM뱅크: ['#00A3E0', '#fff', 'iM'], 경남: ['#D7141A', '#fff', 'BNK'], 광주: ['#0060AF', '#fff', 'JB'], 전북: ['#0060AF', '#fff', 'JB'], 제주: ['#2A62D9', '#fff', '제주'], 수협: ['#0072BC', '#fff', 'Sh'],
+    우체국: ['#E2231A', '#fff', '우체국'], 새마을금고: ['#0A4EA2', '#fff', 'MG'], 신협: ['#0072C6', '#fff', 'CU'], 산업: ['#00479B', '#fff', 'KDB'], 삼성: ['#1428A0', '#fff', '삼성'], 현대: ['#222', '#fff', '현대'], 롯데: ['#E60012', '#fff', '롯데'] };
+  const LOGO_IMG = 'money.v2.logoimg';
+  let logoImgs = readJSON(LOGO_IMG) || {};
+  function bankIcon(bank, cls) {
+    const k = bank && LOOK[bank] ? bank : bankOf(bank || '') || (BANK.find((x) => x[0].test(bank || '')) || [])[2];
+    if (k && logoImgs[k]) return '<span class="bico img' + (cls ? ' ' + cls : '') + '"><img src="' + logoImgs[k] + '" alt="' + esc(k) + '"></span>';
+    const L = LOOK[k] || ['var(--soft)', 'var(--text2)', (bank || '?').slice(0, 2)];
+    return '<span class="bico' + (cls ? ' ' + cls : '') + (L[2].length > 3 ? ' long' : '') + '" style="background:' + L[0] + ';color:' + L[1] + '">' + esc(L[2]) + '</span>';
+  }
+  const bankChip = (name) => bankIcon(name);
+  // 은행 고르기: 버튼을 누르면 아래에 로고+이름 타일이 펼쳐짐
+  const bankField = (name, value, attrs) => '<input type="hidden" name="' + name + '" value="' + esc(value || '') + '"' + (attrs || '') + '>' +
+    '<button type="button" class="bank-btn' + (value ? '' : ' empty') + '" data-act="bankOpen" data-f="' + name + '">' + (value ? bankIcon(value) + '<b>' + esc(value) + '</b>' : '<span class="bico q">?</span><b>은행 고르기</b>') + '<span class="chev">' + I.right + '</span></button>' +
+    '<div class="bank-grid" data-for="' + name + '" hidden>' + BANK_NAMES.map((b) => '<button type="button" class="bank-tile' + (b === value ? ' on' : '') + '" data-act="bankPick" data-f="' + name + '" data-b="' + b + '">' + bankIcon(b, 'lg') + '<span>' + b + '</span></button>').join('') + '</div>';
   const acctChip = (a) => bankChip(a.bank || a.name);
 
   // ===== 이번 급여로 버티면 (이전 대시보드의 전체자금예상) =====
@@ -669,7 +685,7 @@
   function editAccount(id) {
     const a = id ? acct(id) : null;
     const f = [
-      { name: 'bank', label: '은행', type: 'html', html: '<label class="field"><span class="lab">은행</span><select class="input" name="bank">' + bankOpts(a ? a.bank || bankOf(a.name) || '' : '') + '</select></label>' },
+      { name: 'bank', label: '은행', type: 'html', html: '<div class="field"><span class="lab">은행</span>' + bankField('bank', a ? a.bank || bankOf(a.name) || '' : '') + '</div>' },
       { name: 'name', label: '계좌 이름', value: a ? a.name : '', ph: '예: 종합통장, 생활비 통장' },
       { name: 'type', label: '종류', type: 'select', value: a ? a.type : 'bank', options: [['bank', '입출금'], ['overdraft', '마이너스통장'], ['local', '지역화폐']] },
       { name: 'limit', label: '마이너스통장 한도', type: 'money', value: a ? a.limit : '', ph: '마이너스통장일 때만' },
@@ -1043,8 +1059,7 @@
           (needB ? '<b>' + needB + '개는 은행을 골라 주세요.</b><span>로고 옆 목록에서 고르면 그 로고를 기억해서 다음부터는 알아서 골라요.</span>' : '') + '</div>' : '<p class="hint">은행·계좌 이름·금액을 확인해 주세요.</p>') +
           (byLogo ? '<p class="hint">로고를 보고 은행 ' + byLogo + '개를 골라 뒀어요. 틀리면 바꿔 주세요.</p>' : '') + rows.map((r, i) =>
           '<div class="setup-row' + (r.kind === 'skip' ? ' off' : '') + (r.kind === 'overdraft' && !r.limit && r.need ? ' need' : '') + '">' +
-          (r.kind === 'card' ? '' : '<div class="sr-bank">' + (r.logo ? '<img class="logo" src="' + r.logo.url + '" alt="">' : '<span class="logo none">' + (r.bank ? bankChip(r.bank) : '?') + '</span>') +
-            '<select class="input' + (r.bank ? '' : ' empty') + '" name="b' + i + '" data-live="setupB">' + bankOpts(r.bank) + '</select></div>') +
+          (r.kind === 'card' ? '' : '<div class="sr-bank">' + (r.logo ? '<img class="logo" src="' + r.logo.url + '" alt="캡처 로고">' : '') + '<div class="grow">' + bankField('b' + i, r.bank) + '</div></div>') +
           '<label class="field"><span class="lab">' + (r.kind === 'card' ? '카드 이름' : '계좌 이름') + '</span><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="예: 종합통장"></label>' +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
           (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
@@ -1087,7 +1102,7 @@
           if (r.bank) a.bank = r.bank;
           if (r.kind === 'overdraft') { a.limit = r.limit || 0; a.balance = -Math.abs(r.amount); } else a.balance = Math.abs(r.amount);
           S.accounts.push(a);
-          if (r.bank && r.logo) learnLogo(r.bank, r.logo.sig);
+          if (r.bank && r.logo) { learnLogo(r.bank, r.logo.sig); if (!logoImgs[r.bank]) logoImgs[r.bank] = r.logo.url; }
         }
         const payAcc = (S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id;
         for (const r of cards) {
@@ -1096,6 +1111,7 @@
           if (r.amount) c.app[m] = { amount: Math.abs(r.amount), at: t, date: d };
           S.cards.push(c);
         }
+        try { localStorage.setItem(LOGO_IMG, JSON.stringify(logoImgs)); } catch (e) { /* 편의 기능 */ }
         S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('계좌 ' + accs.length + '개 · 카드 ' + cards.length + '개 추가했어요');
       },
     };
@@ -1199,6 +1215,18 @@
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
     goBook() { location.hash = '#/book'; },
+    bankOpen(d) {
+      const grid = document.querySelector('#sheet .bank-grid[data-for="' + d.f + '"]'); if (!grid) return;
+      document.querySelectorAll('#sheet .bank-grid').forEach((g) => { if (g !== grid) g.hidden = true; });
+      grid.hidden = !grid.hidden; if (!grid.hidden) grid.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    },
+    bankPick(d) {
+      const inp = document.querySelector('#sheet [name="' + d.f + '"]'); if (!inp) return; inp.value = d.b;
+      const btn = document.querySelector('#sheet .bank-btn[data-f="' + d.f + '"]'); btn.classList.remove('empty'); btn.innerHTML = bankIcon(d.b) + '<b>' + esc(d.b) + '</b><span class="chev">' + I.right + '</span>';
+      document.querySelectorAll('#sheet .bank-tile[data-f="' + d.f + '"]').forEach((t) => t.classList.toggle('on', t.dataset.b === d.b));
+      document.querySelector('#sheet .bank-grid[data-for="' + d.f + '"]').hidden = true;
+      if (sheet && sheet.setup) sheet.setup.bankSel();
+    },
     resetAll() {
       const n = S.accounts.length + S.cards.length + S.fixed.length + S.loans.length + S.records.length;
       openSheet({ title: '처음부터 다시 시작', body: () => '<p class="hint">이 아이폰에 저장된 계좌·카드·고정비·대출·가계부 ' + n + '개를 모두 지워요. 되돌릴 수 없어요.<br>남겨 두고 싶으면 먼저 백업을 내보내 주세요.</p>',
