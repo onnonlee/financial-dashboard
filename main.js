@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.14';
+  const VERSION = '2.15';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -435,12 +435,13 @@
   function fixedInfo(id) {
     const x = S.fixed.find((y) => y.id === id); if (!x) return;
     const inf = x.info || {};
-    const has = INFO_KEYS.some((k) => inf[k]);
+    const has = INFO_KEYS.some((k) => inf[k]) || !!inf.extra;
     openSheet({
       title: x.name,
       body: () => '<div class="info-top"><b>' + amtText(x) + '</b><span>매월 ' + esc(dayText(x)) + ' · ' + esc(refName(x.pay)) + (x.cat ? ' · ' + esc(x.cat) : '') + '</span></div>' +
-        (has ? '<div class="info-list">' + INFO_KEYS.filter((k) => inf[k]).map((k) => '<div><span>' + INFO_LAB[k] + '</span><b>' + esc(k === 'contractEnd' ? inf[k].replace(/-/g, '.') + (daysTo(inf[k]) >= 0 ? ' (D-' + daysTo(inf[k]) + ')' : ' (끝남)') : inf[k]) + '</b></div>').join('') + '</div>'
-          : '<p class="hint">가입한 곳, 요금제, 약정 끝나는 날, 해지 방법을 적어 두면 나중에 찾을 필요가 없어요.</p>') +
+        (inf.extra ? '<div class="info-extra"><span>특이사항</span><p>' + esc(inf.extra) + '</p></div>' : '') +
+        (INFO_KEYS.some((k) => inf[k]) ? '<div class="info-list">' + INFO_KEYS.filter((k) => inf[k]).map((k) => '<div><span>' + INFO_LAB[k] + '</span><b>' + esc(k === 'contractEnd' ? inf[k].replace(/-/g, '.') + (daysTo(inf[k]) >= 0 ? ' (D-' + daysTo(inf[k]) + ')' : ' (끝남)') : inf[k]) + '</b></div>').join('') + '</div>'
+          : has ? '' : '<p class="hint">가입한 곳, 요금제, 약정 끝나는 날, 해지 방법, 특이사항을 적어 두면 나중에 찾을 필요가 없어요.</p>') +
         (x.note ? '<p class="hint">메모 · ' + esc(x.note) + '</p>' : ''),
       foot: () => '<button class="btn" data-act="editFixed" data-id="' + x.id + '">' + (has ? '고치기' : '정보 적기') + '</button>',
     });
@@ -583,26 +584,47 @@
   // ===== 처음 시작: 급여일 → 계좌 잔액 → 카드값 순서로 한 단계씩 =====
   const onboarding = () => S.onboard != null || (!S.started && !S.accounts.length);
   const nextPayMonth = (c) => { const d = today(); let m = d.slice(0, 7); if (C.cardPayDate(c, m) < d) m = C.addMonths(m, 1); return m; };
+  // 단계: 급여일 → 계좌 → 수입 → 카드·할부 → 고정비·구독 → 대출·이자 (뒤쪽은 없으면 건너뛰기)
+  const OB_STEPS = ['급여일', '계좌', '수입', '카드', '고정비', '대출'];
+  const FIXED_PRESETS = [['월세', '주거'], ['관리비', '주거'], ['통신비', '통신'], ['인터넷', '통신'], ['보험', '보험'], ['넷플릭스', '구독'], ['유튜브 프리미엄', '구독'], ['쿠팡 와우', '구독'], ['적금', '기타']];
   function onboard() {
-    const step = S.onboard || 0; const pd = S.settings.payDay;
-    const steps = ['급여일', '계좌 잔액', '카드값'];
-    let h = '<main class="screen ob"><div class="ob-prog">' + steps.map((t, i) => '<span class="' + (i < step ? 'done' : i === step ? 'on' : '') + '"><i></i>' + t + '</span>').join('') + '</div>';
+    const step = S.onboard || 0; const pd = S.settings.payDay; const last = step === OB_STEPS.length - 1;
+    const head = (t, p) => '<div class="ob-head"><h1>' + t + '</h1><p>' + p + '</p></div>';
+    const list = (rows) => rows.length ? '<section class="card ob-list">' + rows.join('') + '</section>' : '';
+    const item = (act, id, t, sub, amt, extra) => '<button class="row" data-act="' + act + '" data-id="' + id + '"' + (extra || '') + '><span class="grow"><span class="t">' + t + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' + amt + '</button>';
+    const foot = (has, opt) => '<div class="ob-foot"><button class="btn" data-act="' + (last ? 'obDone' : 'obNext') + '">' + (last ? (has ? '시작하기' : '대출 없이 시작하기') : (has || !opt ? '다음' : '없어요, 다음')) + '</button>' +
+      (step ? '<button class="btn ghost" data-act="obBack">이전</button>' : '<button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button>') + '</div>';
+    let h = '<main class="screen ob"><div class="ob-prog">' + OB_STEPS.map((t, i) => '<span class="' + (i < step ? 'done' : i === step ? 'on' : '') + '"><i></i>' + t + '</span>').join('') + '</div>';
     if (step === 0) {
-      const s0 = C.periodRange(S, C.periodOf(S, today()));
-      h += '<div class="ob-head"><h1>월급이 며칠에 들어와요?</h1><p>급여일부터 다음 급여일 전날까지를 한 달로 보고 계산해요.</p></div>' +
+      const r = C.periodRange(S, C.periodOf(S, today()));
+      h += head('급여일이 언제인가요?', '월급 받는 날을 골라 주세요. 이날부터 다음 급여일 전날까지를 한 달로 계산해요.') +
         '<div class="ob-days">' + dayOpts.map(([v]) => '<button type="button" class="' + (v === pd ? 'on' : '') + '" data-act="obDay" data-d="' + v + '">' + v + '</button>').join('') + '</div>' +
-        '<p class="ob-ex">이번 급여주기 <b>' + md(s0.start) + ' ~ ' + md(s0.end) + '</b></p>' +
-        '<div class="ob-foot"><button class="btn" data-act="obNext">다음</button><button class="btn ghost" data-act="backup">이전 정보 묶음·백업으로 시작</button></div>';
+        '<p class="ob-ex">매월 <b>' + pd + '일</b> · 이번 달은 <b>' + md(r.start) + ' ~ ' + md(r.end) + '</b></p>' + foot(true);
     } else if (step === 1) {
-      h += '<div class="ob-head"><h1>계좌 잔액을 넣어요</h1><p>은행앱이나 토스의 전체 계좌 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.</p></div>' +
-        (S.accounts.length ? '<section class="card ob-list">' + S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return '<button class="row" data-act="editAccount" data-id="' + x.id + '"><span class="grow"><span class="t">' + acctChip(x) + ' ' + esc(x.name) + '</span>' + (x.type === 'overdraft' ? '<span class="s">마이너스통장 · 한도 ' + won(x.limit || 0) + '원</span>' : '') + '</span><span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span></button>'; }).join('') + '</section>' : '') +
+      h += head('통장에 지금 얼마 있나요?', '은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.') +
+        list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
-        '<div class="ob-foot">' + (S.accounts.length ? '<button class="btn" data-act="obNext">다음</button>' : '') + '<button class="btn ghost" data-act="obBack">이전</button></div>';
+        (S.accounts.length ? foot(true) : '<div class="ob-foot"><button class="btn ghost" data-act="obBack">이전</button></div>');
+    } else if (step === 2) {
+      h += head('매달 들어오는 돈은 얼마인가요?', '월급과 들어오는 통장을 적어 두면 이번 달에 얼마가 남을지 계산해요. 부수입이나 매달 받는 돈도 같이 넣을 수 있어요.') +
+        list(S.incomes.map((x) => item('editIncome', x.id, esc(x.name), '매월 ' + x.day + '일 · ' + esc((acct(x.accountId) || {}).name || ''), '<span class="amt in">+' + won(x.amount) + '</span>'))) +
+        '<div class="ob-add"><button class="btn ghost" data-act="editIncome">' + (S.incomes.length ? '수입 더 넣기' : '월급 적기') + '</button></div>' + foot(S.incomes.length, true);
+    } else if (step === 3) {
+      h += head('이번 달 카드값은 얼마인가요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
+        S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); const ins = S.installments.filter((i) => i.cardId === c.id);
+          return '<section class="card ob-list">' + item('cardApp', c.id, bankChip(c.name) + ' ' + esc(c.name), md(b.payDate) + ' 결제', b.app ? '<span class="amt">' + won(b.app.amount) + '</span>' : '<span class="badge warn">카드값 적기</span>', ' data-m="' + m + '"') +
+            ins.map((i) => { const left = i.months - Math.max(0, C.monthDiff(i.startMonth, m)); return item('editInst', i.id, '<span class="ob-sub">할부</span> ' + esc(i.name), (left > 0 ? left + '개월 남음' : '끝남') + ' · 매달', '<span class="amt">' + won(Array.isArray(i.amounts) ? i.amounts[0] : i.amount) + '</span>'); }).join('') +
+            '<button class="ob-inst" data-act="editInst" data-card="' + c.id + '">+ 할부 넣기</button></section>'; }).join('') +
+        '<div class="ob-add"><button class="btn ghost" data-act="setup">' + I.scan + ' 카드앱 캡처로 넣기</button><button class="btn ghost" data-act="editCard">카드 직접 추가</button></div>' + foot(S.cards.length, true);
+    } else if (step === 4) {
+      const have = new Set(S.fixed.map((x) => x.name));
+      h += head('매달 나가는 돈이 있나요?', '월세, 통신비, 보험, 구독처럼 매달 나가는 돈이에요. 아래에서 고르면 이름이 채워지고, 약정·결합할인 같은 특이사항도 같이 적을 수 있어요.') +
+        list(S.fixed.map((x) => item('editFixed', x.id, esc(x.name), '매월 ' + x.day + '일 · ' + esc(x.cat || ''), '<span class="amt">' + won(x.amount) + '</span>'))) +
+        '<div class="ob-chips">' + FIXED_PRESETS.filter(([n]) => !have.has(n)).map(([n, c]) => '<button class="chip" data-act="editFixed" data-name="' + n + '" data-cat="' + c + '">+ ' + n + '</button>').join('') + '<button class="chip" data-act="editFixed">+ 직접 적기</button></div>' + foot(S.fixed.length, true);
     } else {
-      h += '<div class="ob-head"><h1>이번 카드값을 넣어요</h1><p>카드앱의 결제 예정 금액을 적어요. 카드가 없으면 바로 시작해도 돼요.</p></div>' +
-        (S.cards.length ? '<section class="card ob-list">' + S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); return '<button class="row" data-act="cardApp" data-id="' + c.id + '" data-m="' + m + '"><span class="grow"><span class="t">' + bankChip(c.name) + ' ' + esc(c.name) + '</span><span class="s">' + md(b.payDate) + ' 결제</span></span>' + (b.app ? '<span class="amt">' + won(b.app.amount) + '</span>' : '<span class="badge warn">카드값 적기</span>') + '</button>'; }).join('') + '</section>' : '') +
-        '<div class="ob-add"><button class="btn ghost" data-act="setup">' + I.scan + ' 카드앱 캡처로 넣기</button><button class="btn ghost" data-act="editCard">카드 직접 추가</button></div>' +
-        '<div class="ob-foot"><button class="btn" data-act="obDone">' + (S.cards.length ? '시작하기' : '카드 없이 시작하기') + '</button><button class="btn ghost" data-act="obBack">이전</button></div>';
+      h += head('갚고 있는 대출이 있나요?', '남은 원금, 금리, 매달 내는 돈을 적어 두면 이자와 다 갚는 날까지 계산해요. 마이너스통장은 앞에서 넣었으면 따로 안 넣어도 돼요.') +
+        list(S.loans.map((l) => item('editLoan', l.id, bankChip(l.bank || l.name) + ' ' + esc(l.name), '매월 ' + l.payDay + '일 · ' + won(l.monthly || 0) + '원' + (l.rate ? ' · ' + l.rate + '%' : ''), '<span class="amt">' + won(C.loanBalance(S, l, today()).amount) + '</span>'))) +
+        '<div class="ob-add"><button class="btn ghost" data-act="editLoan">대출 넣기</button></div>' + foot(S.loans.length, true);
     }
     return h + '</main>';
   }
@@ -772,17 +794,17 @@
       S.cards = S.cards.filter((y) => y !== c); return true;
     } : null);
   }
-  function editFixed(id) {
-    const x = id ? S.fixed.find((y) => y.id === id) : null;
+  function editFixed(id, pre) {
+    const x = id ? S.fixed.find((y) => y.id === id) : null; pre = pre || {};
     const info = (x && x.info) || {};
     if (!payOpts().length) return toast('계좌나 카드를 먼저 추가해 주세요');
     formSheet(x ? '고정비 고치기' : '고정비 추가', [
-      { name: 'name', label: '이름', value: x ? x.name : '', ph: '예: 월세, 넷플릭스' },
+      { name: 'name', label: '이름', value: x ? x.name : pre.name || '', ph: '예: 월세, 넷플릭스' },
       { name: 'amount', label: '금액', type: 'money', value: x ? x.amount : '' },
       { name: 'day', label: '매월 날짜', type: 'select', value: x ? x.day : 25, options: dayOpts },
       { name: 'dayText', label: '날짜 표시 (선택)', value: x ? x.dayText || '' : '', ph: '예: 24일-25일, 말일' },
       { name: 'pay', label: '내는 곳', type: 'select', value: x ? refVal(x.pay) : payOpts()[0][0], options: payOpts() },
-      { name: 'cat', label: '분류', type: 'select', value: x ? x.cat || '기타' : '구독', options: S.categories.map((c) => [c, c]) },
+      { name: 'cat', label: '분류', type: 'select', value: x ? x.cat || '기타' : pre.cat || '구독', options: S.categories.map((c) => [c, c]) },
       { name: 'approx', label: '금액·날짜가 조금씩 달라요', type: 'switch', value: x ? x.approx : false, hint: '"약 ○원", "○일 전후"로 보여요' },
       { name: 'from', label: '시작 급여월 (선택)', type: 'month', value: x ? x.from || '' : '' },
       { name: 'until', label: '끝나는 급여월 (선택)', type: 'month', value: x ? x.until || '' : '' },
@@ -795,12 +817,13 @@
       { name: 'contractEnd', label: '약정·할인 끝나는 날', type: 'date', value: info.contractEnd || '' },
       { name: 'howTo', label: '해지·변경 방법', value: info.howTo || '', ph: '예: 앱 > 마이 > 요금제 변경' },
       { name: 'contact', label: '사이트·고객센터', value: info.contact || '', ph: '예: 114, tworld.co.kr' },
+      { type: 'html', html: '<label class="field"><span class="lab">특이사항</span><textarea class="input" name="extra" rows="4" placeholder="예: 인터넷과 결합할인 중 · 해지하면 할인 끝남&#10;가족 명의로 묶여 있음, 위약금 약 5만원">' + esc(info.extra || '') + '</textarea></label>' },
     ], () => {
       const name = val('name').trim(); const amount = Math.abs(parseAmt(val('amount')));
       if (!name || !amount) return toast('이름과 금액을 적어 주세요');
       const y = x || { id: uid(), from: curP() };
       Object.assign(y, { name, amount, day: Number(val('day')), dayText: val('dayText').trim(), pay: refOf(val('pay')), cat: val('cat'), approx: val('approx'), from: val('from') || (x ? null : curP()), until: val('until') || null, note: val('note').trim(), active: val('active') });
-      const inf = {}; for (const k of INFO_KEYS) { const v = (val(k) || '').trim(); if (v) inf[k] = v; }
+      const inf = {}; for (const k of INFO_KEYS.concat('extra')) { const v = (val(k) || '').trim(); if (v) inf[k] = v; }
       if (Object.keys(inf).length) y.info = inf; else delete y.info;
       if (!x) S.fixed.push(y);
       return LINKED;
@@ -810,7 +833,7 @@
     const x = id ? S.incomes.find((y) => y.id === id) : null;
     if (!S.accounts.length) return toast('계좌를 먼저 추가해 주세요');
     formSheet(x ? '정기 수입 고치기' : '정기 수입 추가', [
-      { name: 'name', label: '이름', value: x ? x.name : '', ph: '예: 급여, 회수금' },
+      { name: 'name', label: '이름', value: x ? x.name : S.incomes.length ? '' : '급여', ph: '예: 급여, 회수금' },
       { name: 'amount', label: '금액', type: 'money', value: x ? x.amount : '' },
       { name: 'day', label: '매월 날짜', type: 'select', value: x ? x.day : S.settings.payDay, options: dayOpts },
       { name: 'accountId', label: '들어오는 계좌', type: 'select', value: x ? x.accountId : S.accounts[0].id, options: acctOpts() },
@@ -858,14 +881,15 @@
       return LINKED;
     }, l ? () => { S.loans = S.loans.filter((y) => y !== l); return true; } : null, '납입일마다 나가는 계좌 잔액에서 빠지고, 원금 부분만큼 남은 원금이 줄어요. 보내 주는 사람을 적으면 같은 날 대납금이 수입으로 들어와요.');
   }
-  function editInst(id) {
+  // 새 할부는 '남은 개월 수'만 받고 첫 결제월은 그 카드의 다음 결제월로 둠
+  function editInst(id, cardId) {
     const x = id ? S.installments.find((y) => y.id === id) : null;
     if (!S.cards.length) return toast('카드를 먼저 추가해 주세요');
-    formSheet(x ? '할부 고치기' : '할부 추가', [
-      { name: 'name', label: '이름', value: x ? x.name : '', ph: '예: 노트북' },
-      { name: 'cardId', label: '카드', type: 'select', value: x ? x.cardId : S.cards[0].id, options: S.cards.map((c) => [c.id, c.name]) },
-      { name: 'start', label: '첫 결제월', type: 'month', value: x ? x.startMonth : C.addMonths(today().slice(0, 7), 1) },
-      { name: 'months', label: '개월 수', type: 'number', value: x ? x.months : 3 },
+    formSheet(x ? '할부 고치기' : '할부 넣기', [
+      { name: 'name', label: '무엇을 샀나요', value: x ? x.name : '', ph: '예: 노트북' },
+      { name: 'cardId', label: '카드', type: 'select', value: x ? x.cardId : cardId || S.cards[0].id, options: S.cards.map((c) => [c.id, c.name]) },
+      x ? { name: 'start', label: '첫 결제월', type: 'month', value: x.startMonth } : { type: 'html', html: '' },
+      { name: 'months', label: x ? '개월 수' : '남은 개월 수 (이번 결제 포함)', type: 'number', value: x ? x.months : '', ph: '예: 3' },
       { name: 'amount', label: '한 달 금액', type: 'money', value: x ? (Array.isArray(x.amounts) ? x.amounts[0] : x.amount) : '' },
       { name: 'amounts', label: '달마다 금액이 다르면 (선택, 쉼표로)', value: x && Array.isArray(x.amounts) ? x.amounts.join(', ') : '', ph: '예: 18168, 18166, 18166' },
       { name: 'note', label: '메모 (선택)', value: x ? x.note || '' : '' },
@@ -873,14 +897,16 @@
       const name = val('name').trim(); const months = Number(val('months'));
       const list = val('amounts').split(/[,\s]+/).map((s) => Math.abs(parseAmt(s))).filter(Boolean);
       const amount = Math.abs(parseAmt(val('amount'))) || list[0];
-      if (!name || !months || !amount || !val('start')) return toast('이름·첫 결제월·개월 수·금액을 적어 주세요');
+      const start = x ? val('start') : nextPayMonth(card(val('cardId')));
+      if (!name || !months || !amount || !start) return toast('이름·개월 수·금액을 적어 주세요');
       const y = x || { id: uid() };
-      Object.assign(y, { name, cardId: val('cardId'), startMonth: val('start'), months, amount, note: val('note').trim() });
+      Object.assign(y, { name, cardId: val('cardId'), startMonth: start, months, amount, note: val('note').trim() });
       if (list.length) y.amounts = list; else delete y.amounts;
       if (!x) S.installments.push(y);
       return LINKED;
-    }, x ? () => { S.installments = S.installments.filter((y) => y !== x); return true; } : null);
+    }, x ? () => { S.installments = S.installments.filter((y) => y !== x); return true; } : null, x ? '' : '카드앱 할부 내역에서 남은 회차를 보고 적으면 돼요.');
   }
+
   function editDebt(id) {
     const d = id ? S.debts.find((y) => y.id === id) : null;
     formSheet(d ? '갚을·받을 돈 고치기' : '갚을·받을 돈 추가', [
@@ -1300,8 +1326,8 @@
     },
     inputSave() { const n = applyInputs(S, document.querySelector('.screen')); if (!n) return toast('고친 칸이 없어요'); save(); render(); toast(n + '칸 저장했어요 · 모든 탭에 반영됐어요'); },
     inputReset() { render(); toast('되돌렸어요'); },
-    editAccount: (d) => editAccount(d.id), editCard: (d) => editCard(d.id), editFixed: (d) => editFixed(d.id), fixedInfo: (d) => fixedInfo(d.id), editIncome: (d) => editIncome(d.id),
-    editLoan: (d) => editLoan(d.id), editInst: (d) => editInst(d.id), editDebt: (d) => editDebt(d.id), debt: (d) => debtSheet(d.id),
+    editAccount: (d) => editAccount(d.id), editCard: (d) => editCard(d.id), editFixed: (d) => editFixed(d.id, { name: d.name, cat: d.cat }), fixedInfo: (d) => fixedInfo(d.id), editIncome: (d) => editIncome(d.id),
+    editLoan: (d) => editLoan(d.id), editInst: (d) => editInst(d.id, d.card), editDebt: (d) => editDebt(d.id), debt: (d) => debtSheet(d.id),
     formSave() { const r = sheet.onSave(); if (r === true || typeof r === 'string') { save(); closeSheet(); render(); toast(r === true ? '저장했어요' : r); } },
     formDelete() { if (!confirm('삭제할까요?')) return; if (sheet.onDelete() !== false) { save(); closeSheet(); render(); toast('삭제했어요 · 모든 탭에서 빠졌어요'); } },
     settle(d) {
