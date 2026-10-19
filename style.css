@@ -329,3 +329,33 @@ a.tint:active { transform: scale(.99); }
 .info-list div:last-child { border-bottom: 0; }
 .info-list span { color: var(--text3); font-size: 14px; flex: none; }
 .info-list b { font-size: 15px; font-weight: 600; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+
+/* v2.2 현황 첫 화면: 머리 카드 하나 + 확인할 것 + 주기 요약 */
+.mast.home { flex-direction: column; align-items: stretch; gap: 0; padding: 18px 18px 16px 22px; }
+.mast-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mast-lab { font-size: 14px; opacity: .8; font-weight: 500; }
+.mast-num { display: block; font-size: 36px; font-weight: 800; letter-spacing: -1.2px; line-height: 1.15; margin-top: 2px; }
+.mast-num em { font-style: normal; font-size: 22px; font-weight: 700; margin-left: 2px; opacity: .85; }
+.mast-sub { font-size: 13px; opacity: .78; margin-top: 10px; }
+.mast-sub b { opacity: 1; font-weight: 700; }
+.mast-chips { display: flex; gap: 8px; margin-top: 14px; }
+.mast-chips a { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .12); }
+.mast-chips a span { font-size: 12px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mast-chips a b { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.mast-chips a.good b { color: #8ef0c3; } .mast-chips a.bad b { color: #ffb0bf; }
+.card.todo { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 28%, transparent); }
+.dot { display: block; width: 10px; height: 10px; border-radius: 50%; margin: 0 10px 0 4px; }
+.dot.blue { background: #3182f6; } .dot.indigo { background: #6b5bf0; } .dot.amber { background: #f0a000; } .dot.red { background: #f04452; }
+.card.todo .row { min-height: 52px; padding: 7px 0; }
+.card.todo .row .t { font-size: 15px; font-weight: 600; }
+.period-card { display: block; }
+.period-card .sec-head > span { color: var(--text2); }
+.trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 6px 0 12px; }
+.trio div { display: flex; flex-direction: column; gap: 2px; padding: 10px 9px; border-radius: 14px; background: var(--soft); min-width: 0; }
+.trio span { font-size: 12px; color: var(--text3); }
+.trio b { font-size: 14.5px; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
+.trio b.in { color: var(--in); }
+.prog { position: relative; height: 8px; border-radius: 4px; background: var(--line); overflow: visible; }
+.prog i { display: block; height: 100%; border-radius: 4px; background: var(--blue); }
+.prog u { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--text); border-radius: 1px; margin-left: -1px; }
+.prog-lab { display: flex; justify-content: space-between; font-size: 12px; color: var(--text3); margin-top: 6px; }
