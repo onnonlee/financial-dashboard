@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.9';
+  const VERSION = '2.10';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -191,10 +191,22 @@
     return '<span class="bico' + (cls ? ' ' + cls : '') + (L[2].length > 3 ? ' long' : '') + '" style="background:' + L[0] + ';color:' + L[1] + '">' + esc(L[2]) + '</span>';
   }
   const bankChip = (name) => bankIcon(name);
-  // 은행 고르기: 버튼을 누르면 아래에 로고+이름 타일이 펼쳐짐
+  // 은행 고르기: 버튼을 누르면 토스처럼 아래에서 '은행을 선택해주세요' 창이 올라옴 (3칸 타일)
   const bankField = (name, value, attrs) => '<input type="hidden" name="' + name + '" value="' + esc(value || '') + '"' + (attrs || '') + '>' +
-    '<button type="button" class="bank-btn' + (value ? '' : ' empty') + '" data-act="bankOpen" data-f="' + name + '">' + (value ? bankIcon(value) + '<b>' + esc(value) + '</b>' : '<span class="bico q">?</span><b>은행 고르기</b>') + '<span class="chev">' + I.right + '</span></button>' +
-    '<div class="bank-grid" data-for="' + name + '" hidden>' + BANK_NAMES.map((b) => '<button type="button" class="bank-tile' + (b === value ? ' on' : '') + '" data-act="bankPick" data-f="' + name + '" data-b="' + b + '">' + bankIcon(b, 'lg') + '<span>' + b + '</span></button>').join('') + '</div>';
+    '<button type="button" class="bank-btn' + (value ? '' : ' empty') + '" data-act="bankOpen" data-f="' + name + '">' + (value ? bankIcon(value) + '<b>' + esc(value) + '</b>' : '<span class="bico q">?</span><b>은행 고르기</b>') + '<span class="chev">' + I.right + '</span></button>';
+  // 토스 송금 화면과 같은 순서·이름표
+  const POP_ORDER = ['농협', '카카오뱅크', '국민', '토스뱅크', '신한', '우리', '기업', '하나', '새마을금고', '부산', 'iM뱅크', '케이뱅크', '신협', '우체국', 'SC제일', '경남', '광주', '수협', '전북', '제주', '씨티', '산업'];
+  const POP_LABEL = { 농협: 'NH농협', 국민: 'KB국민', 기업: 'IBK기업', 새마을금고: '새마을', 산업: 'KDB산업' };
+  function bankPop(f) {
+    const cur = (document.querySelector('#sheet [name="' + f + '"]') || {}).value;
+    let el = document.getElementById('bankPop');
+    if (!el) { el = document.createElement('div'); el.id = 'bankPop'; document.body.appendChild(el); }
+    el.innerHTML = '<div class="bp-scrim" data-act="bankClose"></div><section class="bp" role="dialog" aria-modal="true"><i class="bp-grab"></i><h3>은행을 선택해주세요</h3><div class="bp-grid">' +
+      POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === cur ? ' on' : '') + '" data-act="bankPick" data-f="' + f + '" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') +
+      '</div>' + (BANK_NAMES.some((b) => !logoImgs[b]) ? '<button type="button" class="bp-more" data-act="logoFill">진짜 로고로 바꾸기 (토스 화면 캡처)</button>' : '') + '</section>';
+    el.hidden = false; requestAnimationFrame(() => el.classList.add('on'));
+  }
+  function bankClose() { const el = document.getElementById('bankPop'); if (!el) return; el.classList.remove('on'); el.hidden = true; }
   const acctChip = (a) => bankChip(a.bank || a.name);
 
   // ===== 이번 급여로 버티면 (이전 대시보드의 전체자금예상) =====
@@ -1288,16 +1300,12 @@
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
     goBook() { location.hash = '#/book'; },
-    bankOpen(d) {
-      const grid = document.querySelector('#sheet .bank-grid[data-for="' + d.f + '"]'); if (!grid) return;
-      document.querySelectorAll('#sheet .bank-grid').forEach((g) => { if (g !== grid) g.hidden = true; });
-      grid.hidden = !grid.hidden; if (!grid.hidden) grid.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    },
+    bankOpen(d) { bankPop(d.f); },
+    bankClose() { bankClose(); },
     bankPick(d) {
+      bankClose();
       const inp = document.querySelector('#sheet [name="' + d.f + '"]'); if (!inp) return; inp.value = d.b;
       const btn = document.querySelector('#sheet .bank-btn[data-f="' + d.f + '"]'); btn.classList.remove('empty'); btn.innerHTML = bankIcon(d.b) + '<b>' + esc(d.b) + '</b><span class="chev">' + I.right + '</span>';
-      document.querySelectorAll('#sheet .bank-tile[data-f="' + d.f + '"]').forEach((t) => t.classList.toggle('on', t.dataset.b === d.b));
-      document.querySelector('#sheet .bank-grid[data-for="' + d.f + '"]').hidden = true;
       if (sheet && sheet.setup) sheet.setup.bankSel();
     },
     resetAll() {
@@ -1306,7 +1314,7 @@
         foot: () => '<button class="btn ghost" data-act="exportJSON">먼저 백업 내보내기</button><button class="btn danger" data-act="resetGo">모두 지우고 처음부터</button>' });
     },
     resetGo() { try { [KEY, OLDKEY, 'money.v2.last'].forEach((k) => localStorage.removeItem(k)); } catch (e) { /* 지울 게 없음 */ } S = C.emptyState(); last = {}; closeSheet(); location.hash = '#/home'; render(); toast('모두 지웠어요'); },
-    logoFill: () => logoSheet(), logoSave: () => sheet.logo.save(), logoBack: () => sheet.logo.back(), logoReset: () => logoReset(),
+    logoFill: () => { bankClose(); logoSheet(); }, logoSave: () => sheet.logo.save(), logoBack: () => sheet.logo.back(), logoReset: () => logoReset(),
     setup: () => setupSheet(), setupRead: () => sheet.setup.read(), setupBack: () => sheet.setup.back(), setupSave: () => sheet.setup.save(), 
     capture: () => captureSheet(), capRead: () => sheet.cap.read(), capBack: () => sheet.cap.back(), capSave: () => sheet.cap.save(),
     sched: (d) => schedSheet(d.k, d.p),

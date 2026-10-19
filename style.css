@@ -407,12 +407,27 @@ details.paste .btn { margin-top: 8px; }
 .bank-btn.empty b { color: var(--warn); }
 .field > .bank-btn { background: var(--soft); }
 .bank-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 0 2px; }
-.bank-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 8px; border-radius: 14px; background: var(--card); }
-.field .bank-tile { background: var(--soft); }
+.bank-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 8px; border-radius: 14px; background: var(--soft); }
 .bank-tile span { font-size: 12px; color: var(--text2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.bank-tile.on { box-shadow: inset 0 0 0 2px var(--blue); }
-.bank-tile.on span { color: var(--blue); font-weight: 700; }
-.bank-tile:active { transform: scale(.96); }
+/* 은행 선택 창 (토스 송금 화면처럼) */
+#bankPop { position: fixed; inset: 0; z-index: 40; }
+.bp-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .35); opacity: 0; transition: opacity .22s; }
+.bp { position: absolute; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; max-height: 86vh; overflow-y: auto; background: var(--card); border-radius: 28px 28px 0 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); -webkit-overflow-scrolling: touch; }
+#bankPop.on .bp-scrim { opacity: 1; }
+#bankPop.on .bp { transform: none; }
+.bp-grab { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 18px; }
+.bp h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin: 0 4px 20px; }
+.bp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bp-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 104px; padding: 16px 4px 14px; border-radius: 18px; background: var(--bg); transition: transform .12s; }
+.bp-tile span { font-size: 15px; color: var(--text); font-weight: 500; letter-spacing: -0.3px; white-space: nowrap; }
+.bp-tile.on { box-shadow: inset 0 0 0 2px var(--blue); }
+.bp-tile.on span { color: var(--blue); font-weight: 700; }
+.bp-tile:active { transform: scale(.96); background: var(--line); }
+.bp-tile .bico.img { background: transparent; }
+.bico.xl { width: 40px; height: 40px; border-radius: 12px; font-size: 12px; }
+.bico.xl.img { border-radius: 0; }
+.bico.xl.img img { object-fit: contain; }
+.bp-more { display: block; width: 100%; margin-top: 16px; padding: 12px; font-size: 14px; color: var(--blue); font-weight: 600; }
 .sr-bank .grow { flex: 1; min-width: 0; }
 .sr-bank { align-items: flex-start; }
 .sr-bank .logo { margin-top: 5px; }

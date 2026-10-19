@@ -1,5 +1,5 @@
 // 오프라인에서도 열리게 앱 파일만 저장. 데이터는 localStorage에 있음.
-const CACHE = 'money-v2-10';
+const CACHE = 'money-v2-11';
 const OCR = 'money-ocr-5.1.1'; // 글자 읽기 파일은 크고 잘 안 바뀌어서 한 번 받으면 계속 씀
 const FILES = ['./', 'index.html', 'style.css', 'core.js', 'main.js', 'manifest.webmanifest', 'icons/icon-180.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))); self.skipWaiting(); });
