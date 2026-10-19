@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.3';
+  const VERSION = '2.4';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -537,7 +537,8 @@
   function settingsScreen() {
     return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
       '<section class="card">' + head('데이터', '') + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
-      (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') + '</section>' +
+      (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') +
+      row({ act: 'resetAll', t: '<span class="danger">처음부터 다시 시작</span>', s: '이 기기의 데이터를 모두 지우고 처음 화면으로 가요', amt: '' }) + '</section>' +
       '<p class="hint center">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가<br>버전 ' + VERSION + '</p>';
   }
 
@@ -1079,6 +1080,12 @@
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
     goBook() { location.hash = '#/book'; },
+    resetAll() {
+      const n = S.accounts.length + S.cards.length + S.fixed.length + S.loans.length + S.records.length;
+      openSheet({ title: '처음부터 다시 시작', body: () => '<p class="hint">이 아이폰에 저장된 계좌·카드·고정비·대출·가계부 ' + n + '개를 모두 지워요. 되돌릴 수 없어요.<br>남겨 두고 싶으면 먼저 백업을 내보내 주세요.</p>',
+        foot: () => '<button class="btn ghost" data-act="exportJSON">먼저 백업 내보내기</button><button class="btn danger" data-act="resetGo">모두 지우고 처음부터</button>' });
+    },
+    resetGo() { try { [KEY, OLDKEY, 'money.v2.last'].forEach((k) => localStorage.removeItem(k)); } catch (e) { /* 지울 게 없음 */ } S = C.emptyState(); last = {}; closeSheet(); location.hash = '#/home'; render(); toast('모두 지웠어요'); },
     setup: () => setupSheet(), setupRead: () => sheet.setup.read(), setupBack: () => sheet.setup.back(), setupSave: () => sheet.setup.save(), setupBank: (d) => sheet.setup.bank(Number(d.i), d.b),
     capture: () => captureSheet(), capRead: () => sheet.cap.read(), capBack: () => sheet.cap.back(), capSave: () => sheet.cap.save(),
     sched: (d) => schedSheet(d.k, d.p),

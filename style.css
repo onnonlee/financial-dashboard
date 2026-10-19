@@ -165,7 +165,7 @@ button.row:active { opacity: .55; }
 .btn.soft { background: var(--blue-bg); color: var(--blue); min-height: 48px; font-size: 16px; margin-top: 14px; }
 .btn.ghost { background: var(--card); color: var(--text2); min-height: 50px; font-size: 16px; }
 .sheet .btn.ghost { background: var(--soft); }
-.btn.danger { color: #e5484d; }
+.btn.danger { background: #e5484d; color: #fff; } .btn.ghost.danger { background: var(--card); color: #e5484d; } .row .danger { color: #e5484d; }
 .btn.sm { width: auto; min-height: 34px; padding: 0 12px; font-size: 14px; border-radius: 10px; margin: 0; }
 .pill { display: inline-flex; align-items: center; gap: 4px; padding: 7px 11px; border-radius: 999px; background: var(--soft); font-size: 14px; color: var(--text2); font-weight: 600; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
