@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.28-미리보기';
+  const VERSION = '2.29-미리보기';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -686,7 +686,7 @@
     const list = (rows) => rows.length ? '<section class="card ob-list">' + rows.join('') + '</section>' : '';
     const item = (act, id, t, sub, amt, extra) => '<button class="row" data-act="' + act + '" data-id="' + id + '"' + (extra || '') + '><span class="grow"><span class="t">' + t + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' + amt + '</button>';
     const cta = (act, label, sub) => '<div class="ob-foot">' + (sub || '') + '<button class="btn" data-act="' + act + '">' + label + '</button></div>';
-    const foot = (has, opt) => cta(last ? 'obDone' : 'obNext', last ? (has ? '시작하기' : '대출 없이 시작하기') : (has || !opt ? '다음' : '없어요, 다음'));
+    const foot = (has, opt) => cta(last ? 'obDone' : 'obNext', has || !opt ? (last ? '시작하기' : '다음') : '나중에 입력할게요');
     const q = obQ(); const prog = (step + (step === 0 ? Math.min(q, 3) / 4 : 0) + 0.5) / OB_STEPS.length;
     let h = '<main class="screen ob"><div class="ob-top"><button class="ob-back" data-act="obBack" aria-label="이전">' + I.left + '</button><div class="ob-bar"><s style="width:' + Math.round(prog * 100) + '%"></s></div><span class="ob-n">' + (step + 1) + '/' + OB_STEPS.length + '</span><button class="ob-reset" data-act="resetAll">처음부터</button></div>';
     if (step === 0) {
