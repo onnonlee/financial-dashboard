@@ -549,3 +549,39 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .card .ko-units button, #sheet .ko-units button { background: var(--bg); }
 .ko-units button:active { transform: scale(.95); background: var(--line); }
 .money.huge + .ko-row .ko-units button { background: var(--card); }
+/* 앱 전용 숫자 키패드 */
+:root { --padh: calc(348px + env(safe-area-inset-bottom)); }
+#pad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 640px; margin: 0 auto; background: var(--card); transform: translateY(100%); transition: transform .24s cubic-bezier(.2, .8, .2, 1); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -6px 24px rgba(0, 0, 0, .06); }
+#pad.on { transform: none; }
+.pad-units { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 16px; background: var(--bg); }
+.pad-ko { flex: 1; font-size: 15px; font-weight: 700; color: var(--blue); letter-spacing: -0.3px; }
+.pad-units button { min-width: 56px; height: 36px; border-radius: 18px; background: var(--card); font-size: 16px; font-weight: 700; color: var(--text); }
+.pad-units button:active { transform: scale(.95); }
+.pad-ok { display: block; width: 100%; height: 56px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600; }
+.pad-keys { display: grid; grid-template-columns: repeat(3, 1fr); }
+.pad-keys button { height: 60px; font-size: 26px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
+.pad-keys button:active { background: var(--soft); }
+.pad-keys svg { width: 26px; height: 26px; color: var(--text3); }
+.money.pad .input { caret-color: transparent; cursor: pointer; }
+.money.pad + .ko-row .ko-units { display: none; }
+.money.pad.pad-on .input { box-shadow: 0 0 0 2px var(--blue) inset; }
+.money.huge.pad.pad-on .input { box-shadow: none !important; }
+body.pad-open .sheet { bottom: var(--padh); max-height: calc(92vh - var(--padh)); border-radius: 24px 24px 0 0; }
+body.pad-open .sheet-foot { display: none; }
+body.pad-open .screen.ob .ob-foot { display: none; }
+body.pad-open .screen.ob { padding-bottom: var(--padh); }
+/* 가벼운 머리 카드: 흰 바탕 + 파란 포인트 (남색 그라데이션 대신) */
+.mast, .in-card { background: var(--card); color: var(--text); box-shadow: 0 2px 12px rgba(20, 30, 60, .06); }
+.mast-lab, .in-card span { color: var(--text2); opacity: 1; }
+.mast-num em { color: var(--text2); opacity: 1; }
+.mast-sub, .mast small, .mast p { color: var(--text2); opacity: 1; }
+.mast-sub b { color: var(--text); }
+.mast-btn { background: var(--soft); color: var(--text2); }
+.mast-btn.on { background: #e8f3ff; color: var(--blue); }
+.mast-chips a, .in-chips i { background: var(--soft); color: var(--text); }
+.mast-chips a span { color: var(--text2); opacity: 1; }
+.mast-chips a.good b { color: #1f9a4a; } .mast-chips a.bad b { color: #e5484d; }
+.in-card { box-shadow: 0 6px 20px rgba(20, 30, 60, .08); }
+.in-bar { background: var(--line); }
+.in-bar s { background: var(--blue); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast-chips a.good b { color: #4cd685; } :root:not([data-theme="light"]) .mast-chips a.bad b { color: #ff7a85; } :root:not([data-theme="light"]) .mast-btn.on { background: rgba(49, 130, 246, .2); } }

@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.27';
+  const VERSION = '2.27-미리보기';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -81,9 +81,10 @@
       '<div class="sheet-body">' + sheet.body() + '</div>' + (sheet.foot ? '<div class="sheet-foot">' + sheet.foot() + '</div>' : '');
     el.querySelector('.sheet-body').scrollTop = top;
     koAll(el); if (sheet.mount) sheet.mount(el);
-    if (sheet.focus && !sheet.focused) { sheet.focused = true; const f = el.querySelector(sheet.focus); if (f) setTimeout(() => f.focus(), 60); }
+    if (sheet.focus && !sheet.focused) { sheet.focused = true; const f = el.querySelector(sheet.focus); if (f) setTimeout(() => focusAmt(f), 60); }
   }
   function closeSheet() {
+    closePad();
     const el = document.getElementById('sheet'); el.classList.remove('on');
     document.getElementById('scrim').hidden = true; el.hidden = true; sheet = null;
   }
@@ -113,7 +114,34 @@
     }
     return Number(dg || 0);
   }
-  const koAll = (root) => (root || document).querySelectorAll('[data-live=money]').forEach(koFill);
+  const koAll = (root) => { (root || document).querySelectorAll('[data-live=money]').forEach(koFill); padMark(root); };
+  // ===== 앱 전용 숫자 키패드 (큰 금액 칸): 1~9, 00, 0, 지우기 + 위에 [만]·[천]과 파란 확인 =====
+  const PAD_SEL = '.money.big .input, .money.huge .input';
+  let padEl = null;
+  function padMark(root) { (root || document).querySelectorAll(PAD_SEL).forEach((el) => { el.readOnly = true; el.setAttribute('inputmode', 'none'); el.closest('.money').classList.add('pad'); }); }
+  function padOk() { return document.getElementById('obSal') && padEl && padEl.to && padEl.to.id === 'obSal' ? ['obSalOk', '확인'] : ['padClose', '완료']; }
+  function openPad(el) {
+    if (!el) return;
+    let p = document.getElementById('pad');
+    if (!p) { p = document.createElement('div'); p.id = 'pad'; document.body.appendChild(p); }
+    padEl = { to: el };
+    document.querySelectorAll('.money.pad-on').forEach((m) => m.classList.remove('pad-on')); el.closest('.money').classList.add('pad-on');
+    const [act, label] = padOk();
+    const key = (k, l) => '<button type="button" data-act="padKey" data-k="' + k + '">' + (l || k) + '</button>';
+    p.innerHTML = '<div class="pad-units"><span class="pad-ko"></span><button type="button" data-act="padUnit" data-u="10000">만</button><button type="button" data-act="padUnit" data-u="1000">천</button></div>' +
+      '<button type="button" class="pad-ok" data-act="' + act + '">' + label + '</button>' +
+      '<div class="pad-keys">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => key(n)).join('') + key('00') + key('0') + key('del', I.left) + '</div>';
+    p.hidden = false; document.body.classList.add('pad-open'); requestAnimationFrame(() => p.classList.add('on')); padKo();
+    setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 120);
+  }
+  function closePad() { const p = document.getElementById('pad'); padEl = null; document.body.classList.remove('pad-open'); document.querySelectorAll('.money.pad-on').forEach((m) => m.classList.remove('pad-on')); if (p) { p.classList.remove('on'); p.hidden = true; } }
+  function padKo() { const k = document.querySelector('#pad .pad-ko'); if (k && padEl) k.textContent = koWon(parseAmt(padEl.to.value)) || '금액을 입력해 주세요'; }
+  function applyUnit(el, u) {
+    const ds = el.dataset; const typed = ds.base ? Number(ds.pend || 0) : moneyTyped(el); if (!typed) return;
+    const n = Number(ds.base || 0) + typed * u; ds.base = n; ds.pend = ''; ds.prev = String(n);
+    el.value = won(n); koFill(el); if (sheet && sheet.rec) recHint();
+  }
+  const focusAmt = (el) => { if (!el) return; if (el.matches(PAD_SEL)) openPad(el); else el.focus(); };
   function field(f) {
     const lab = '<span class="lab">' + esc(f.label) + (f.sub ? ' <em>' + esc(f.sub) + '</em>' : '') + '</span>';
     if (f.type === 'switch') return '<label class="switch"><span>' + esc(f.label) + (f.hint ? '<small>' + esc(f.hint) + '</small>' : '') + '</span><input type="checkbox" name="' + f.name + '"' + (f.value ? ' checked' : '') + '><i></i></label>';
@@ -143,6 +171,7 @@
     for (const f of S.fixed) if (f.base) f.amount = C.fixedAmount(f, curP());
     // 통장 없이 적어 둔 수입은 통장이 생기면 같은 은행 통장(없으면 첫 입출금 통장)으로
     if (S.accounts.length && S.incomes.some((x) => !acct(x.accountId))) { for (const x of S.incomes) if (!acct(x.accountId)) x.accountId = (accOfBank(x.bank) || S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id; save(); }
+    if (padEl) closePad();
     if (onboarding()) { app.innerHTML = onboard(); koAll(app); return; }
     if (!view.P) view.P = curP();
     const fn = { more: moreScreen, input: inputScreen, home: homeScreen, book: bookScreen, flow: flowScreen, fixed: fixedScreen, loans: loansScreen, accounts: accountsScreen, cards: cardsScreen, income: incomeScreen, debts: debtsScreen, settings: settingsScreen }[view.tab] || homeScreen;
@@ -713,7 +742,7 @@
     S.obExtra = Array.from(document.querySelectorAll('.ob .dyn-row[data-t="inc"]')).map((r) => ({ name: r.querySelector('[data-k=name]').value.trim(), amount: Math.abs(parseAmt(r.querySelector('[data-k=val]').value)), day: Number(r.querySelector('[data-k=day]').value), bank: r.querySelector('[data-k=bank]').value || null })).filter((r) => r.name && r.amount);
   }
   // 질문에 답하면 아직 안 한 다음 질문으로 (고치러 돌아온 경우엔 다시 맨 앞 질문으로)
-  function obAnswer(q) { S.obMaxQ = Math.max(obMax(), q + 1); S.obQ = S.obMaxQ; save(); render(); const el = document.getElementById('obSal') || document.getElementById('obDayIn'); if (el) el.focus(); }
+  function obAnswer(q) { closePad(); S.obMaxQ = Math.max(obMax(), q + 1); S.obQ = S.obMaxQ; save(); render(); focusAmt(document.getElementById('obSal') || document.getElementById('obDayIn')); }
   function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; delete S.obSalBank; delete S.obQ; delete S.obMaxQ; S.started = true; save(); location.hash = '#/home'; render(); }
 
   // ===== 시트: 가계부 기록 =====
@@ -1408,13 +1437,15 @@
     editRecord(d) { const r = S.records.find((x) => x.id === d.id); if (r) recordSheet(r); },
     recType(d) { const rec = sheet.rec; rec.x.amount = Math.abs(parseAmt(val('amt'))); rec.x.memo = val('memo'); rec.x.date = val('date'); rec.f.type = d.k; rec.f.cat = d.k === 'income' ? '급여' : rec.f.cat === '급여' ? last.cat || '식비' : rec.f.cat; paintSheet(); },
     recCat(d) { sheet.rec.f.cat = d.c; document.querySelectorAll('#sheet .cat').forEach((b) => b.classList.toggle('on', b.dataset.c === d.c)); recHint(); },
-    unit(d, b) {
-      const el = b.closest('.ko-row').previousElementSibling.querySelector('.input'); const ds = el.dataset; const u = Number(d.u);
-      const typed = ds.base ? Number(ds.pend || 0) : moneyTyped(el); if (!typed) return el.focus();
-      const n = Number(ds.base || 0) + typed * u; ds.base = n; ds.pend = ''; ds.prev = String(n);
-      el.value = won(n); koFill(el); el.focus(); el.setSelectionRange(el.value.length, el.value.length);
-      if (sheet && sheet.rec) recHint();
+    padKey(d) {
+      const el = padEl && padEl.to; if (!el) return;
+      if (d.k === 'del') { const dg = el.value.replace(/[^0-9]/g, ''); el.value = dg.slice(0, -1); } else el.value = el.value + d.k;
+      el.dispatchEvent(new Event('input', { bubbles: true })); padKo();
     },
+    padUnit(d) { if (padEl) applyUnit(padEl.to, Number(d.u)); padKo(); },
+    padClose: () => closePad(),
+    unit(d, b) { const el = b.closest('.ko-row').previousElementSibling.querySelector('.input'); applyUnit(el, Number(d.u)); el.focus(); el.setSelectionRange(el.value.length, el.value.length); },
+
     saveRecord,
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
@@ -1456,7 +1487,7 @@
       S.settings.payDay = v; obAnswer(0); },
     obSalOk(d) { if (d.skip) S.obSalary = null; else { obReadSal(); if (!S.obSalary) return toast('월급을 적어 주세요'); } obAnswer(1); },
     obBank(d) { S.obSalBank = d.b || null; obAnswer(2); },
-    obEdit(d) { obReadSal(); S.obQ = Number(d.q); save(); render(); window.scrollTo(0, 0); const el = document.getElementById('obSal') || document.getElementById('obDayIn'); if (el) el.focus(); },
+    obEdit(d) { obReadSal(); S.obQ = Number(d.q); save(); render(); window.scrollTo(0, 0); focusAmt(document.getElementById('obSal') || document.getElementById('obDayIn')); },
     obNext() { obReadSal(); if ((S.onboard || 0) <= 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
     obSalAcc(d) { const old = salAcc(); S.obSalAcc = d.id; S.incomes.forEach((x) => { if (x.accountId === old) x.accountId = d.id; }); save(); render(); },
     obBack() { obReadSal(); if (!S.onboard) { if (obQ() > 0) S.obQ = obQ() - 1; else delete S.onboard; } else S.onboard -= 1; save(); render(); window.scrollTo(0, 0); },
@@ -1504,8 +1535,9 @@
     if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.preventDefault();
     fn(el.dataset, el, ev);
   });
+  document.addEventListener('click', (ev) => { const el = ev.target.closest && ev.target.closest(PAD_SEL); if (el) openPad(el); }, true);
   // [만]·[천]을 눌러도 자판이 내려가지 않게
-  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('.ko-units')) ev.preventDefault(); });
+  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('.ko-units, #pad')) ev.preventDefault(); });
   document.addEventListener('input', (ev) => {
     const el = ev.target; const live = el.dataset && el.dataset.live;
     if (live === 'money') {
