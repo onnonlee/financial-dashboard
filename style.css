@@ -602,3 +602,13 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mast-chips a.good b { color: #fff; } .mast-chips a.bad b { color: #ffd2d8; }
 .in-bar { background: rgba(255, 255, 255, .25); } .in-bar s { background: #fff; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast, :root:not([data-theme="light"]) .in-card { background: linear-gradient(135deg, #1f5fd1 0%, #2f74e6 100%); } :root:not([data-theme="light"]) .mast-chips a, :root:not([data-theme="light"]) .in-chips i, :root:not([data-theme="light"]) .mast-btn { background: rgba(255, 255, 255, .14); } :root:not([data-theme="light"]) .mast-chips a.good b { color: #fff; } :root:not([data-theme="light"]) .mast-chips a.bad b { color: #ffd2d8; } }
+.ob-accs { display: flex; flex-direction: column; gap: 8px; }
+.ob-acc { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; background: var(--card); text-align: left; }
+.ob-acc .bico { width: 36px; height: 36px; border-radius: 11px; }
+.ob-acc .grow { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ob-acc b { font-size: 16px; font-weight: 700; }
+.ob-acc .grow span { font-size: 13px; color: var(--text3); }
+.ob-acc .chk { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--line); flex: none; }
+.ob-acc.on { box-shadow: inset 0 0 0 2px var(--blue); }
+.ob-acc.on .chk { background: var(--blue); box-shadow: none; }
+.ob-acc:active { transform: scale(.98); }
