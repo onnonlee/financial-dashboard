@@ -216,7 +216,7 @@
       income: ['수입 항목', '', '해당 월 흐름에 들어가는 수입을 모아서 보여줘요.'],
       debts: ['갚을·받을 돈', '', '임시출금, 빌린 돈, 받을 돈을 따로 관리해요.'],
       settings: ['설정', '', ''],
-      more: ['전체', '', '내 돈, 지출, 관리 메뉴를 모아 뒀어요.'],
+      more: ['전체', '', '자산, 지출, 관리 메뉴를 모아 뒀어요.'],
     }[view.tab];
     if (!H) return '';
     if (!H) return '';
@@ -515,7 +515,7 @@
     const item = (tab, name, sub, amt, ic, icn) => '<a class="row" href="#/' + tab + '"><span class="lead"><span class="m-ic ' + ic + '">' + I[icn] + '</span></span><span class="grow"><span class="t">' + name + '</span><span class="s">' + sub + '</span></span><span class="end"><span class="amt">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
     const grp = (title, rows) => '<section class="card menu"><h3 class="grp">' + title + '</h3>' + rows.join('') + '</section>';
     let h = soonCard();
-    h += grp('내 돈', [
+    h += grp('자산', [
       item('income', '수입', inc.length + '개 · 급여·정기 수입', '월 ' + won(inc.reduce((a, x) => a + x.amount, 0)), 'green', 'mIncome'),
       item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'teal', 'mWallet'),
       item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber', 'mSwap'),
