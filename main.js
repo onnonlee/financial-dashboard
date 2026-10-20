@@ -713,13 +713,14 @@
       else if (q === 3 && !accs.length) h += '<div class="ob-foot"><button class="ob-skip" data-act="obBank" data-b="">나중에 고를게요</button></div>';
       else if (q === 4) h += cta('obNext', '다음');
     } else if (step === 1) {
-      const sal = salaryOf(); const amt = sal && sal.amount; const sa = acct(S.obSalAcc) ? S.obSalAcc : (sal && acct(sal.accountId) ? sal.accountId : null);
+      const sal = salaryOf(); const amt = sal && sal.amount;
+      // 월급 통장은 항상 하나 고르게: 같은 은행 통장이 있으면 미리 골라 둠
+      const sa = acct(S.obSalAcc) ? S.obSalAcc : (sal && acct(sal.accountId) ? sal.accountId : ((sal && accOfBank(S.obSalBank || sal.bank)) || {}).id);
       h += head('통장을 넣어 볼까요?', '은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요.') +
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
-        // 월급 받는 은행 통장이 없으면 어느 통장으로 받는지 고르게
-        (S.accounts.length && amt && !sa && !accOfBank(S.obSalBank || sal.bank) ? '<section class="card ob-pick"><b>월급 ' + won(amt) + '원은 어느 통장으로 들어오나요?</b>' + (sal.bank ? '<span class="hint">' + esc(sal.bank) + ' 통장이 아직 없어요. 넣거나 아래에서 골라 주세요.</span>' : '') + '<div class="ob-chips">' + S.accounts.map((a) => '<button class="chip" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
-        (S.accounts.length ? foot(true) : skip('obNext'));
+        (S.accounts.length && amt ? '<section class="card ob-pick"><b>월급 ' + won(amt) + '원은 어느 통장으로 들어오나요?</b>' + (!sa && sal.bank ? '<span class="hint">' + esc(sal.bank) + ' 통장이 아직 없어요. 넣거나 아래에서 골라 주세요.</span>' : '') + '<div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
+        (S.accounts.length ? (amt && !sa ? '<div class="ob-foot"><button class="btn" disabled>통장을 골라 주세요</button></div>' : foot(true)) : skip('obNext'));
     } else if (step === 2) {
       h += head('카드값을 입력할까요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
         S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); const ins = S.installments.filter((i) => i.cardId === c.id);

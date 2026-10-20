@@ -636,3 +636,4 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .screen.hello { justify-content: flex-start; }
 .hello .in-hero { margin-top: auto; }
 .hello .in-feats { margin-bottom: auto; }
+.btn:disabled { background: var(--line); color: var(--text3); }
