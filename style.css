@@ -553,7 +553,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 :root { --padh: calc(348px + env(safe-area-inset-bottom)); }
 #pad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 640px; margin: 0 auto; background: var(--card); transform: translateY(100%); transition: transform .24s cubic-bezier(.2, .8, .2, 1); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -6px 24px rgba(0, 0, 0, .06); }
 #pad.on { transform: none; }
-.pad-units { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 16px; background: var(--bg); }
+.pad-units { display: flex; align-items: center; height: 44px; padding: 0 16px; background: var(--bg); }
 .pad-ko { flex: 1; font-size: 15px; font-weight: 700; color: var(--blue); letter-spacing: -0.3px; }
 .pad-units button { min-width: 56px; height: 36px; border-radius: 18px; background: var(--card); font-size: 16px; font-weight: 700; color: var(--text); }
 .pad-units button:active { transform: scale(.95); }

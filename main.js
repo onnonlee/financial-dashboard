@@ -100,27 +100,15 @@
   // 금액 읽어 주기: 3,205,000 → '320만 5,000원' (0을 몇 개 쳤는지 헷갈리지 않게 입력 칸 아래에 보여줌)
   const koWon = (n) => { n = Math.round(Math.abs(n)); if (n < 10000) return ''; const e = Math.floor(n / 1e8), m = Math.floor(n % 1e8 / 1e4), r = n % 1e4;
     return [e ? e + '억' : '', m ? won(m) + '만' : '', r ? won(r) : ''].filter(Boolean).join(' ') + '원'; };
-  // 금액 칸 아래: 읽어 주기 + [만]·[천] 버튼 (320 치고 [만] → 3,200,000, 이어서 5 치고 [천] → 3,205,000)
+  // 금액 칸 아래: '320만 5,000원' 읽어 주기
   function koFill(el) {
     const box = el.closest('.money'); if (!box || box.closest('.in-row, .dyn-grid')) return;
     let row = box.nextElementSibling;
-    if (!row || !row.classList.contains('ko-row')) { row = document.createElement('div'); row.className = 'ko-row'; row.innerHTML = '<span class="ko-amt"></span><span class="ko-units"><button type="button" data-act="unit" data-u="10000">만</button><button type="button" data-act="unit" data-u="1000">천</button></span>'; box.after(row); }
+    if (!row || !row.classList.contains('ko-row')) { row = document.createElement('div'); row.className = 'ko-row'; row.innerHTML = '<span class="ko-amt"></span>'; box.after(row); }
     row.querySelector('.ko-amt').textContent = koWon(parseAmt(el.value));
   }
-  // 단위를 누른 뒤 이어서 친 숫자만 따로 모음 (앞에 확정한 금액 base, 이어 친 숫자 pend)
-  function moneyTyped(el) {
-    const dg = el.value.replace(/[^0-9]/g, ''); const ds = el.dataset;
-    if (ds.base) {
-      const prev = ds.prev || ''; let pend = ds.pend || '';
-      if (dg.length > prev.length && dg.startsWith(prev)) pend += dg.slice(prev.length);
-      else if (dg.length < prev.length && prev.startsWith(dg) && pend) pend = pend.slice(0, Math.max(0, pend.length - (prev.length - dg.length)));
-      else if (dg !== prev) { delete ds.base; delete ds.pend; delete ds.prev; return Number(dg || 0); }
-      ds.pend = pend; const n = Number(ds.base) + Number(pend || 0); ds.prev = String(n); return n;
-    }
-    return Number(dg || 0);
-  }
   const koAll = (root) => { (root || document).querySelectorAll('[data-live=money]').forEach(koFill); padMark(root); };
-  // ===== 앱 전용 숫자 키패드 (큰 금액 칸): 1~9, 00, 0, 지우기 + 위에 [만]·[천]과 파란 확인 =====
+  // ===== 앱 전용 숫자 키패드 (큰 금액 칸, 휴대폰만): 1~9, 00, 0, 지우기 + 위에 읽어 주기와 파란 확인 =====
   const PAD_SEL = '.money.big .input, .money.huge .input';
   let padEl = null;
   // 손가락으로 쓰는 기기(휴대폰·태블릿)에서만 키패드, PC는 원래 키보드로
@@ -135,7 +123,7 @@
     document.querySelectorAll('.money.pad-on').forEach((m) => m.classList.remove('pad-on')); el.closest('.money').classList.add('pad-on');
     const [act, label] = padOk();
     const key = (k, l) => '<button type="button" data-act="padKey" data-k="' + k + '">' + (l || k) + '</button>';
-    p.innerHTML = '<div class="pad-units"><span class="pad-ko"></span><button type="button" data-act="padUnit" data-u="10000">만</button><button type="button" data-act="padUnit" data-u="1000">천</button></div>' +
+    p.innerHTML = '<div class="pad-units"><span class="pad-ko"></span></div>' +
       '<button type="button" class="pad-ok" data-act="' + act + '">' + label + '</button>' +
       '<div class="pad-keys">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => key(n)).join('') + key('00') + key('0') + key('del', I.left) + '</div>';
     p.hidden = false; document.body.classList.add('pad-open'); requestAnimationFrame(() => p.classList.add('on')); padKo();
@@ -143,17 +131,12 @@
   }
   function closePad() { const p = document.getElementById('pad'); padEl = null; document.body.classList.remove('pad-open'); document.querySelectorAll('.money.pad-on').forEach((m) => m.classList.remove('pad-on')); if (p) { p.classList.remove('on'); p.hidden = true; } }
   function padKo() { const k = document.querySelector('#pad .pad-ko'); if (k && padEl) k.textContent = koWon(parseAmt(padEl.to.value)) || '금액을 입력해 주세요'; }
-  function applyUnit(el, u) {
-    const ds = el.dataset; const typed = ds.base ? Number(ds.pend || 0) : moneyTyped(el); if (!typed) return;
-    const n = Number(ds.base || 0) + typed * u; ds.base = n; ds.pend = ''; ds.prev = String(n);
-    el.value = won(n); koFill(el); if (sheet && sheet.rec) recHint();
-  }
   const focusAmt = (el) => { if (!el) return; if (PAD_ON && el.matches(PAD_SEL)) openPad(el); else el.focus(); };
   function field(f) {
     const lab = '<span class="lab">' + esc(f.label) + (f.sub ? ' <em>' + esc(f.sub) + '</em>' : '') + '</span>';
     if (f.type === 'switch') return '<label class="switch"><span>' + esc(f.label) + (f.hint ? '<small>' + esc(f.hint) + '</small>' : '') + '</span><input type="checkbox" name="' + f.name + '"' + (f.value ? ' checked' : '') + '><i></i></label>';
     if (f.type === 'select') return '<label class="field">' + lab + '<select class="input" name="' + f.name + '">' + f.options.map(([v, l]) => '<option value="' + esc(v) + '"' + (String(f.value) === String(v) ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select></label>';
-    if (f.type === 'money') return '<label class="field">' + lab + '<div class="money"><input class="input" name="' + f.name + '" inputmode="numeric" data-live="money" value="' + (f.value != null && f.value !== '' ? won(f.value) : '') + '" placeholder="' + esc(f.ph || '0') + '"><span>원</span></div></label>';
+    if (f.type === 'money') return '<label class="field">' + lab + '<div class="money"><input class="input" name="' + f.name + '" inputmode="numeric" pattern="[0-9]*" data-live="money" value="' + (f.value != null && f.value !== '' ? won(f.value) : '') + '" placeholder="' + esc(f.ph || '0') + '"><span>원</span></div></label>';
     if (f.type === 'html') return f.html;
     return '<label class="field">' + lab + '<input class="input" name="' + f.name + '" type="' + (f.type || 'text') + '" value="' + esc(f.value == null ? '' : f.value) + '" placeholder="' + esc(f.ph || '') + '"' + (f.type === 'number' ? ' inputmode="decimal"' : '') + '></label>';
   }
@@ -386,7 +369,7 @@
     h += '<div class="input-bar"><div id="inPreview"></div><div class="grid2"><button class="btn ghost" data-act="inputReset">변경 취소</button><button class="btn" data-act="inputSave">저장하고 반영</button></div></div>';
     return h;
   }
-  const inRow = (k, label, v, sub) => '<label class="in-row"><span class="grow"><span class="t">' + esc(label) + '</span><span class="s">' + esc(sub || '') + '</span></span><span class="money"><input class="input" inputmode="numeric" data-live="money" data-k="' + esc(k) + '" data-orig="' + (v === '' ? '' : Math.round(v)) + '" value="' + (v === '' ? '' : won(v)) + '" placeholder="0"><span>원</span></span></label>';
+  const inRow = (k, label, v, sub) => '<label class="in-row"><span class="grow"><span class="t">' + esc(label) + '</span><span class="s">' + esc(sub || '') + '</span></span><span class="money"><input class="input" inputmode="numeric" pattern="[0-9]*" data-live="money" data-k="' + esc(k) + '" data-orig="' + (v === '' ? '' : Math.round(v)) + '" value="' + (v === '' ? '' : won(v)) + '" placeholder="0"><span>원</span></span></label>';
   // 고친 칸을 상태에 적용 (미리보기는 복사본에, 저장은 진짜에)
   function applyInputs(s, root) {
     const t = today(); const P = C.periodOf(s, t); let n = 0;
@@ -670,7 +653,7 @@
     delete S.obExtra;
   }
   const extraRow = (r) => { r = r || {}; return '<div class="dyn-row" data-t="inc"><input class="input" data-k="name" value="' + esc(r.name || '') + '" placeholder="이름 (예: 부업, 용돈, 이자)">' +
-    '<div class="dyn-grid"><div class="money"><input class="input" data-k="val" inputmode="numeric" data-live="money" value="' + (r.amount ? won(r.amount) : '') + '" placeholder="금액"><span>원</span></div>' +
+    '<div class="dyn-grid"><div class="money"><input class="input" data-k="val" inputmode="numeric" pattern="[0-9]*" data-live="money" value="' + (r.amount ? won(r.amount) : '') + '" placeholder="금액"><span>원</span></div>' +
     '<select class="input" data-k="day">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === (r.day || S.settings.payDay) ? ' selected' : '') + '>매월 ' + l + '</option>').join('') + '</select></div>' +
     (S.accounts.length ? '<div class="ob-bank"><span>받는 통장</span><select class="input" data-k="acc">' + S.accounts.map((a) => '<option value="' + a.id + '"' + (a.id === (r.acc || salAcc()) ? ' selected' : '') + '>' + esc(a.name) + '</option>').join('') + '</select></div>'
       : '<div class="ob-bank"><span>받는 은행</span>' + bankField('ib' + (obRowN++), r.bank || '', ' data-k="bank"') + '</div>') +
@@ -711,7 +694,7 @@
       if (q === 0) h += '<div class="ob-opts"><button type="button" class="ob-opt' + (obMax() > 0 && !noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="1"><b>네, 있어요</b><span>월급, 연금처럼 매달 정해진 날에 들어와요</span></button><button type="button" class="ob-opt' + (obMax() > 0 && noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="0"><b>아니요</b><span>프리랜서·자영업·학생처럼 들어오는 날이 정해져 있지 않아요</span></button></div>';
       else if (q === 1) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 1 && pd !== 31 ? pd : '') + '" placeholder="' + (noSal() ? '1' : '25') + '"><span>일</span></div>' +
         (noSal() ? '<p class="ob-ex">비워 두고 확인을 누르면 매월 1일부터예요.</p>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>');
-      else if (q === 2) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
+      else if (q === 2) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" pattern="[0-9]*" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
       else if (q === 3 && accs.length) h += '<div class="ob-accs">' + accs.map((a) => '<button type="button" class="ob-acc' + (a.id === sa ? ' on' : '') + '" data-act="obAcc" data-id="' + a.id + '">' + acctChip(a) + '<span class="grow"><b>' + esc(a.name) + '</b><span>' + (a.type === 'overdraft' ? '마이너스통장' : '입출금') + '</span></span><span class="chk"></span></button>').join('') + '</div>';
       else if (q === 3) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
       else h += S.incomes.filter((x) => !x.salary).map((x) => '<button class="row ob-inc" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
@@ -781,7 +764,7 @@
       headRight: () => existing ? '' : '<button class="pill" data-act="capture">' + I.scan + '<span>캡처</span></button>',
       body() {
         let h = '<div class="seg">' + [['expense', '지출'], ['income', '수입'], ['transfer', '이체']].map(([k, l]) => '<button data-act="recType" data-k="' + k + '"' + (f.type === k ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div>';
-        h += '<div class="money big"><input class="input" name="amt" inputmode="numeric" data-live="money" value="' + (x.amount ? won(x.amount) : '') + '" placeholder="0"><span>원</span></div>';
+        h += '<div class="money big"><input class="input" name="amt" inputmode="numeric" pattern="[0-9]*" data-live="money" value="' + (x.amount ? won(x.amount) : '') + '" placeholder="0"><span>원</span></div>';
         if (f.type !== 'transfer') {
           const cats = f.type === 'income' ? ['급여', '용돈', '정산', '환급', '수당', '기타'] : S.categories;
           h += '<div class="cats">' + cats.map((c) => '<button class="cat' + (f.cat === c ? ' on' : '') + '" data-act="recCat" data-c="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>';
@@ -900,7 +883,7 @@
     const est = od ? Math.max(0, -bal) : bal;
     openSheet({
       title: a.name + (od ? ' 사용 중인 금액' : ' 잔액'), focus: '[name=amt]',
-      body: () => '<div class="money big"><input class="input" name="amt" inputmode="numeric" data-live="money" data-est="' + est + '" value="' + won(est) + '"><span>원</span></div>' +
+      body: () => '<div class="money big"><input class="input" name="amt" inputmode="numeric" pattern="[0-9]*" data-live="money" data-est="' + est + '" value="' + won(est) + '"><span>원</span></div>' +
         '<div class="kv"><div><span>앱이 계산한 금액</span><b>' + won(est) + '</b></div><div><span>차이</span><b id="gap">0</b></div></div>' +
         '<p class="hint">은행앱 숫자를 그대로 적어 주세요. 차이는 가계부에 안 적은 입출금이에요. 저장하면 이 숫자부터 다시 계산해요.' + (od ? ' 마이너스통장은 쓴 금액(−로 보이는 숫자)을 적어요.' : '') + '</p>',
       foot: () => '<button class="btn" data-act="saveBalance" data-id="' + id + '">저장</button>',
@@ -934,7 +917,7 @@
     '<div class="dyn-grid"><label><span>언제부터 (선택)</span><input class="input" type="month" data-k="from" value="' + (d.from || '') + '"></label><label><span>언제까지 (선택)</span><input class="input" type="month" data-k="until" value="' + (d.until || '') + '"></label></div>' +
     '<button type="button" class="dyn-del" data-act="dynDel">이 할인 지우기</button></div>'; };
   const perkRow = (b) => { b = b || {}; return '<div class="dyn-row" data-t="perk"><input class="input" data-k="name" value="' + esc(b.name || '') + '" placeholder="혜택 이름 (예: 꿀머니, 쿠폰)">' +
-    '<div class="money"><input class="input" data-k="val" inputmode="numeric" data-live="money" value="' + (b.amount ? won(b.amount) : '') + '" placeholder="한 달에 받는 금액"><span>원</span></div>' +
+    '<div class="money"><input class="input" data-k="val" inputmode="numeric" pattern="[0-9]*" data-live="money" value="' + (b.amount ? won(b.amount) : '') + '" placeholder="한 달에 받는 금액"><span>원</span></div>' +
     '<div class="dyn-grid"><label><span>언제부터 (선택)</span><input class="input" type="month" data-k="from" value="' + (b.from || '') + '"></label><label><span>언제까지 (선택)</span><input class="input" type="month" data-k="until" value="' + (b.until || '') + '"></label></div>' +
     '<button type="button" class="dyn-del" data-act="dynDel">이 혜택 지우기</button></div>'; };
   const readRows = (t) => Array.from(document.querySelectorAll('#sheet .dyn-row[data-t="' + t + '"]')).map((r) => {
@@ -1309,8 +1292,8 @@
           (r.kind === 'card' ? '' : '<div class="sr-bank">' + bankField('b' + i, r.bank) + '</div>') +
           '<label class="field"><span class="lab">' + (r.kind === 'card' ? '카드 이름' : '계좌 이름') + '</span><input class="input" name="n' + i + '" value="' + esc(r.name) + '" placeholder="예: 종합통장"></label>' +
           '<div class="grid2"><select class="input" data-live="setupKind" data-i="' + i + '">' + kinds.map(([v, l]) => '<option value="' + v + '"' + (r.kind === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
-          (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
-          (r.kind === 'overdraft' ? '<p class="od-note">마이너스 ' + won(r.amount) + '원 사용 중</p><label class="field"><span class="lab">마이너스통장 한도' + (r.limit ? '' : ' <em class="req">필수</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 10,000,000"><span>원</span></div></label>' : '') +
+          (r.kind === 'skip' ? '<span></span>' : '<div class="money"><input class="input" name="a' + i + '" inputmode="numeric" pattern="[0-9]*" data-live="money" value="' + won(r.amount) + '"><span>원</span></div>') + '</div>' +
+          (r.kind === 'overdraft' ? '<p class="od-note">마이너스 ' + won(r.amount) + '원 사용 중</p><label class="field"><span class="lab">마이너스통장 한도' + (r.limit ? '' : ' <em class="req">필수</em>') + '</span><div class="money"><input class="input" name="l' + i + '" inputmode="numeric" pattern="[0-9]*" data-live="money" value="' + (r.limit ? won(r.limit) : '') + '" placeholder="예: 10,000,000"><span>원</span></div></label>' : '') +
           (r.kind === 'card' ? '<select class="input" name="d' + i + '">' + dayOpts.map(([v, l]) => '<option value="' + v + '"' + (v === r.payDay ? ' selected' : '') + '>결제일 ' + l + '</option>').join('') + '</select>' : '') + '</div>').join('');
       },
       foot: () => !rows ? '' : (rows.length ? '<button class="btn" data-act="setupSave">' + rows.filter((r) => r.kind !== 'skip').length + '개 추가</button>' : '') + '<button class="btn ghost" data-act="setupBack">다시 고르기</button>',
@@ -1461,9 +1444,7 @@
       if (d.k === 'del') { const dg = el.value.replace(/[^0-9]/g, ''); el.value = dg.slice(0, -1); } else el.value = el.value + d.k;
       el.dispatchEvent(new Event('input', { bubbles: true })); padKo();
     },
-    padUnit(d) { if (padEl) applyUnit(padEl.to, Number(d.u)); padKo(); },
     padClose: () => closePad(),
-    unit(d, b) { const el = b.closest('.ko-row').previousElementSibling.querySelector('.input'); applyUnit(el, Number(d.u)); el.focus(); el.setSelectionRange(el.value.length, el.value.length); },
 
     saveRecord,
     deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
@@ -1559,11 +1540,13 @@
   });
   document.addEventListener('click', (ev) => { if (!PAD_ON) return; const el = ev.target.closest && ev.target.closest(PAD_SEL); if (el) openPad(el); }, true);
   // [만]·[천]을 눌러도 자판이 내려가지 않게
-  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('.ko-units, #pad')) ev.preventDefault(); });
+  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('#pad')) ev.preventDefault(); });
   document.addEventListener('input', (ev) => {
     const el = ev.target; const live = el.dataset && el.dataset.live;
+    // 숫자 칸(날짜·금액)은 숫자 말고는 안 들어가게
+    if (el.getAttribute && el.getAttribute('inputmode') === 'numeric' && live !== 'money') { const d = el.value.replace(/[^0-9]/g, ''); if (d !== el.value) el.value = d; }
     if (live === 'money') {
-      const n = moneyTyped(el); el.value = el.value.trim() === '' ? '' : won(n); koFill(el);
+      const n = Math.abs(parseAmt(el.value)); el.value = el.value.trim() === '' ? '' : won(n); koFill(el);
       if (el.dataset.est != null) { const g = n - Number(el.dataset.est); const gap = document.getElementById('gap'); if (gap) gap.textContent = (g > 0 ? '+' : g < 0 ? '−' : '') + won(g); }
       recHint();
     } else if (live === 'hint') recHint();
