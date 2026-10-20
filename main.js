@@ -216,7 +216,7 @@
       income: ['수입 항목', '', '해당 월 흐름에 들어가는 수입을 모아서 보여줘요.'],
       debts: ['갚을·받을 돈', '', '임시출금, 빌린 돈, 받을 돈을 따로 관리해요.'],
       settings: ['설정', '', ''],
-      more: ['전체', '', '수입, 지출, 내 돈, 관리 메뉴를 모아 뒀어요.'],
+      more: ['전체', '', '내 돈, 지출, 관리 메뉴를 모아 뒀어요.'],
     }[view.tab];
     if (!H) return '';
     if (!H) return '';
@@ -515,17 +515,15 @@
     const item = (tab, name, sub, amt, ic, icn) => '<a class="row" href="#/' + tab + '"><span class="lead"><span class="m-ic ' + ic + '">' + I[icn] + '</span></span><span class="grow"><span class="t">' + name + '</span><span class="s">' + sub + '</span></span><span class="end"><span class="amt">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
     const grp = (title, rows) => '<section class="card menu"><h3 class="grp">' + title + '</h3>' + rows.join('') + '</section>';
     let h = soonCard();
-    h += grp('수입', [
+    h += grp('내 돈', [
       item('income', '수입', inc.length + '개 · 급여·정기 수입', '월 ' + won(inc.reduce((a, x) => a + x.amount, 0)), 'green', 'mIncome'),
+      item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'teal', 'mWallet'),
+      item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber', 'mSwap'),
     ]);
     h += grp('지출', [
       item('fixed', '구독·고정비', fx.length + '개 · 통신비·보험·구독', '월 ' + won(fx.reduce((a, x) => a + x.amount, 0)), 'blue', 'mRepeat'),
       item('cards', '카드·할부', S.cards.length + '개 카드 · 할부 ' + S.installments.length + '건', won(st.nextCardTotal || 0), 'indigo', 'mCard'),
       item('loans', '대출', '매달 내 부담 ' + won(L.monthlySelf) + '원', won(L.total), 'red', 'mLoan'),
-    ]);
-    h += grp('내 돈', [
-      item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'teal', 'mWallet'),
-      item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber', 'mSwap'),
     ]);
     h += grp('관리', [
       item('input', '한 번에 입력', '잔액·카드값을 한 화면에서 고쳐요', '', 'gray', 'mEdit'),
