@@ -520,8 +520,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .ob-q.ob-in { animation-delay: .06s; }
 @keyframes obIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 .ob-q { display: flex; flex-direction: column; gap: 10px; }
-.money.huge { background: transparent; border-bottom: 2px solid var(--line); border-radius: 0; padding: 0 2px 8px; transition: border-color .15s; }
-.money.huge:focus-within, .money.huge.pad-on { border-color: var(--blue); }
+.money.huge { background: transparent; border-bottom: 2px solid var(--blue); border-radius: 0; padding: 0 2px 8px; }
 .money.huge .input { font-size: 30px; font-weight: 800; letter-spacing: -1px; background: transparent !important; box-shadow: none !important; border-radius: 0; min-height: 52px; padding: 0 40px 0 0; text-align: left; }
 .money.huge span { right: 2px; font-size: 26px; font-weight: 700; color: var(--text); }
 .ob-banks .bp-tile { background: var(--card); min-height: 92px; padding: 12px 4px; }
@@ -536,7 +535,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .screen.ob .ob-foot { position: sticky; bottom: 0; margin: auto -16px 0; padding: 18px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--bg) 22px); z-index: 4; }
 .screen.ob { padding-bottom: 0; }
 .ob-skip { align-self: center; padding: 12px 14px; font-size: 15px; font-weight: 600; color: var(--text2); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--text3); }
-.ob-dayin { display: flex; align-items: center; gap: 4px; border-bottom: 2px solid var(--line); transition: border-color .15s; padding: 0 2px 8px; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+.ob-dayin { display: flex; align-items: center; gap: 4px; border-bottom: 2px solid var(--blue); padding: 0 2px 8px; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
 .ob-dayin .input { width: 1.5em; flex: none; min-height: 52px; padding: 0; background: transparent !important; box-shadow: none !important; border-radius: 0; font-size: 30px; font-weight: 800; text-align: center; letter-spacing: -1px; }
 .ob-quick { margin-top: 6px; }
 .ob-quick .chip.on { background: var(--blue); color: #fff; }
@@ -544,7 +543,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .ob-last.on { background: var(--blue); color: #fff; }
 /* 금액 아래: 읽어 주기 + [만]·[천] */
 .ko-row { display: flex; align-items: center; justify-content: flex-end; margin-top: 6px; padding-right: 4px; }
-.ko-amt { font-size: 14px; font-weight: 500; color: var(--text2); letter-spacing: -0.2px; }
+.ko-amt { font-size: 14px; font-weight: 600; color: var(--blue); letter-spacing: -0.2px; }
 .ko-units { display: flex; gap: 6px; margin-left: auto; }
 .ko-units button { min-width: 48px; height: 36px; padding: 0 12px; border-radius: 18px; background: var(--soft); font-size: 15px; font-weight: 700; color: var(--text); }
 .card .ko-units button, #sheet .ko-units button { background: var(--bg); }
@@ -555,7 +554,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 #pad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 640px; margin: 0 auto; background: var(--card); transform: translateY(100%); transition: transform .24s cubic-bezier(.2, .8, .2, 1); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -6px 24px rgba(0, 0, 0, .06); }
 #pad.on { transform: none; }
 .pad-units { display: flex; align-items: center; height: 44px; padding: 0 16px; background: var(--bg); }
-.pad-ko { flex: 1; text-align: right; font-size: 14px; font-weight: 500; color: var(--text2); letter-spacing: -0.3px; }
+.pad-ko { flex: 1; text-align: right; font-size: 14px; font-weight: 600; color: var(--blue); letter-spacing: -0.3px; }
 .pad-units button { min-width: 56px; height: 36px; border-radius: 18px; background: var(--card); font-size: 16px; font-weight: 700; color: var(--text); }
 .pad-units button:active { transform: scale(.95); }
 .pad-ok { display: flex; align-items: center; justify-content: center; width: 100%; height: 56px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600; }
@@ -637,4 +636,3 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .screen.hello { justify-content: flex-start; }
 .hello .in-hero { margin-top: auto; }
 .hello .in-feats { margin-bottom: auto; }
-.ob-dayin:focus-within { border-color: var(--blue); }
