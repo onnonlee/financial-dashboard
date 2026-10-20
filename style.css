@@ -585,3 +585,4 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .in-bar { background: var(--line); }
 .in-bar s { background: var(--blue); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast-chips a.good b { color: #4cd685; } :root:not([data-theme="light"]) .mast-chips a.bad b { color: #ff7a85; } :root:not([data-theme="light"]) .mast-btn.on { background: rgba(49, 130, 246, .2); } }
+.ob-reset { font-size: 13px; font-weight: 600; color: var(--text3); padding: 6px 2px 6px 6px; }
