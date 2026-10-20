@@ -105,7 +105,8 @@
     const box = el.closest('.money'); if (!box || box.closest('.in-row, .dyn-grid')) return;
     let row = box.nextElementSibling;
     if (!row || !row.classList.contains('ko-row')) { row = document.createElement('div'); row.className = 'ko-row'; row.innerHTML = '<span class="ko-amt"></span>'; box.after(row); }
-    row.querySelector('.ko-amt').textContent = koWon(parseAmt(el.value));
+    // 큰 금액 칸은 비어 있으면 0원으로
+    row.querySelector('.ko-amt').textContent = koWon(parseAmt(el.value)) || (box.matches('.big, .huge') ? '0원' : '');
   }
   const koAll = (root) => { (root || document).querySelectorAll('[data-live=money]').forEach(koFill); padMark(root); };
   // ===== 앱 전용 숫자 키패드 (큰 금액 칸, 휴대폰만): 1~9, 00, 0, 지우기 + 위에 읽어 주기와 파란 확인 =====
@@ -130,7 +131,7 @@
     setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 120);
   }
   function closePad() { const p = document.getElementById('pad'); padEl = null; document.body.classList.remove('pad-open'); document.querySelectorAll('.money.pad-on').forEach((m) => m.classList.remove('pad-on')); if (p) { p.classList.remove('on'); p.hidden = true; } }
-  function padKo() { const k = document.querySelector('#pad .pad-ko'); if (k && padEl) k.textContent = koWon(parseAmt(padEl.to.value)) || '금액을 입력해 주세요'; }
+  function padKo() { const k = document.querySelector('#pad .pad-ko'); if (k && padEl) k.textContent = koWon(parseAmt(padEl.to.value)) || '0원'; }
   const focusAmt = (el) => { if (!el) return; if (PAD_ON && el.matches(PAD_SEL)) openPad(el); else el.focus(); };
   function field(f) {
     const lab = '<span class="lab">' + esc(f.label) + (f.sub ? ' <em>' + esc(f.sub) + '</em>' : '') + '</span>';
