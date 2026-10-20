@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.32';
+  const VERSION = '2.33';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -1371,7 +1371,8 @@
     const t = today(); const P = curP();
     for (const a of d.accounts || []) {
       let x = findAcc(a.name);
-      if (!x) { x = { id: uid(), name: a.name, type: a.kind === 'overdraft' ? 'overdraft' : a.kind === 'local' ? 'local' : 'bank', include: a.kind !== 'local', balance: 0, balanceAt: 0, balanceDate: null }; S.accounts.push(x); add.계좌++; }
+      if (!x) { x = { id: uid(), name: a.name, bank: a.bank || bankOf(a.name) || (a.name === '토스' ? '토스뱅크' : null), type: a.kind === 'overdraft' ? 'overdraft' : a.kind === 'local' ? 'local' : 'bank', include: a.kind !== 'local', balance: 0, balanceAt: 0, balanceDate: null }; S.accounts.push(x); add.계좌++; }
+      if (!x.bank) x.bank = bankOf(x.name) || (x.name === '토스' ? '토스뱅크' : null);
       if (a.kind === 'overdraft') { x.type = 'overdraft'; if (a.limit) x.limit = a.limit; }
       if (a.rate) x.rate = a.rate; if (a.note && !x.purpose) x.purpose = a.note;
     }
