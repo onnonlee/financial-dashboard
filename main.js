@@ -34,6 +34,11 @@
   const wonS = (n) => (n < 0 ? '−' : '') + won(n);
   const md = (d) => (d ? Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)) : '');
   const mName = (m) => Number(m.slice(5, 7)) + '월';
+  // 월급이 없으면 '급여주기' 대신 그냥 '달'로 보여줌 (계산은 같음: 정한 날짜부터 다음 달 그 전날까지)
+  const noSal = () => !!S.settings.noSalary;
+  const PW = () => noSal() ? '' : ' 급여주기';
+  // 1일부터 끊으면 10/1~10/31은 '10월'로 (급여주기는 다음 급여 달 이름)
+  const pName = (P) => S.settings.payDay === 1 ? mName(C.addMonths(P, -1)) : mName(P);
   const ymName = (m) => m.slice(2, 4) + '년 ' + Number(m.slice(5, 7)) + '월';
   const parseAmt = (s) => { const t = String(s == null ? '' : s); const n = Number(t.replace(/[^0-9]/g, '')); return (/^\s*[-−]/.test(t) ? -1 : 1) * (isFinite(n) ? n : 0); };
   const curP = () => C.periodOf(S, today());
@@ -190,7 +195,7 @@
   const head = (title, right, tab) => tab ? '<a class="sec-head" href="#/' + tab + '"><h2>' + title + '</h2><span>' + (right || '') + I.right + '</span></a>' : '<div class="sec-head"><h2>' + title + '</h2><span>' + (right || '') + '</span></div>';
   function periodBar() {
     const P = view.P; const r = C.periodRange(S, P);
-    return '<div class="period"><button class="icon-btn" data-act="period" data-d="-1" aria-label="이전 달">' + I.left + '</button><div><b>' + mName(P) + ' 급여주기</b><span>' + md(r.start) + ' – ' + md(r.end) + (P === curP() ? ' · 지금' : '') + '</span></div><button class="icon-btn" data-act="period" data-d="1" aria-label="다음 달">' + I.rightL + '</button></div>';
+    return '<div class="period"><button class="icon-btn" data-act="period" data-d="-1" aria-label="이전 달">' + I.left + '</button><div><b>' + pName(P) + PW() + '</b><span>' + md(r.start) + ' – ' + md(r.end) + (P === curP() ? ' · 지금' : '') + '</span></div><button class="icon-btn" data-act="period" data-d="1" aria-label="다음 달">' + I.rightL + '</button></div>';
   }
   const row = (o) => '<' + (o.act ? 'button' : 'div') + ' class="row' + (o.cls ? ' ' + o.cls : '') + '"' + (o.act ? ' data-act="' + o.act + '"' + Object.entries(o.data || {}).map(([k, v]) => ' data-' + k + '="' + esc(v) + '"').join('') : '') + '>' +
     (o.lead != null ? '<span class="lead">' + o.lead + '</span>' : '') +
@@ -277,7 +282,7 @@
     const short = f.left < 0; const L = f.lines;
     const lines = [['수입', L.income, 'in'], ['카드값', -L.card], ['통장 고정비', -L.fixed], ['대출·이자', -L.loan], ['가계부 통장 지출', -L.living], ['정산·기타', -L.other]].filter((x, i) => i < 4 || x[1]);
     return '<' + (link ? 'a href="#/flow"' : 'section') + ' class="hero tint ' + (short ? 'red' : 'amber') + '"><span class="hero-label">전체자금예상 <span class="pill-s">' + (short ? '부족' : '여유') + '</span></span>' +
-      '<span class="hero-num">' + (short ? '− ' : '+ ') + won(f.left) + '원</span><span class="hero-sub">' + (ahead ? md(C.addDays(st.end, 1)) + ' 급여로 ' + mName(P) + ' 버티면' : mName(P) + ' 수입과 전체 지출 기준') + '</span>' +
+      '<span class="hero-num">' + (short ? '− ' : '+ ') + won(f.left) + '원</span><span class="hero-sub">' + (ahead ? (noSal() ? md(C.addDays(st.end, 1)) + '부터 ' + pName(P) + ' 예상' : md(C.addDays(st.end, 1)) + ' 급여로 ' + pName(P) + ' 버티면') : pName(P) + ' 수입과 전체 지출 기준') + '</span>' +
       '<div class="hero-lines">' + lines.map(([l, n, c]) => '<div><span>' + l + '</span><b' + (c ? ' class="' + c + '"' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + won(n) + '</b></div>').join('') + '</div></' + (link ? 'a' : 'section') + '>';
   }
 
@@ -288,8 +293,8 @@
     const f = C.flow(S, P, t); const short = f.left < 0;
     return '<header class="masthead"><div class="mast home"><div class="mast-top"><div><p class="mast-lab">지금 쓸 수 있는 돈</p><b class="mast-num">' + wonS(st.spendable) + '<em>원</em></b></div>' +
       '<a class="mast-btn" href="#/settings" aria-label="설정">' + I.gear + '</a></div>' +
-      '<p class="mast-sub">' + mName(st.P) + ' 급여주기 · ' + md(st.start) + ' – ' + md(st.end) + ' · <b>' + st.daysLeft + '일 남음</b></p>' +
-      '<div class="mast-chips"><a href="#/flow" class="' + (short ? 'bad' : 'good') + '"><span>' + (ahead ? mName(P) + ' 급여로' : '이번 급여로') + '</span><b>' + (short ? '부족 −' : '여유 +') + won(f.left) + '</b></a>' +
+      '<p class="mast-sub">' + pName(st.P) + PW() + ' · ' + md(st.start) + ' – ' + md(st.end) + ' · <b>' + st.daysLeft + '일 남음</b></p>' +
+      '<div class="mast-chips"><a href="#/flow" class="' + (short ? 'bad' : 'good') + '"><span>' + (noSal() ? (ahead ? pName(P) : '이번 달') : ahead ? mName(P) + ' 급여로' : '이번 급여로') + '</span><b>' + (short ? '부족 −' : '여유 +') + won(f.left) + '</b></a>' +
       '<a href="#/flow" class="' + (st.forecast < 0 ? 'bad' : '') + '"><span>' + md(st.end) + ' 예상 잔액</span><b>' + wonS(st.forecast) + '</b></a></div></div></header>';
   }
 
@@ -314,7 +319,7 @@
     const out = L.card + L.fixed + L.loan + L.living + L.other;
     const elapsed = Math.min(1, Math.max(0, C.daysBetween(st.start, t) / Math.max(1, C.daysBetween(st.start, st.end))));
     const done = f.schedule.filter((x) => !x.skip && x.dir === 'out' && x.date <= t).reduce((a, x) => a + x.amount, 0) + L.living;
-    h += '<a class="card period-card" href="#/flow">' + head(mName(st.P) + ' 급여주기', st.daysLeft + '일 남음' + I.right) +
+    h += '<a class="card period-card" href="#/flow">' + head(pName(st.P) + PW(), st.daysLeft + '일 남음' + I.right) +
       '<div class="trio"><div><span>수입</span><b class="in">' + won(L.income) + '</b></div><div><span>나갈 돈</span><b>' + won(out) + '</b></div><div><span>남는 돈</span><b class="' + (f.left < 0 ? 'warn' : '') + '">' + wonS(f.left) + '</b></div></div>' +
       '<div class="prog"><i style="width:' + Math.round(100 * Math.min(1, out ? done / out : 0)) + '%"></i><u style="left:' + Math.round(elapsed * 100) + '%"></u></div><div class="prog-lab"><span>나간 돈 ' + won(done) + '</span><span>오늘 · ' + Math.round(elapsed * 100) + '% 지남</span></div></a>';
 
@@ -368,7 +373,7 @@
     const t = today(); const P = curP(); const st = C.status(S, t);
     const sch = C.schedule(S, P, t).filter((x) => x.dir === 'in');
     let h = '<div class="intro"><b>데이터 입력</b><span>여기만 고치면 다른 탭이 모두 같이 바뀌어요.</span></div>';
-    h += '<section class="card">' + head(mName(P) + ' 급여주기 수입', '실제로 들어온 금액') + (sch.length ? sch.map((x) => inRow('in:' + x.key, x.name, x.amount, md(x.date) + ' · 기본 ' + won(x.planned) + '원')).join('') : '<p class="hint">정기 수입이 없어요. 수입 탭에서 급여를 추가해 주세요.</p>') + '</section>';
+    h += '<section class="card">' + head(pName(P) + PW() + ' 수입', '실제로 들어온 금액') + (sch.length ? sch.map((x) => inRow('in:' + x.key, x.name, x.amount, md(x.date) + ' · 기본 ' + won(x.planned) + '원')).join('') : '<p class="hint">정기 수입이 없어요. 수입 탭에서 급여를 추가해 주세요.</p>') + '</section>';
     h += '<section class="card">' + head('카드앱 현재액', '결제 예정 금액 그대로') + (st.nextCards.length ? st.nextCards.map((b) => inRow('card:' + b.cardId + ':' + b.payMonth, b.card.name + ' · ' + mName(b.payMonth) + ' 결제', b.app ? b.app.amount : '', b.app ? ago(b.app.at) : '아직 안 적었어요')).join('') : '<p class="hint">카드가 없어요.</p>') + '</section>';
     const pend = [];
     st.nextCards.forEach((b) => b.pending.forEach((it) => pend.push({ b, it })));
@@ -653,7 +658,8 @@
   const accOfBank = (b) => b ? (S.accounts.find((a) => a.bank === b && a.type === 'bank') || S.accounts.find((a) => a.bank === b)) : null;
   let obRowN = 0;
   function obSalarySave() {
-    const amt = S.obSalary; const s = salaryOf();
+    if (noSal()) S.incomes = S.incomes.filter((x) => !x.salary);
+    const amt = noSal() ? null : S.obSalary; const s = salaryOf();
     const to = acct(S.obSalAcc) ? S.obSalAcc : (accOfBank(S.obSalBank) || {}).id;
     // 통장을 아직 안 넣었으면 통장 없이 저장해 두고, 통장이 생기면 render()에서 같은 은행 통장으로 이어 줌
     if (amt && s) Object.assign(s, { amount: amt, day: S.settings.payDay, bank: S.obSalBank || s.bank || null });
@@ -678,9 +684,9 @@
       '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button><p class="in-note">다섯 단계면 끝나요 · 데이터는 이 아이폰에만 저장돼요</p></div></main>';
   }
   // 급여 단계는 토스처럼 질문을 하나씩: 답하면 다음 질문이 위에 나타나고, 답한 건 아래에 쌓임 (누르면 다시 고치기)
-  const OB_Q = ['급여일이 언제인가요?', '월급은 얼마인가요?', '어느 은행으로 받나요?', '다른 수입도 있나요?'];
+  const OB_Q = ['정기적으로 들어오는 소득이 있나요?', '급여일이 언제인가요?', '월급은 얼마인가요?', '어느 은행으로 받나요?', '다른 수입도 있나요?'];
   const obQ = () => S.obQ || 0;
-  const obMax = () => S.obMaxQ != null ? S.obMaxQ : (salaryOf() ? 3 : 0);
+  const obMax = () => S.obMaxQ != null ? S.obMaxQ : (salaryOf() || noSal() ? 4 : 0);
   function onboard() {
     if (S.onboard == null) return intro();
     const step = S.onboard || 0; const pd = S.settings.payDay; const last = step === OB_STEPS.length - 1;
@@ -689,7 +695,7 @@
     const item = (act, id, t, sub, amt, extra) => '<button class="row" data-act="' + act + '" data-id="' + id + '"' + (extra || '') + '><span class="grow"><span class="t">' + t + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' + amt + '</button>';
     const cta = (act, label, sub) => '<div class="ob-foot">' + (sub || '') + '<button class="btn" data-act="' + act + '">' + label + '</button></div>';
     const foot = (has, opt) => cta(last ? 'obDone' : 'obNext', has || !opt ? (last ? '시작하기' : '다음') : '나중에 입력할게요');
-    const q = obQ(); const prog = (step + (step === 1 ? Math.min(q, 3) / 4 : 0) + 0.5) / OB_STEPS.length;
+    const q = obQ(); const prog = (step + (step === 1 ? Math.min(q, 4) / 5 : 0) + 0.5) / OB_STEPS.length;
     let h = '<main class="screen ob"><div class="ob-top"><button class="ob-back" data-act="obBack" aria-label="이전">' + I.left + '</button><div class="ob-bar"><s style="width:' + Math.round(prog * 100) + '%"></s></div><span class="ob-n">' + (step + 1) + '/' + OB_STEPS.length + '</span><button class="ob-reset" data-act="resetAll">처음부터</button></div>';
     if (step === 1) {
       const r = C.periodRange(S, C.periodOf(S, today())); const s = salaryOf(); const sal = S.obSalary != null ? S.obSalary : (s || {}).amount;
@@ -697,27 +703,31 @@
       // 통장을 먼저 넣었으면 그 통장 중에서 고르고, 건너뛰었으면 은행만 고름
       const accs = S.accounts.filter((a) => a.type !== 'local'); const sa = acct(S.obSalAcc) ? S.obSalAcc : (s && acct(s.accountId) ? s.accountId : null);
       const done = (i, label, v) => '<button class="ob-ans" data-act="obEdit" data-q="' + i + '"><span>' + label + '</span><b>' + v + '</b></button>';
-      const subs = ['이날부터 다음 급여일 전날까지를 한 달로 계산해요.', '세후, 통장에 실제로 들어오는 금액이에요.', '같은 은행 통장을 넣으면 월급이 그 통장으로 들어가요.', '부업, 용돈, 이자처럼 매달 들어오는 돈이 있으면 더해 주세요.'];
-      if (accs.length) subs[2] = '앞에서 넣은 통장 중에 골라 주세요.';
-      h += head(q === 2 && accs.length ? '어느 통장으로 받나요?' : OB_Q[q], subs[q]) + '<div class="ob-q ob-in">';
-      if (q === 0) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 0 && pd !== 31 ? pd : '') + '" placeholder="25"><span>일</span></div>' +
-        '<button type="button" class="ob-last' + (obMax() > 0 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>';
-      else if (q === 1) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
-      else if (q === 2 && accs.length) h += '<div class="ob-accs">' + accs.map((a) => '<button type="button" class="ob-acc' + (a.id === sa ? ' on' : '') + '" data-act="obAcc" data-id="' + a.id + '">' + acctChip(a) + '<span class="grow"><b>' + esc(a.name) + '</b><span>' + (a.type === 'overdraft' ? '마이너스통장' : '입출금') + '</span></span><span class="chk"></span></button>').join('') + '</div>';
-      else if (q === 2) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
+      const subs = ['월급처럼 매달 정해진 날에 들어오는 돈이 있으면 그날을 기준으로 한 달을 계산해요.', '이날부터 다음 급여일 전날까지를 한 달로 계산해요.', '세후, 통장에 실제로 들어오는 금액이에요.', '같은 은행 통장을 넣으면 월급이 그 통장으로 들어가요.', '부업, 용돈, 이자처럼 매달 들어오는 돈이 있으면 더해 주세요.'];
+      const titles = OB_Q.slice();
+      if (noSal()) { titles[1] = '돈 계산을 언제부터 끊을까요?'; subs[1] = '이날부터 다음 달 그 전날까지를 한 달로 계산해요. 보통 매월 1일로 해요.'; titles[4] = '매달 들어오는 돈이 있나요?'; subs[4] = '용돈, 이자, 정기 수입처럼 매달 들어오는 돈이 있으면 적어 주세요. 들쭉날쭉한 수입은 들어올 때 가계부에 적으면 돼요.'; }
+      if (accs.length) { titles[3] = '어느 통장으로 받나요?'; subs[3] = '앞에서 넣은 통장 중에 골라 주세요.'; }
+      h += head(titles[q], subs[q]) + '<div class="ob-q ob-in">';
+      if (q === 0) h += '<div class="ob-opts"><button type="button" class="ob-opt' + (obMax() > 0 && !noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="1"><b>네, 있어요</b><span>월급, 연금처럼 매달 정해진 날에 들어와요</span></button><button type="button" class="ob-opt' + (obMax() > 0 && noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="0"><b>아니요</b><span>프리랜서·자영업·학생처럼 들어오는 날이 정해져 있지 않아요</span></button></div>';
+      else if (q === 1) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 1 && pd !== 31 ? pd : '') + '" placeholder="' + (noSal() ? '1' : '25') + '"><span>일</span></div>' +
+        (noSal() ? '<button type="button" class="ob-last' + (obMax() > 1 && pd === 1 ? ' on' : '') + '" data-act="obDay" data-d="1">매월 1일부터</button>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>');
+      else if (q === 2) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
+      else if (q === 3 && accs.length) h += '<div class="ob-accs">' + accs.map((a) => '<button type="button" class="ob-acc' + (a.id === sa ? ' on' : '') + '" data-act="obAcc" data-id="' + a.id + '">' + acctChip(a) + '<span class="grow"><b>' + esc(a.name) + '</b><span>' + (a.type === 'overdraft' ? '마이너스통장' : '입출금') + '</span></span><span class="chk"></span></button>').join('') + '</div>';
+      else if (q === 3) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
       else h += S.incomes.filter((x) => !x.salary).map((x) => '<button class="row ob-inc" data-act="editIncome" data-id="' + x.id + '"><span class="grow"><span class="t">' + esc(x.name) + '</span><span class="s">매월 ' + x.day + '일</span></span><span class="amt in">+' + won(x.amount) + '</span></button>').join('') +
-        '<div class="dyn">' + (S.obExtra || []).map(extraRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="inc">+ 다른 수입 추가</button></div>';
+        '<div class="dyn">' + (S.obExtra || []).map(extraRow).join('') + '<button type="button" class="dyn-add" data-act="dynAdd" data-t="inc">+ ' + (noSal() ? '들어오는 돈 추가' : '다른 수입 추가') + '</button></div>';
       h += '</div>';
       // 답한 것들 (최근 답이 위로)
       const ans = [];
-      if (obMax() > 0 && q !== 0) ans.push(done(0, '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
-      if (obMax() > 1 && q !== 1) ans.push(done(1, '월급', sal ? won(sal) + '원' : '나중에 적기'));
-      if (obMax() > 2 && q !== 2) ans.push(sa && accs.length ? done(2, '받는 통장', acctChip(acct(sa)) + esc(acct(sa).name)) : done(2, '받는 은행', bank ? bankIcon(bank) + esc(POP_LABEL[bank] || bank) : '나중에 고르기'));
+      if (obMax() > 0 && q !== 0) ans.push(done(0, '정기 소득', noSal() ? '없어요' : '있어요'));
+      if (obMax() > 1 && q !== 1) ans.push(done(1, noSal() ? '계산 시작일' : '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
+      if (!noSal() && obMax() > 2 && q !== 2) ans.push(done(2, '월급', sal ? won(sal) + '원' : '나중에 적기'));
+      if (!noSal() && obMax() > 3 && q !== 3) ans.push(sa && accs.length ? done(3, '받는 통장', acctChip(acct(sa)) + esc(acct(sa).name)) : done(3, '받는 은행', bank ? bankIcon(bank) + esc(POP_LABEL[bank] || bank) : '나중에 고르기'));
       if (ans.length) h += '<section class="ob-done">' + ans.reverse().join('') + '</section>';
-      if (q === 0) h += cta('obDayOk', '확인');
-      else if (q === 1) h += cta('obSalOk', '확인', '<button class="ob-skip" data-act="obSalOk" data-skip="1">월급은 나중에 적을게요</button>');
-      else if (q === 2 && !accs.length) h += '<div class="ob-foot"><button class="ob-skip" data-act="obBank" data-b="">나중에 고를게요</button></div>';
-      else if (q === 3) h += cta('obNext', '다음');
+      if (q === 1) h += cta('obDayOk', '확인');
+      else if (q === 2) h += cta('obSalOk', '확인', '<button class="ob-skip" data-act="obSalOk" data-skip="1">월급은 나중에 적을게요</button>');
+      else if (q === 3 && !accs.length) h += '<div class="ob-foot"><button class="ob-skip" data-act="obBank" data-b="">나중에 고를게요</button></div>';
+      else if (q === 4) h += cta('obNext', '다음');
     } else if (step === 0) {
       h += head('쓰고 있는 통장을 넣어 볼까요?', '월급 받는 통장부터 넣어 주세요. 은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.') +
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
@@ -748,7 +758,7 @@
     S.obExtra = Array.from(document.querySelectorAll('.ob .dyn-row[data-t="inc"]')).map((r) => ({ name: r.querySelector('[data-k=name]').value.trim(), amount: Math.abs(parseAmt(r.querySelector('[data-k=val]').value)), day: Number(r.querySelector('[data-k=day]').value), bank: (r.querySelector('[data-k=bank]') || {}).value || null, acc: (r.querySelector('[data-k=acc]') || {}).value || null })).filter((r) => r.name && r.amount);
   }
   // 질문에 답하면 아직 안 한 다음 질문으로 (고치러 돌아온 경우엔 다시 맨 앞 질문으로)
-  function obAnswer(q) { closePad(); S.obMaxQ = Math.max(obMax(), q + 1); S.obQ = S.obMaxQ; save(); render(); focusAmt(document.getElementById('obSal') || document.getElementById('obDayIn')); }
+  function obAnswer(q) { closePad(); let n = q + 1; if (noSal() && n >= 2 && n <= 3) n = 4; S.obMaxQ = Math.max(obMax(), n); S.obQ = Math.max(n, Math.min(S.obMaxQ, n)); save(); render(); focusAmt(document.getElementById('obSal') || document.getElementById('obDayIn')); }
   function obFinish() { delete S.onboard; delete S.obSalary; delete S.obSalAcc; delete S.obExtra; delete S.obSalBank; delete S.obQ; delete S.obMaxQ; S.started = true; save(); location.hash = '#/home'; render(); }
 
   // ===== 시트: 가계부 기록 =====
@@ -1485,19 +1495,20 @@
     cardApp: (d) => cardApp(d.id, d.m),
     dynAdd(d, el) { el.insertAdjacentHTML('beforebegin', d.t === 'disc' ? discRow() : d.t === 'inc' ? extraRow() : perkRow()); const r = el.previousElementSibling; r.querySelector('input').focus(); },
     dynDel(d, el) { el.closest('.dyn-row').remove(); },
-    obDay(d) { if (sheet) closeSheet(); S.settings.payDay = Number(d.d); obAnswer(0); },
+    obDay(d) { if (sheet) closeSheet(); S.settings.payDay = Number(d.d); obAnswer(1); },
+    obHasSal(d) { const no = d.v === '0'; S.settings.noSalary = no; if (no) { delete S.obSalary; delete S.obSalBank; delete S.obSalAcc; if (S.obMaxQ == null) S.settings.payDay = 1; } else if (S.obMaxQ == null) S.settings.payDay = 25; obAnswer(0); },
     obDayOk() { const v = Number((document.getElementById('obDayIn') || {}).value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요');
       // 29·30일은 '말일'인지 한 번 물어봄 (31일은 말일과 같게 계산)
       if (v === 29 || v === 30) return openSheet({ title: '매달 말일에 받나요?', body: () => '<p class="hint">' + v + '일이 없는 달(2월 등)은 그달 마지막 날로 계산해요. 31일까지 있는 달에도 말일에 받는다면 \'말일\'을 골라 주세요.</p>',
         foot: () => '<button class="btn" data-act="obDay" data-d="31">네, 매달 말일이에요</button><button class="btn ghost" data-act="obDay" data-d="' + v + '">아니요, 매월 ' + v + '일이에요</button>' });
-      S.settings.payDay = v; obAnswer(0); },
-    obSalOk(d) { if (d.skip) S.obSalary = null; else { obReadSal(); if (!S.obSalary) return toast('월급을 적어 주세요'); } obAnswer(1); },
-    obBank(d) { S.obSalBank = d.b || null; delete S.obSalAcc; obAnswer(2); },
-    obAcc(d) { S.obSalAcc = d.id; S.obSalBank = (acct(d.id) || {}).bank || null; obAnswer(2); },
+      S.settings.payDay = v; obAnswer(1); },
+    obSalOk(d) { if (d.skip) S.obSalary = null; else { obReadSal(); if (!S.obSalary) return toast('월급을 적어 주세요'); } obAnswer(2); },
+    obBank(d) { S.obSalBank = d.b || null; delete S.obSalAcc; obAnswer(3); },
+    obAcc(d) { S.obSalAcc = d.id; S.obSalBank = (acct(d.id) || {}).bank || null; obAnswer(3); },
     obEdit(d) { obReadSal(); S.obQ = Number(d.q); save(); render(); window.scrollTo(0, 0); focusAmt(document.getElementById('obSal') || document.getElementById('obDayIn')); },
-    obNext() { obReadSal(); if (S.onboard === 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); if (S.onboard === 1) { const el = document.getElementById('obDayIn'); if (el) el.focus(); } },
+    obNext() { obReadSal(); if (S.onboard === 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
 
-    obBack() { obReadSal(); if (S.onboard === 1 && obQ() > 0) S.obQ = obQ() - 1; else if (!S.onboard) delete S.onboard; else S.onboard -= 1; save(); render(); window.scrollTo(0, 0); },
+    obBack() { obReadSal(); if (S.onboard === 1 && obQ() > 0) S.obQ = noSal() && obQ() === 4 ? 1 : obQ() - 1; else if (!S.onboard) delete S.onboard; else S.onboard -= 1; save(); render(); window.scrollTo(0, 0); },
     obStart() { S.onboard = 0; save(); render(); window.scrollTo(0, 0); },
     obDone: () => obFinish(),
     cardAppSave(d) {
