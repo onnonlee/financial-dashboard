@@ -693,7 +693,8 @@
     const list = (rows) => rows.length ? '<section class="card ob-list">' + rows.join('') + '</section>' : '';
     const item = (act, id, t, sub, amt, extra) => '<button class="row" data-act="' + act + '" data-id="' + id + '"' + (extra || '') + '><span class="grow"><span class="t">' + t + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' + amt + '</button>';
     const cta = (act, label, sub) => '<div class="ob-foot">' + (sub || '') + '<button class="btn" data-act="' + act + '">' + label + '</button></div>';
-    const foot = (has, opt) => cta(last ? 'obDone' : 'obNext', has || !opt ? (last ? '시작하기' : '다음') : '나중에 입력할게요');
+    const skip = (act) => '<div class="ob-foot"><button class="ob-skip" data-act="' + act + '">나중에 입력할게요</button></div>';
+    const foot = (has, opt) => last ? cta('obDone', '시작하기') : has || !opt ? cta('obNext', '다음') : skip('obNext');
     const q = obQ(); const prog = (step + (step === 1 ? Math.min(q, 4) / 5 : 0) + 0.5) / OB_STEPS.length;
     let h = '<main class="screen ob"><div class="ob-top"><button class="ob-back" data-act="obBack" aria-label="이전">' + I.left + '</button><div class="ob-bar"><s style="width:' + Math.round(prog * 100) + '%"></s></div><span class="ob-n">' + (step + 1) + '/' + OB_STEPS.length + '</span><button class="ob-reset" data-act="resetAll">처음부터</button></div>';
     if (step === 1) {
@@ -704,7 +705,7 @@
       const done = (i, label, v) => '<button class="ob-ans" data-act="obEdit" data-q="' + i + '"><span>' + label + '</span><b>' + v + '</b></button>';
       const subs = ['월급처럼 매달 정해진 날에 들어오는 돈이 있으면 그날을 기준으로 한 달을 계산해요.', '이날부터 다음 급여일 전날까지를 한 달로 계산해요.', '세후, 통장에 실제로 들어오는 금액이에요.', '같은 은행 통장을 넣으면 월급이 그 통장으로 들어가요.', '부업, 용돈, 이자처럼 매달 들어오는 돈이 있으면 더해 주세요.'];
       const titles = OB_Q.slice();
-      if (noSal()) { titles[1] = '돈 계산을 언제부터 끊을까요?'; subs[1] = '이날부터 다음 달 그 전날까지를 한 달로 계산해요. 보통 매월 1일로 해요.'; titles[4] = '매달 들어오는 돈이 있나요?'; subs[4] = '용돈, 이자, 정기 수입처럼 매달 들어오는 돈이 있으면 적어 주세요. 들쭉날쭉한 수입은 들어올 때 가계부에 적으면 돼요.'; }
+      if (noSal()) { titles[1] = '주기 시작을 며칠부터로 할까요?'; subs[1] = '이날부터 다음 달 그 전날까지를 한 달로 계산해요. 보통 매월 1일로 해요.'; titles[4] = '매달 들어오는 돈이 있나요?'; subs[4] = '용돈, 이자, 정기 수입처럼 매달 들어오는 돈이 있으면 적어 주세요. 들쭉날쭉한 수입은 들어올 때 가계부에 적으면 돼요.'; }
       if (accs.length) { titles[3] = '어느 통장으로 받나요?'; subs[3] = '앞에서 넣은 통장 중에 골라 주세요.'; }
       h += head(titles[q], subs[q]) + '<div class="ob-q ob-in">';
       if (q === 0) h += '<div class="ob-opts"><button type="button" class="ob-opt' + (obMax() > 0 && !noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="1"><b>네, 있어요</b><span>월급, 연금처럼 매달 정해진 날에 들어와요</span></button><button type="button" class="ob-opt' + (obMax() > 0 && noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="0"><b>아니요</b><span>프리랜서·자영업·학생처럼 들어오는 날이 정해져 있지 않아요</span></button></div>';
@@ -719,7 +720,7 @@
       // 답한 것들 (최근 답이 위로)
       const ans = [];
       if (obMax() > 0 && q !== 0) ans.push(done(0, '정기 소득', noSal() ? '없어요' : '있어요'));
-      if (obMax() > 1 && q !== 1) ans.push(done(1, noSal() ? '계산 시작일' : '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
+      if (obMax() > 1 && q !== 1) ans.push(done(1, noSal() ? '주기 시작' : '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
       if (!noSal() && obMax() > 2 && q !== 2) ans.push(done(2, '월급', sal ? won(sal) + '원' : '나중에 적기'));
       if (!noSal() && obMax() > 3 && q !== 3) ans.push(sa && accs.length ? done(3, '받는 통장', acctChip(acct(sa)) + esc(acct(sa).name)) : done(3, '받는 은행', bank ? bankIcon(bank) + esc(POP_LABEL[bank] || bank) : '나중에 고르기'));
       if (ans.length) h += '<section class="ob-done">' + ans.reverse().join('') + '</section>';
@@ -731,7 +732,7 @@
       h += head('쓰고 있는 통장을 넣어 볼까요?', '월급 받는 통장부터 넣어 주세요. 은행앱이나 토스의 \'내 계좌\' 화면을 캡처하면 한 번에 들어가요. 계좌번호는 저장하지 않아요.') +
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
-        (S.accounts.length ? foot(true) : cta('obNext', '나중에 입력할게요'));
+        (S.accounts.length ? foot(true) : skip('obNext'));
     } else if (step === 2) {
       h += head('카드값을 입력할까요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
         S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); const ins = S.installments.filter((i) => i.cardId === c.id);

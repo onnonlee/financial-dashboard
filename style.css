@@ -534,7 +534,7 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .ob-inc { background: var(--card); border-radius: 16px; padding: 12px 16px; }
 .screen.ob .ob-foot { position: sticky; bottom: 0; margin: auto -16px 0; padding: 18px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--bg) 22px); z-index: 4; }
 .screen.ob { padding-bottom: 0; }
-.ob-skip { align-self: center; padding: 10px 14px; font-size: 15px; font-weight: 600; color: var(--text2); }
+.ob-skip { align-self: center; padding: 12px 14px; font-size: 15px; font-weight: 600; color: var(--text2); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--text3); }
 .ob-dayin { display: flex; align-items: center; gap: 4px; border-bottom: 2px solid var(--blue); padding: 0 2px 8px; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
 .ob-dayin .input { width: 1.5em; flex: none; min-height: 52px; padding: 0; background: transparent !important; box-shadow: none !important; border-radius: 0; font-size: 30px; font-weight: 800; text-align: center; letter-spacing: -1px; }
 .ob-quick { margin-top: 6px; }
