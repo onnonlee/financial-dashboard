@@ -587,3 +587,9 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast-chips a.good b { color: #4cd685; } :root:not([data-theme="light"]) .mast-chips a.bad b { color: #ff7a85; } :root:not([data-theme="light"]) .mast-btn.on { background: rgba(49, 130, 246, .2); } }
 .ob-reset { font-size: 13px; font-weight: 600; color: var(--text3); padding: 6px 2px 6px 6px; }
 .money.pad.pad-on + .ko-row { display: none; }
+/* 머리 카드: 아주 연한 파란빛 (너무 하얗지도, 무겁지도 않게) */
+.mast, .in-card { background: linear-gradient(135deg, #dde9ff 0%, #eef4ff 100%); box-shadow: none; }
+.mast-chips a, .in-chips i { background: rgba(255, 255, 255, .75); }
+.mast-btn { background: rgba(255, 255, 255, .75); }
+.card.todo { box-shadow: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast, :root:not([data-theme="light"]) .in-card { background: linear-gradient(135deg, #1a2338 0%, #171c28 100%); } :root:not([data-theme="light"]) .mast-chips a, :root:not([data-theme="light"]) .in-chips i, :root:not([data-theme="light"]) .mast-btn { background: rgba(255, 255, 255, .07); } }
