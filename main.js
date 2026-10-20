@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.26';
+  const VERSION = '2.27';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -141,6 +141,8 @@
   function render() {
     const app = document.getElementById('app');
     for (const f of S.fixed) if (f.base) f.amount = C.fixedAmount(f, curP());
+    // 통장 없이 적어 둔 수입은 통장이 생기면 같은 은행 통장(없으면 첫 입출금 통장)으로
+    if (S.accounts.length && S.incomes.some((x) => !acct(x.accountId))) { for (const x of S.incomes) if (!acct(x.accountId)) x.accountId = (accOfBank(x.bank) || S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id; save(); }
     if (onboarding()) { app.innerHTML = onboard(); koAll(app); return; }
     if (!view.P) view.P = curP();
     const fn = { more: moreScreen, input: inputScreen, home: homeScreen, book: bookScreen, flow: flowScreen, fixed: fixedScreen, loans: loansScreen, accounts: accountsScreen, cards: cardsScreen, income: incomeScreen, debts: debtsScreen, settings: settingsScreen }[view.tab] || homeScreen;
@@ -621,12 +623,12 @@
   let obRowN = 0;
   function obSalarySave() {
     const amt = S.obSalary; const s = salaryOf();
-    if (!S.accounts.length) return;
-    if (amt && s) Object.assign(s, { amount: amt, day: S.settings.payDay });
-    if (s && accOfBank(S.obSalBank)) s.accountId = accOfBank(S.obSalBank).id;
-    else if (amt) S.incomes.push({ id: uid(), name: '급여', amount: amt, day: S.settings.payDay, accountId: (accOfBank(S.obSalBank) || {}).id || salAcc(), salary: true, approx: false, active: true });
+    // 통장을 아직 안 넣었으면 통장 없이 저장해 두고, 통장이 생기면 render()에서 같은 은행 통장으로 이어 줌
+    if (amt && s) Object.assign(s, { amount: amt, day: S.settings.payDay, bank: S.obSalBank || s.bank || null });
+    if (s) { if (accOfBank(S.obSalBank)) s.accountId = accOfBank(S.obSalBank).id; }
+    else if (amt) S.incomes.push({ id: uid(), name: '급여', amount: amt, day: S.settings.payDay, bank: S.obSalBank || null, accountId: (accOfBank(S.obSalBank) || {}).id || salAcc() || null, salary: true, approx: false, active: true });
     // 급여일 화면에서 적은 다른 수입은 통장이 생기면 월급 통장으로 넣음 (나중에 고칠 수 있음)
-    for (const r of S.obExtra || []) S.incomes.push({ id: uid(), name: r.name, amount: r.amount, day: r.day, accountId: (accOfBank(r.bank) || {}).id || salAcc(), salary: false, approx: false, active: true });
+    for (const r of S.obExtra || []) S.incomes.push({ id: uid(), name: r.name, amount: r.amount, day: r.day, bank: r.bank || null, accountId: (accOfBank(r.bank) || {}).id || salAcc() || null, salary: false, approx: false, active: true });
     delete S.obExtra;
   }
   const extraRow = (r) => { r = r || {}; return '<div class="dyn-row" data-t="inc"><input class="input" data-k="name" value="' + esc(r.name || '') + '" placeholder="이름 (예: 부업, 용돈, 이자)">' +
@@ -685,7 +687,7 @@
         list(S.accounts.map((x) => { const v = C.accountBalance(S, x.id, today()); return item('editAccount', x.id, acctChip(x) + ' ' + esc(x.name), x.type === 'overdraft' ? '마이너스통장 · 한도 ' + won(x.limit || 0) + '원' : '', '<span class="amt">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '</span>'); })) +
         '<div class="ob-add"><button class="btn' + (S.accounts.length ? ' ghost' : '') + '" data-act="setup">' + I.scan + ' 캡처로 넣기</button><button class="btn ghost" data-act="editAccount">직접 적기</button></div>' +
         (S.accounts.length && amt && !(s ? acct(s.accountId) && (!S.obSalBank || acct(s.accountId).bank === S.obSalBank) : accOfBank(S.obSalBank)) ? '<section class="card ob-pick"><b>월급 ' + won(amt) + '원은 어느 통장으로 들어오나요?</b>' + (S.obSalBank ? '<span class="hint">' + esc(S.obSalBank) + ' 통장이 아직 없어요. 넣거나 아래에서 골라 주세요.</span>' : '') + '<div class="ob-chips">' + S.accounts.map((a) => '<button class="chip' + (a.id === sa ? ' on' : '') + '" data-act="obSalAcc" data-id="' + a.id + '">' + acctChip(a) + ' ' + esc(a.name) + '</button>').join('') + '</div></section>' : '') +
-        (S.accounts.length ? foot(true) : '');
+        (S.accounts.length ? foot(true) : cta('obNext', '나중에 입력할게요'));
     } else if (step === 2) {
       h += head('카드값을 입력할까요?', '카드앱의 결제 예정 금액을 적어 주세요. 할부도 같이 넣어 두면 다음 달 카드값까지 미리 계산해요.') +
         S.cards.map((c) => { const m = nextPayMonth(c); const b = C.cardBill(S, c.id, m); const ins = S.installments.filter((i) => i.cardId === c.id);
