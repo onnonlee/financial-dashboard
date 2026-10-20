@@ -710,7 +710,7 @@
       h += head(titles[q], subs[q]) + '<div class="ob-q ob-in">';
       if (q === 0) h += '<div class="ob-opts"><button type="button" class="ob-opt' + (obMax() > 0 && !noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="1"><b>네, 있어요</b><span>월급, 연금처럼 매달 정해진 날에 들어와요</span></button><button type="button" class="ob-opt' + (obMax() > 0 && noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="0"><b>아니요</b><span>프리랜서·자영업·학생처럼 들어오는 날이 정해져 있지 않아요</span></button></div>';
       else if (q === 1) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 1 && pd !== 31 ? pd : '') + '" placeholder="' + (noSal() ? '1' : '25') + '"><span>일</span></div>' +
-        (noSal() ? '<button type="button" class="ob-last' + (obMax() > 1 && pd === 1 ? ' on' : '') + '" data-act="obDay" data-d="1">매월 1일부터</button>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>');
+        (noSal() ? '<p class="ob-ex">비워 두고 확인을 누르면 매월 1일부터예요.</p>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>');
       else if (q === 2) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
       else if (q === 3 && accs.length) h += '<div class="ob-accs">' + accs.map((a) => '<button type="button" class="ob-acc' + (a.id === sa ? ' on' : '') + '" data-act="obAcc" data-id="' + a.id + '">' + acctChip(a) + '<span class="grow"><b>' + esc(a.name) + '</b><span>' + (a.type === 'overdraft' ? '마이너스통장' : '입출금') + '</span></span><span class="chk"></span></button>').join('') + '</div>';
       else if (q === 3) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
@@ -1497,7 +1497,7 @@
     dynDel(d, el) { el.closest('.dyn-row').remove(); },
     obDay(d) { if (sheet) closeSheet(); S.settings.payDay = Number(d.d); obAnswer(1); },
     obHasSal(d) { const no = d.v === '0'; S.settings.noSalary = no; if (no) { delete S.obSalary; delete S.obSalBank; delete S.obSalAcc; if (S.obMaxQ == null) S.settings.payDay = 1; } else if (S.obMaxQ == null) S.settings.payDay = 25; obAnswer(0); },
-    obDayOk() { const v = Number((document.getElementById('obDayIn') || {}).value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요');
+    obDayOk() { const el = document.getElementById('obDayIn') || {}; const v = noSal() && !String(el.value || '').trim() ? 1 : Number(el.value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요');
       // 29·30일은 '말일'인지 한 번 물어봄 (31일은 말일과 같게 계산)
       if (v === 29 || v === 30) return openSheet({ title: '매달 말일에 받나요?', body: () => '<p class="hint">' + v + '일이 없는 달(2월 등)은 그달 마지막 날로 계산해요. 31일까지 있는 달에도 말일에 받는다면 \'말일\'을 골라 주세요.</p>',
         foot: () => '<button class="btn" data-act="obDay" data-d="31">네, 매달 말일이에요</button><button class="btn ghost" data-act="obDay" data-d="' + v + '">아니요, 매월 ' + v + '일이에요</button>' });
