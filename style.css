@@ -326,6 +326,7 @@ a.tint:active { transform: scale(.99); }
 .card.menu { padding-top: 14px; }
 .grp { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text3); letter-spacing: 0; }
 .m-ic { width: 36px; height: 36px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; }
+.row .m-ic svg { width: 19px; height: 19px; stroke-width: 1.9; }
 .m-ic.blue { background: #e8f3ff; color: #1b64da; } .m-ic.indigo { background: #efedff; color: #5b4fd6; }
 .m-ic.red { background: #ffeef0; color: #d63850; } .m-ic.teal { background: #e3f7f1; color: #0b8a6a; }
 .m-ic.green { background: #e7f8ec; color: #1f9a4a; } .m-ic.amber { background: #fff4e0; color: #b86b00; }

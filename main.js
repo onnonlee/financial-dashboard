@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.33';
+  const VERSION = '2.34';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -58,6 +58,14 @@
   const I = {
     gear: sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 22),
     plus: sv('<path d="M12 5v14M5 12h14"/>', 26),
+    mRepeat: sv('<path d="M17 2.5 20.5 6 17 9.5"/><path d="M4 11V9a3 3 0 0 1 3-3h13"/><path d="m7 21.5L3.5 18 7 14.5"/><path d="M20 13v2a3 3 0 0 1-3 3H4"/>'),
+    mCard: sv('<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M7 14.5h4"/>'),
+    mLoan: sv('<path d="M3 10.5 12 4l9 6.5"/><path d="M5 10.5V19M9.5 10.5V19M14.5 10.5V19M19 10.5V19"/><path d="M3 20h18"/>'),
+    mWallet: sv('<path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v3"/><rect x="4" y="8" width="17" height="11.5" rx="2.5"/><path d="M16 13.5h5"/><circle cx="16" cy="13.75" r=".6" fill="currentColor"/>'),
+    mIncome: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M8.5 13l3.5 3.5 3.5-3.5"/>'),
+    mSwap: sv('<path d="M4 8.5h13"/><path d="m13.5 5 3.5 3.5L13.5 12"/><path d="M20 15.5H7"/><path d="m10.5 12-3.5 3.5 3.5 3.5"/>'),
+    mLocal: sv('<path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'),
+    mEdit: sv('<path d="M4 20h4.5L19 9.5a2.1 2.1 0 0 0-3-3L5.5 17 4 20z"/><path d="m13.5 9 2.5 2.5"/>'),
     right: sv('<path d="m9 6 6 6-6 6"/>', 16),
     left: sv('<path d="m15 6-6 6 6 6"/>', 20),
     home: sv('<path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/>', 24),
@@ -315,10 +323,10 @@
     const nc = st.nextCards[0]; const Ls = C.loanSummary(S, t);
     const mine = (href, ic, lab, t1, amt, cls) => '<a class="row" href="' + href + '"><span class="lead"><span class="m-ic ' + ic + '">' + lab + '</span></span><span class="grow"><span class="t">' + t1[0] + '</span><span class="s">' + t1[1] + '</span></span><span class="end"><span class="amt' + (cls ? ' ' + cls : '') + '">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
     h += '<section class="card">' + head('내 돈', '') +
-      mine('#/accounts', 'teal', '계', ['계좌 ' + S.accounts.length + '개', aa ? shortDate(aa) + ' 확인 · 마통 남은 한도 포함' : '잔액을 아직 안 적었어요'], wonS(st.spendable)) +
-      (nc ? mine('#/cards', 'indigo', '카', [mName(nc.payMonth) + ' 카드값', md(nc.payDate) + ' 출금 · ' + st.nextCards.map((b) => esc(b.card.name)).join(' + ')], '−' + won(st.nextCardTotal)) : '') +
-      (Ls.total ? mine('#/loans', 'red', '대', ['대출 남은 돈', '매달 내 부담 ' + won(Ls.monthlySelf) + '원' + (Ls.order[0] ? ' · 먼저 갚을 것 ' + esc(Ls.order[0].name) : '')], won(Ls.total)) : '') +
-      (st.local ? mine('#/accounts', 'green', '지', ['지역화폐', '쓸 수 있는 돈과 따로 세요'], won(st.local)) : '') + '</section>';
+      mine('#/accounts', 'teal', I.mWallet, ['계좌 ' + S.accounts.length + '개', aa ? shortDate(aa) + ' 확인 · 마통 남은 한도 포함' : '잔액을 아직 안 적었어요'], wonS(st.spendable)) +
+      (nc ? mine('#/cards', 'indigo', I.mCard, [mName(nc.payMonth) + ' 카드값', md(nc.payDate) + ' 출금 · ' + st.nextCards.map((b) => esc(b.card.name)).join(' + ')], '−' + won(st.nextCardTotal)) : '') +
+      (Ls.total ? mine('#/loans', 'red', I.mLoan, ['대출 남은 돈', '매달 내 부담 ' + won(Ls.monthlySelf) + '원' + (Ls.order[0] ? ' · 먼저 갚을 것 ' + esc(Ls.order[0].name) : '')], won(Ls.total)) : '') +
+      (st.local ? mine('#/accounts', 'green', I.mLocal, ['지역화폐', '쓸 수 있는 돈과 따로 세요'], won(st.local)) : '') + '</section>';
 
     // 5. 이번 달 가계부
     const cats = Object.entries(f.byCat).sort((a, b) => b[1] - a[1]);
@@ -504,22 +512,22 @@
     const inc = S.incomes.filter(on);
     const pay = S.debts.filter((d) => d.dir === 'pay').reduce((a, d) => a + C.debtStatus(S, d).left, 0);
     const get = S.debts.filter((d) => d.dir !== 'pay').reduce((a, d) => a + C.debtStatus(S, d).left, 0);
-    const item = (tab, name, sub, amt, ic) => '<a class="row" href="#/' + tab + '"><span class="lead"><span class="m-ic ' + ic + '">' + name.slice(0, 1) + '</span></span><span class="grow"><span class="t">' + name + '</span><span class="s">' + sub + '</span></span><span class="end"><span class="amt">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
+    const item = (tab, name, sub, amt, ic, icn) => '<a class="row" href="#/' + tab + '"><span class="lead"><span class="m-ic ' + ic + '">' + I[icn] + '</span></span><span class="grow"><span class="t">' + name + '</span><span class="s">' + sub + '</span></span><span class="end"><span class="amt">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
     const grp = (title, rows) => '<section class="card menu"><h3 class="grp">' + title + '</h3>' + rows.join('') + '</section>';
     let h = soonCard();
     h += grp('매달 나가는 돈', [
-      item('fixed', '구독·고정비', fx.length + '개 · 통신비·보험·구독', '월 ' + won(fx.reduce((a, x) => a + x.amount, 0)), 'blue'),
-      item('cards', '카드·할부', S.cards.length + '개 카드 · 할부 ' + S.installments.length + '건', won(st.nextCardTotal || 0), 'indigo'),
-      item('loans', '대출', '매달 내 부담 ' + won(L.monthlySelf) + '원', won(L.total), 'red'),
+      item('fixed', '구독·고정비', fx.length + '개 · 통신비·보험·구독', '월 ' + won(fx.reduce((a, x) => a + x.amount, 0)), 'blue', 'mRepeat'),
+      item('cards', '카드·할부', S.cards.length + '개 카드 · 할부 ' + S.installments.length + '건', won(st.nextCardTotal || 0), 'indigo', 'mCard'),
+      item('loans', '대출', '매달 내 부담 ' + won(L.monthlySelf) + '원', won(L.total), 'red', 'mLoan'),
     ]);
     h += grp('내 돈', [
-      item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'teal'),
-      item('income', '수입', inc.length + '개 · 급여·정기 수입', '월 ' + won(inc.reduce((a, x) => a + x.amount, 0)), 'green'),
-      item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber'),
+      item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'teal', 'mWallet'),
+      item('income', '수입', inc.length + '개 · 급여·정기 수입', '월 ' + won(inc.reduce((a, x) => a + x.amount, 0)), 'green', 'mIncome'),
+      item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber', 'mSwap'),
     ]);
     h += grp('관리', [
-      item('input', '한 번에 입력', '잔액·카드값을 한 화면에서 고쳐요', '', 'gray'),
-      item('settings', '설정·백업', '급여일, 분류, 백업 내보내기', '', 'gray'),
+      item('input', '한 번에 입력', '잔액·카드값을 한 화면에서 고쳐요', '', 'gray', 'mEdit'),
+      item('settings', '설정·백업', '급여일, 분류, 백업 내보내기', '', 'gray', 'gear'),
     ]);
     return h;
   }
