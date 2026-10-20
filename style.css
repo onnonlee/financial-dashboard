@@ -612,3 +612,9 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ob-acc.on { box-shadow: inset 0 0 0 2px var(--blue); }
 .ob-acc.on .chk { background: var(--blue); box-shadow: none; }
 .ob-acc:active { transform: scale(.98); }
+/* 머리 카드: 차분한 남색 한 가지 (그림자·그라데이션 없이 가볍게, 파란 버튼과 안 겹치게) */
+.mast, .in-card { background: #2b3550; box-shadow: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast, :root:not([data-theme="light"]) .in-card { background: #232a3d; } }
+.mast-chips a, .in-chips i, .mast-btn { background: rgba(255, 255, 255, .1); }
+.mast-chips a.good b { color: #8ee3b5; } .mast-chips a.bad b { color: #ffb3bd; }
+.in-bar s { background: #8db8ff; }
