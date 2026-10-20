@@ -679,7 +679,6 @@
   function intro() {
     const feat = (ic, cls, t, d) => '<div class="in-feat"><span class="m-ic ' + cls + '">' + ic + '</span><div><b>' + t + '</b><span>' + d + '</span></div></div>';
     return '<main class="screen hello"><div class="in-hero"><img src="icons/icon-180.png" alt="" class="in-logo"><h1>이번 달 월급부터<br>다음 달 월급까지</h1><p>급여주기를 확인하고 흐름을 관리해요.</p></div>' +
-      '<div class="in-card"><span>지금 쓸 수 있는 돈</span><b>1,284,500원</b><div class="in-chips"><i>이번 급여로 여유 320,000원</i><i>10/24 예상 잔액 412,000원</i></div><div class="in-bar"><s style="width:62%"></s></div></div>' +
       '<div class="in-feats">' + feat(I.flow, 'blue', '이번 달 남는 돈 미리 보기', '월급·카드값·고정비·대출을 날짜별로 계산해요') + feat(I.scan, 'green', '캡처 한 장으로 계좌 입력', '은행앱 화면을 찍으면 잔액이 한 번에 들어가요') + feat(I.book, 'indigo', '할부·약정까지 기억', '끝나는 할인, 남은 할부를 대신 챙겨요') + '</div>' +
       '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button><p class="in-note">다섯 단계면 끝나요 · 데이터는 이 아이폰에만 저장돼요</p></div></main>';
   }
