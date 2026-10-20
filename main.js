@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.31';
+  const VERSION = '2.32';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -1534,13 +1534,18 @@
   document.addEventListener('click', (ev) => {
     const el = ev.target.closest('[data-act]');
     if (!el) { if (ev.target.id === 'scrim') closeSheet(); return; }
-    const fn = A[el.dataset.act]; if (!fn) return;
+    const fn = A[el.dataset.act]; if (!fn || el.dataset.act === 'padKey') return;
     if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.preventDefault();
     fn(el.dataset, el, ev);
   });
   document.addEventListener('click', (ev) => { if (!PAD_ON) return; const el = ev.target.closest && ev.target.closest(PAD_SEL); if (el) openPad(el); }, true);
   // [만]·[천]을 눌러도 자판이 내려가지 않게
-  document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('#pad')) ev.preventDefault(); });
+  // 키패드는 손가락이 닿는 순간 바로 반응 (사파리가 빠른 연타를 두 번 누르기로 보고 click을 버리는 일 방지)
+  document.addEventListener('pointerdown', (ev) => {
+    if (!ev.target.closest || !ev.target.closest('#pad')) return;
+    ev.preventDefault();
+    const k = ev.target.closest('[data-act=padKey]'); if (k) { k.classList.add('hit'); setTimeout(() => k.classList.remove('hit'), 120); A.padKey(k.dataset); }
+  });
   document.addEventListener('input', (ev) => {
     const el = ev.target; const live = el.dataset && el.dataset.live;
     // 숫자 칸(날짜·금액)은 숫자 말고는 안 들어가게

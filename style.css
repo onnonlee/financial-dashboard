@@ -637,3 +637,5 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .hello .in-hero { margin-top: auto; }
 .hello .in-feats { margin-bottom: auto; }
 .btn:disabled { background: var(--line); color: var(--text3); }
+#pad { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.pad-keys button.hit { background: var(--soft); }
