@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.27';
+  const VERSION = '2.28';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -657,7 +657,7 @@
     const cta = (act, label, sub) => '<div class="ob-foot">' + (sub || '') + '<button class="btn" data-act="' + act + '">' + label + '</button></div>';
     const foot = (has, opt) => cta(last ? 'obDone' : 'obNext', last ? (has ? '시작하기' : '대출 없이 시작하기') : (has || !opt ? '다음' : '없어요, 다음'));
     const q = obQ(); const prog = (step + (step === 0 ? Math.min(q, 3) / 4 : 0) + 0.5) / OB_STEPS.length;
-    let h = '<main class="screen ob"><div class="ob-top"><button class="ob-back" data-act="obBack" aria-label="이전">' + I.left + '</button><div class="ob-bar"><s style="width:' + Math.round(prog * 100) + '%"></s></div><span class="ob-n">' + (step + 1) + '/' + OB_STEPS.length + '</span></div>';
+    let h = '<main class="screen ob"><div class="ob-top"><button class="ob-back" data-act="obBack" aria-label="이전">' + I.left + '</button><div class="ob-bar"><s style="width:' + Math.round(prog * 100) + '%"></s></div><span class="ob-n">' + (step + 1) + '/' + OB_STEPS.length + '</span><button class="ob-reset" data-act="resetAll">처음부터</button></div>';
     if (step === 0) {
       const r = C.periodRange(S, C.periodOf(S, today())); const s = salaryOf(); const sal = S.obSalary != null ? S.obSalary : (s || {}).amount;
       const bank = S.obSalBank || ((acct((s || {}).accountId) || {}).bank) || '';

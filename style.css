@@ -549,3 +549,4 @@ textarea.input[name=extra] { min-height: 96px; line-height: 1.5; resize: vertica
 .card .ko-units button, #sheet .ko-units button { background: var(--bg); }
 .ko-units button:active { transform: scale(.95); background: var(--line); }
 .money.huge + .ko-row .ko-units button { background: var(--card); }
+.ob-reset { font-size: 13px; font-weight: 600; color: var(--text3); padding: 6px 2px 6px 6px; }
