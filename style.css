@@ -593,3 +593,12 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mast-btn { background: rgba(255, 255, 255, .75); }
 .card.todo { box-shadow: none; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast, :root:not([data-theme="light"]) .in-card { background: linear-gradient(135deg, #1a2338 0%, #171c28 100%); } :root:not([data-theme="light"]) .mast-chips a, :root:not([data-theme="light"]) .in-chips i, :root:not([data-theme="light"]) .mast-btn { background: rgba(255, 255, 255, .07); } }
+/* 머리 카드: 밝은 파란색 (남색보다 가볍고, 배경과는 확실히 구분) */
+.mast, .in-card { background: linear-gradient(135deg, #2f7bf5 0%, #4f97ff 100%); color: #fff; box-shadow: 0 8px 22px rgba(49, 130, 246, .22); }
+.mast-lab, .in-card span, .mast-num em, .mast-sub, .mast small, .mast p, .mast-chips a span { color: rgba(255, 255, 255, .85); }
+.mast-sub b { color: #fff; }
+.mast-chips a, .in-chips i, .mast-btn { background: rgba(255, 255, 255, .16); color: #fff; }
+.mast-btn.on { background: rgba(255, 255, 255, .3); color: #fff; }
+.mast-chips a.good b { color: #fff; } .mast-chips a.bad b { color: #ffd2d8; }
+.in-bar { background: rgba(255, 255, 255, .25); } .in-bar s { background: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mast, :root:not([data-theme="light"]) .in-card { background: linear-gradient(135deg, #1f5fd1 0%, #2f74e6 100%); } :root:not([data-theme="light"]) .mast-chips a, :root:not([data-theme="light"]) .in-chips i, :root:not([data-theme="light"]) .mast-btn { background: rgba(255, 255, 255, .14); } :root:not([data-theme="light"]) .mast-chips a.good b { color: #fff; } :root:not([data-theme="light"]) .mast-chips a.bad b { color: #ffd2d8; } }

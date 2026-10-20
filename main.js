@@ -118,7 +118,9 @@
   // ===== 앱 전용 숫자 키패드 (큰 금액 칸): 1~9, 00, 0, 지우기 + 위에 [만]·[천]과 파란 확인 =====
   const PAD_SEL = '.money.big .input, .money.huge .input';
   let padEl = null;
-  function padMark(root) { (root || document).querySelectorAll(PAD_SEL).forEach((el) => { el.readOnly = true; el.setAttribute('inputmode', 'none'); el.closest('.money').classList.add('pad'); }); }
+  // 손가락으로 쓰는 기기(휴대폰·태블릿)에서만 키패드, PC는 원래 키보드로
+  const PAD_ON = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+  function padMark(root) { if (!PAD_ON) return; (root || document).querySelectorAll(PAD_SEL).forEach((el) => { el.readOnly = true; el.setAttribute('inputmode', 'none'); el.closest('.money').classList.add('pad'); }); }
   function padOk() { return document.getElementById('obSal') && padEl && padEl.to && padEl.to.id === 'obSal' ? ['obSalOk', '확인'] : ['padClose', '완료']; }
   function openPad(el) {
     if (!el) return;
@@ -141,7 +143,7 @@
     const n = Number(ds.base || 0) + typed * u; ds.base = n; ds.pend = ''; ds.prev = String(n);
     el.value = won(n); koFill(el); if (sheet && sheet.rec) recHint();
   }
-  const focusAmt = (el) => { if (!el) return; if (el.matches(PAD_SEL)) openPad(el); else el.focus(); };
+  const focusAmt = (el) => { if (!el) return; if (PAD_ON && el.matches(PAD_SEL)) openPad(el); else el.focus(); };
   function field(f) {
     const lab = '<span class="lab">' + esc(f.label) + (f.sub ? ' <em>' + esc(f.sub) + '</em>' : '') + '</span>';
     if (f.type === 'switch') return '<label class="switch"><span>' + esc(f.label) + (f.hint ? '<small>' + esc(f.hint) + '</small>' : '') + '</span><input type="checkbox" name="' + f.name + '"' + (f.value ? ' checked' : '') + '><i></i></label>';
@@ -1535,7 +1537,7 @@
     if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.preventDefault();
     fn(el.dataset, el, ev);
   });
-  document.addEventListener('click', (ev) => { const el = ev.target.closest && ev.target.closest(PAD_SEL); if (el) openPad(el); }, true);
+  document.addEventListener('click', (ev) => { if (!PAD_ON) return; const el = ev.target.closest && ev.target.closest(PAD_SEL); if (el) openPad(el); }, true);
   // [만]·[천]을 눌러도 자판이 내려가지 않게
   document.addEventListener('pointerdown', (ev) => { if (ev.target.closest && ev.target.closest('.ko-units, #pad')) ev.preventDefault(); });
   document.addEventListener('input', (ev) => {
