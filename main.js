@@ -98,7 +98,7 @@
   // 입력 칸 하나
   const dayOpts = Array.from({ length: 31 }, (_, i) => [i + 1, i + 1 + '일']);
   // 금액 읽어 주기: 3,205,000 → '320만 5,000원' (0을 몇 개 쳤는지 헷갈리지 않게 입력 칸 아래에 보여줌)
-  const koWon = (n) => { n = Math.round(Math.abs(n)); if (n < 10000) return ''; const e = Math.floor(n / 1e8), m = Math.floor(n % 1e8 / 1e4), r = n % 1e4;
+  const koWon = (n) => { n = Math.round(Math.abs(n)); if (!n) return ''; const e = Math.floor(n / 1e8), m = Math.floor(n % 1e8 / 1e4), r = n % 1e4;
     return [e ? e + '억' : '', m ? won(m) + '만' : '', r ? won(r) : ''].filter(Boolean).join(' ') + '원'; };
   // 금액 칸 아래: '320만 5,000원' 읽어 주기
   function koFill(el) {
