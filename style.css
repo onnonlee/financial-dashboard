@@ -640,3 +640,13 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .btn:disabled { background: var(--line); color: var(--text3); }
 #pad { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .pad-keys button.hit { background: var(--soft); }
+
+/* Claude가 보낸 변경 */
+.plist { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.prow { display: flex; gap: 10px; align-items: flex-start; }
+.prow div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prow b { font-weight: 600; font-size: 15px; }
+.prow span:not(.pdot) { font-size: 13px; color: var(--text2); }
+.pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 7px; flex: none; }
+.prow.bad b { color: var(--text2); text-decoration: line-through; }
+.prow.bad .pdot { background: var(--text3, #b0b8c1); }

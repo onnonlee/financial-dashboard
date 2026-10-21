@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.34';
+  const VERSION = '2.35';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -628,10 +628,99 @@
     return h;
   }
 
+  // ===== Claude가 보낸 변경 (반영 링크·코드) =====
+  // 형식: { kind: 'money-patch', id, note, ops: [{ t: '설명', c: 'fixed'|'incomes'|..., find?: {name}, set?: {...}, add?: {...}, del?: true }] }
+  // 값에 '$acc:이름' '$card:이름' '$today' '$now'를 쓰면 이 기기의 데이터로 바꿔 넣어요.
+  const PCOLS = ['accounts', 'cards', 'fixed', 'incomes', 'loans', 'installments', 'debts', 'records'];
+  function b64dec(t) { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; const bin = atob(t); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
+  function readPatch(txt) {
+    txt = String(txt || '').trim(); const m = txt.match(/(?:[?&]d=|MONEY:)([A-Za-z0-9_-]+)/);
+    try { const d = m ? JSON.parse(b64dec(m[1])) : JSON.parse(txt); return d && d.kind === 'money-patch' && Array.isArray(d.ops) ? d : null; } catch (e) { return null; }
+  }
+  function pVal(v) {
+    if (typeof v === 'string') {
+      if (v === '$today') return today(); if (v === '$now') return now();
+      if (v.indexOf('$acc:') === 0) { const a = S.accounts.find((x) => x.name === v.slice(5)); if (!a) throw new Error(v.slice(5) + ' 계좌'); return a.id; }
+      if (v.indexOf('$card:') === 0) { const c = S.cards.find((x) => x.name === v.slice(6)); if (!c) throw new Error(v.slice(6) + ' 카드'); return c.id; }
+      return v;
+    }
+    if (Array.isArray(v)) return v.map(pVal);
+    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = pVal(v[k]); return o; }
+    return v;
+  }
+  function pFind(op) { const xs = S[op.c]; const f = pVal(op.find || {}); return xs.find((x) => Object.keys(f).every((k) => x[k] === f[k])); }
+  function pCheck(op) {
+    try {
+      if (op.c === 'settings') { pVal(op.set || {}); return ''; }
+      if (PCOLS.indexOf(op.c) < 0) return '알 수 없는 항목';
+      if (op.add) { pVal(op.add); return ''; }
+      if (!pFind(op)) return '이 기기에서 찾을 수 없어요';
+      if (op.set) pVal(op.set); return '';
+    } catch (e) { return e.message + '을(를) 찾을 수 없어요'; }
+  }
+  function pApply(op) {
+    if (op.c === 'settings') { Object.assign(S.settings, pVal(op.set)); return; }
+    if (op.add) {
+      const x = Object.assign({ id: uid() }, pVal(op.add));
+      if (op.c === 'records') { x.at = x.at || now(); x.date = x.date || today(); if (x.from && x.from.type === 'card') { const c = card(x.from.id); if (c) x.payMonth = C.payMonthOf(c, x.date); } }
+      S[op.c].push(x); return;
+    }
+    const x = pFind(op); if (!x) return;
+    if (op.del) { S[op.c] = S[op.c].filter((y) => y !== x); return; }
+    Object.assign(x, pVal(op.set || {}));
+  }
+  function patchSheet(p) {
+    const done = (S.applied || []).indexOf(p.id) >= 0;
+    const rows = p.ops.map((op) => ({ t: op.t || op.c, err: pCheck(op) }));
+    const ok = rows.filter((r) => !r.err).length;
+    sheet = null;
+    openSheet({
+      title: 'Claude가 보낸 변경',
+      body: () => (p.note ? '<p class="hint">' + esc(p.note) + '</p>' : '') + (done ? '<p class="hint"><b>이미 반영한 변경이에요.</b> 다시 누르면 한 번 더 들어가요.</p>' : '') +
+        '<div class="plist">' + rows.map((r) => '<div class="prow' + (r.err ? ' bad' : '') + '"><span class="pdot"></span><div><b>' + esc(r.t) + '</b>' + (r.err ? '<span>' + esc(r.err) + ' · 건너뛰어요</span>' : '') + '</div></div>').join('') + '</div>',
+      foot: () => ok ? '<button class="btn" data-act="patchGo">' + ok + '개 반영하기</button>' : '<button class="btn ghost" data-act="closeSheet">닫기</button>',
+    });
+    sheet.patch = p;
+  }
+  function patchGo() {
+    const p = sheet && sheet.patch; if (!p) return; let n = 0;
+    for (const op of p.ops) { if (pCheck(op)) continue; pApply(op); n++; }
+    S.applied = (S.applied || []).concat(p.id || uid()).slice(-40);
+    save(); closeSheet(); render(); toast(n + '개 반영했어요');
+  }
+  function patchNoData(h) {
+    openSheet({ title: '여기에는 아직 데이터가 없어요', body: () => '<p class="hint">홈 화면에 추가한 앱과 Safari는 데이터를 따로 저장해요. 홈 화면 앱을 열고 <b>전체 → 설정·백업 → Claude가 보낸 변경 넣기</b>에 아래 코드를 붙여넣어 주세요.</p><textarea class="input" readonly style="min-height:120px">' + esc(location.origin + location.pathname + h) + '</textarea>', foot: () => '<button class="btn" data-act="copyLink">코드 복사</button>' });
+    sheet.link = location.origin + location.pathname + h;
+  }
+  function patchPasteSheet() {
+    openSheet({
+      title: 'Claude가 보낸 변경 넣기',
+      body: () => '<p class="hint">대화에서 받은 링크나 코드를 통째로 붙여넣어 주세요.</p><textarea class="input" name="patch" placeholder="https://… 또는 MONEY:…"></textarea>',
+      foot: () => '<button class="btn" data-act="patchPaste">확인</button>',
+    });
+  }
+  function stateText() {
+    const P = curP(); const L = [];
+    L.push('[머니 지금 상태 ' + today() + ' · 급여일 ' + S.settings.payDay + '일]');
+    L.push('계좌: ' + S.accounts.map((a) => a.name + (a.type === 'overdraft' ? '(마통 한도 ' + won(a.limit || 0) + ')' : '') + ' ' + won(a.balance || 0) + (a.balanceDate ? '@' + a.balanceDate : '')).join(' / '));
+    L.push('카드: ' + S.cards.map((c) => c.name + ' ' + c.payDay + '일').join(' / '));
+    L.push('수입: ' + S.incomes.map((x) => x.name + ' ' + won(x.amount) + ' ' + x.day + '일').join(' / '));
+    L.push('고정비: ' + S.fixed.map((x) => x.name + ' ' + won(C.fixedAmount ? C.fixedAmount(x, P) : x.amount) + ' ' + (x.day || '') + '일' + (x.active === false ? '(꺼짐)' : '')).join(' / '));
+    L.push('할부: ' + S.installments.map((x) => x.name + ' ' + won(x.amount || 0) + ' ' + x.months + '개월').join(' / '));
+    L.push('대출: ' + S.loans.map((x) => x.name + ' ' + won(x.balance || 0)).join(' / '));
+    L.push('갚을·받을 돈: ' + S.debts.map((x) => (x.dir === 'pay' ? '갚을 ' : '받을 ') + x.who + ' ' + won(x.amount)).join(' / '));
+    return L.join('\n');
+  }
+  function copyState() {
+    const t = stateText();
+    const fallback = () => openSheet({ title: '지금 상태', body: () => '<p class="hint">아래 글을 길게 눌러 전체 선택 → 복사해서 Claude에게 보내 주세요.</p><textarea class="input" readonly style="min-height:240px">' + esc(t) + '</textarea>' });
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('복사했어요. Claude 대화에 붙여넣어 주세요'), fallback); else fallback();
+  }
+
   // ===== 설정 =====
   function settingsScreen() {
     return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
-      '<section class="card">' + head('데이터', '') + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
+      '<section class="card">' + head('데이터', '') + row({ act: 'patchPasteOpen', t: 'Claude가 보낸 변경 넣기', s: '링크가 안 열릴 때 코드를 붙여넣어요', amt: '' }) + row({ act: 'copyState', t: '지금 상태 복사', s: 'Claude에게 보내면 그대로 보고 고쳐 줘요', amt: '' }) + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
       (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') +
       row({ act: 'resetAll', t: '<span class="danger">처음부터 다시 시작</span>', s: '이 기기의 데이터를 모두 지우고 처음 화면으로 가요', amt: '' }) + '</section>' +
       '<p class="hint center">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가<br>버전 ' + VERSION + '</p>';
@@ -1535,6 +1624,8 @@
     },
     setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }], () => { S.settings.payDay = Number(val('d')); view.P = null; return LINKED; }); },
     backup: () => backupSheet(),
+    patchGo, copyState, copyLink() { const t = sheet && sheet.link; if (t && navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했어요'), () => toast('길게 눌러 복사해 주세요')); }, patchPasteOpen: () => patchPasteSheet(),
+    patchPaste() { const p = readPatch(val('patch')); if (!p) return toast('이 내용은 읽을 수 없어요'); patchSheet(p); },
     importPaste() { const t = (val('seed') || '').trim(); if (!t) return toast('내용을 붙여넣어 주세요'); takeImport(t); },
     importFile: () => document.getElementById('importFile').click(),
     exportJSON,
@@ -1572,6 +1663,7 @@
 
   function route() {
     const h = location.hash || '#/home';
+    if (h.indexOf('#/apply') === 0) { const p = readPatch(h); history.replaceState(null, '', '#/home'); view.tab = 'home'; view.P = curP(); render(); if (!p) toast('이 링크는 읽을 수 없어요'); else if (!S.started && !S.accounts.length) patchNoData(h); else patchSheet(p); return; }
     if (h.indexOf('#/import') === 0) { const q = h.split('?t=')[1]; history.replaceState(null, '', '#/book'); view.tab = 'book'; render(); if (S.accounts.length) captureSheet(q ? decodeURIComponent(q) : ''); return; }
     const tab = h.replace('#/', '');
     view.tab = TABS.some((x) => x[0] === tab) || tab === 'settings' ? tab : 'home';
