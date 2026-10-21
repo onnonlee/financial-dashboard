@@ -330,11 +330,11 @@ a.tint:active { transform: scale(.99); }
 .m-ic.blue { background: #e8f3ff; color: #1b64da; } .m-ic.indigo { background: #efedff; color: #5b4fd6; }
 .m-ic.red { background: #ffeef0; color: #d63850; } .m-ic.teal { background: #e3f7f1; color: #0b8a6a; }
 .m-ic.green { background: #e7f8ec; color: #1f9a4a; } .m-ic.amber { background: #fff4e0; color: #b86b00; }
-.m-ic.gray { background: var(--soft); color: var(--text2); } .m-ic.navy { background: #e9ecf4; color: #34405f; }
+.m-ic.gray { background: var(--soft); color: var(--text2); } .m-ic.purple { background: #f3ebff; color: #7c4ddb; } .m-ic.navy { background: #e9ecf4; color: #34405f; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   .m-ic.blue { background: #1b2a44; color: #8cc3ff; } .m-ic.indigo { background: #24223f; color: #b3a9ff; }
   .m-ic.red { background: #3a1820; color: #ff8ba1; } .m-ic.teal { background: #10302a; color: #6fe0bd; }
-  .m-ic.green { background: #12301d; color: #7ddc98; } .m-ic.amber { background: #33260f; color: #ffc46b; } .m-ic.navy { background: #2a3246; color: #b9c5e8; }
+  .m-ic.green { background: #12301d; color: #7ddc98; } .m-ic.amber { background: #33260f; color: #ffc46b; } .m-ic.navy { background: #2a3246; color: #b9c5e8; } .m-ic.purple { background: #2e2340; color: #c9a8ff; }
 } }
 .card.notice { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--warn) 30%, transparent); }
 .badge.warn { background: var(--warn-bg); color: var(--warn); }

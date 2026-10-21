@@ -65,6 +65,7 @@
     mIncome: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M8.5 13l3.5 3.5 3.5-3.5"/>'),
     mSwap: sv('<path d="M4 8.5h13"/><path d="m13.5 5 3.5 3.5L13.5 12"/><path d="M20 15.5H7"/><path d="m10.5 12-3.5 3.5 3.5 3.5"/>'),
     mLocal: sv('<path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'),
+    mChat: sv('<path d="M5 18.5 3.5 21V6.5A2.5 2.5 0 0 1 6 4h12a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 18 18H5.5"/><path d="M8 9.5h8M8 13h5"/>'),
     mEdit: sv('<path d="M4 20h4.5L19 9.5a2.1 2.1 0 0 0-3-3L5.5 17 4 20z"/><path d="m13.5 9 2.5 2.5"/>'),
     right: sv('<path d="m9 6 6 6-6 6"/>', 16),
     left: sv('<path d="m15 6-6 6 6 6"/>', 20),
@@ -526,6 +527,7 @@
       item('loans', '대출', '매달 내 부담 ' + won(L.monthlySelf) + '원', won(L.total), 'red', 'mLoan'),
     ]);
     h += grp('관리', [
+      '<a class="row" href="#" data-act="patchPasteOpen"><span class="lead"><span class="m-ic purple">' + I.mChat + '</span></span><span class="grow"><span class="t">Claude가 보낸 변경</span><span class="s">대화에서 받은 링크를 붙여넣어요</span></span><span class="end"><span class="amt"></span></span><span class="chev">' + I.right + '</span></a>',
       item('input', '한 번에 입력', '잔액·카드값을 한 화면에서 고쳐요', '', 'gray', 'mEdit'),
       item('settings', '설정·백업', '급여일, 분류, 백업 내보내기', '', 'gray', 'gear'),
     ]);
@@ -695,8 +697,8 @@
   function patchPasteSheet() {
     openSheet({
       title: 'Claude가 보낸 변경 넣기',
-      body: () => '<p class="hint">대화에서 받은 링크나 코드를 통째로 붙여넣어 주세요.</p><textarea class="input" name="patch" placeholder="https://… 또는 MONEY:…"></textarea>',
-      foot: () => '<button class="btn" data-act="patchPaste">확인</button>',
+      body: () => '<p class="hint">대화에서 받은 링크를 길게 눌러 복사한 뒤 아래 버튼을 눌러 주세요. 안 되면 칸에 직접 붙여넣어도 돼요.</p><textarea class="input" name="patch" placeholder="https://… 또는 MONEY:…"></textarea>',
+      foot: () => '<button class="btn" data-act="patchClip">복사한 링크 붙여넣기</button><button class="btn ghost" data-act="patchPaste">칸에 넣은 내용으로 확인</button>',
     });
   }
   function stateText() {
@@ -1625,6 +1627,7 @@
     setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }], () => { S.settings.payDay = Number(val('d')); view.P = null; return LINKED; }); },
     backup: () => backupSheet(),
     patchGo, copyState, copyLink() { const t = sheet && sheet.link; if (t && navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했어요'), () => toast('길게 눌러 복사해 주세요')); }, patchPasteOpen: () => patchPasteSheet(),
+    patchClip() { if (!navigator.clipboard || !navigator.clipboard.readText) return toast('칸에 길게 눌러 붙여넣어 주세요'); navigator.clipboard.readText().then((t) => { const p = readPatch(t); if (!p) return toast('복사한 내용이 변경 링크가 아니에요'); patchSheet(p); }, () => toast('칸에 길게 눌러 붙여넣어 주세요')); },
     patchPaste() { const p = readPatch(val('patch')); if (!p) return toast('이 내용은 읽을 수 없어요'); patchSheet(p); },
     importPaste() { const t = (val('seed') || '').trim(); if (!t) return toast('내용을 붙여넣어 주세요'); takeImport(t); },
     importFile: () => document.getElementById('importFile').click(),
