@@ -650,16 +650,3 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 7px; flex: none; }
 .prow.bad b { color: var(--text2); text-decoration: line-through; }
 .prow.bad .pdot { background: var(--text3, #b0b8c1); }
-
-/* 급여 명세 */
-.slip .sl-net { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0 14px; border-bottom: 1px solid var(--line); }
-.slip .sl-net span { color: var(--text2); font-size: 14px; }
-.slip .sl-net b { font-size: 22px; font-weight: 800; color: var(--blue); font-variant-numeric: tabular-nums; }
-.slip .sl-grp { padding: 12px 0 4px; display: flex; flex-direction: column; gap: 8px; }
-.slip .sl-grp + .sl-grp { border-top: 1px solid var(--line); }
-.slip h4 { margin: 0 0 2px; font-size: 13px; font-weight: 700; color: var(--text2); display: flex; justify-content: space-between; }
-.slip h4 em { font-style: normal; color: var(--text); font-variant-numeric: tabular-nums; }
-.slip .sl-row { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
-.slip .sl-row span { min-width: 0; }
-.slip .sl-row b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.slip .sl-row b.muted { color: var(--text2); }

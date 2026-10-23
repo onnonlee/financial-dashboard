@@ -169,7 +169,6 @@
   function render() {
     const app = document.getElementById('app');
     for (const f of S.fixed) if (f.base) f.amount = C.fixedAmount(f, curP());
-    for (const x of S.incomes) if (x.slip) { x.amount = slipNet(x.slip); x.approx = true; }
     // 통장 없이 적어 둔 수입은 통장이 생기면 같은 은행 통장(없으면 첫 입출금 통장)으로
     if (S.onboard == null && S.accounts.length && S.incomes.some((x) => !acct(x.accountId))) { for (const x of S.incomes) if (!acct(x.accountId)) x.accountId = (accOfBank(x.bank) || acct((salaryOf() || {}).accountId) || S.accounts.find((a) => a.type === 'bank') || S.accounts[0]).id; save(); }
     if (padEl) closePad();
@@ -606,21 +605,6 @@
   }
 
   // ===== 수입 =====
-  // ===== 급여 명세 (선택): 고정 보수 + 시간외(시간 × 단가) − 공제 = 예상 실수령 =====
-  const sum = (xs) => (xs || []).reduce((a, x) => a + (x.amount || 0), 0);
-  const slipOt = (sl) => Math.round(((sl.ot && sl.ot.rate) || 0) * ((sl.ot && sl.ot.hours) || 0) / 10) * 10;
-  const slipNet = (sl) => sum(sl.pay) + slipOt(sl) - sum(sl.ded);
-  function slipCard(x) {
-    const sl = x.slip; const ot = slipOt(sl);
-    const line = (n, a, cls) => '<div class="sl-row"><span>' + esc(n) + '</span><b class="' + (cls || '') + '">' + a + '</b></div>';
-    return '<section class="card slip">' + head(esc(x.name) + ' 명세', '예상 실수령') +
-      '<div class="sl-net"><span>매달 ' + esc(dayText(x)) + '</span><b>' + won(slipNet(sl)) + '원</b></div>' +
-      '<div class="sl-grp"><h4>보수 <em>' + won(sum(sl.pay) + ot) + '</em></h4>' + sl.pay.map((y) => line(y.name, won(y.amount))).join('') +
-      (sl.ot ? line('시간외수당 · ' + (sl.ot.hours || 0) + '시간 × ' + won(sl.ot.rate || 0), won(ot)) : '') + '</div>' +
-      '<div class="sl-grp"><h4>공제 <em>−' + won(sum(sl.ded)) + '</em></h4>' + sl.ded.map((y) => line(y.name, '−' + won(y.amount), 'muted')).join('') + '</div>' +
-      (sl.month ? '<p class="hint">' + esc(sl.month) + ' 명세서 기준이에요. 그 달만 있는 공제(정산·식대 등)는 빼고 잡았어요.</p>' : '') +
-      '<p class="hint">명세서를 Claude 대화에 보내면 항목과 이번 달 실제 금액을 맞춰 줘요.</p></section>';
-  }
   function incomeScreen() {
     const P = view.P; const t = today(); const f = C.flow(S, P, t);
     let h = periodBar();
@@ -631,7 +615,6 @@
     h += '<section class="card">' + head('매달 들어오는 돈', '') + S.incomes.map((x) => row({ act: 'editIncome', data: { id: x.id }, cls: x.active === false || (x.until && P > x.until) ? 'off' : '', lead: '<span class="date">' + esc(dayText(x)) + '</span>', t: esc(x.name) + (x.until ? badge(ymName(x.until) + '까지', 'gray') : '') + (x.active === false ? badge('끝남', 'gray') : ''), s: esc((acct(x.accountId) || {}).name || '') + (x.note ? ' · ' + esc(x.note) : ''), amt: amtText(x), amtCls: 'in' })).join('') +
       fam.map((l) => row({ act: 'editLoan', data: { id: l.id }, lead: '<span class="date">' + l.payDay + '일</span>', t: esc(l.familyPayer) + ' 대납금', s: esc(l.name) + ' 납입용 · 대출에서 고쳐요', amt: won(l.familyAmount || l.monthly) + '원', amtCls: 'in' })).join('') +
       (!S.incomes.length && !fam.length ? '<p class="hint">정기 수입이 없어요</p>' : '') + '</section>';
-    for (const x of S.incomes) if (x.slip && x.active !== false) h += slipCard(x);
     h += '<button class="btn ghost" data-act="editIncome">정기 수입 추가</button><p class="hint center">급여는 급여일이 들어 있는 다음 달 흐름의 수입이에요. 상여가 들어간 달은 이 달 항목을 눌러 실제 금액으로 바꿔 주세요.</p>';
     return h;
   }
