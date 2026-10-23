@@ -364,7 +364,7 @@ a.tint:active { transform: scale(.99); }
 .mast-chips a.good b { color: #8ef0c3; } .mast-chips a.bad b { color: #ffb0bf; }
 .card.todo { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 28%, transparent); }
 .dot { display: block; width: 10px; height: 10px; border-radius: 50%; margin: 0 10px 0 4px; }
-.dot.blue { background: #3182f6; } .dot.indigo { background: #6b5bf0; } .dot.amber { background: #f0a000; } .dot.red { background: #f04452; }
+.dot.teal { background: #12b886; } .dot.blue { background: #3182f6; } .dot.indigo { background: #6b5bf0; } .dot.amber { background: #f0a000; } .dot.red { background: #f04452; }
 .card.todo .row { min-height: 52px; padding: 7px 0; }
 .card.todo .row .t { font-size: 15px; font-weight: 600; }
 .period-card { display: block; }
@@ -650,3 +650,11 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 7px; flex: none; }
 .prow.bad b { color: var(--text2); text-decoration: line-through; }
 .prow.bad .pdot { background: var(--text3, #b0b8c1); }
+
+/* 처음 시작: 휴일이면 앞당김 */
+.ob-shift { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; color: var(--text2); cursor: pointer; }
+.ob-shift .tick { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.ob-shift.on { color: var(--text); }
+.ob-shift.on .tick { background: var(--blue); border-color: var(--blue); }
+.ob-shift .tick svg { width: 14px; height: 14px; stroke-width: 3; color: #fff; opacity: 0; }
+.ob-shift.on .tick svg { opacity: 1; }
