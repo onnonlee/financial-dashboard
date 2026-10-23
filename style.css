@@ -658,3 +658,11 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ob-shift.on .tick { background: var(--blue); border-color: var(--blue); }
 .ob-shift .tick svg { width: 14px; height: 14px; stroke-width: 3; color: #fff; opacity: 0; }
 .ob-shift.on .tick svg { opacity: 1; }
+
+/* 백업 시트 */
+.bk { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 18px; }
+.bk + .bk { border-top: 1px solid var(--line); padding-top: 18px; }
+.bk > b { font-size: 16px; }
+.bk .hint { margin: 0; }
+.bk-paste summary { font-size: 14px; color: var(--text2); padding: 6px 0; cursor: pointer; }
+.bk-paste[open] { display: flex; flex-direction: column; gap: 8px; }

@@ -724,7 +724,7 @@
   // ===== 설정 =====
   function settingsScreen() {
     return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', s: S.settings.payShift ? '급여일이 주말·공휴일이면 그 전 평일에 받아요' : '', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
-      '<section class="card">' + head('데이터', '') + row({ act: 'patchPasteOpen', t: 'Claude가 보낸 변경 넣기', s: '링크가 안 열릴 때 코드를 붙여넣어요', amt: '' }) + row({ act: 'copyState', t: '지금 상태 복사', s: 'Claude에게 보내면 그대로 보고 고쳐 줘요', amt: '' }) + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
+      '<section class="card">' + head('데이터', '') + row({ act: 'patchPasteOpen', t: 'Claude가 보낸 변경 넣기', s: '링크가 안 열릴 때 코드를 붙여넣어요', amt: '' }) + row({ act: 'copyState', t: '지금 상태 복사', s: 'Claude에게 보내면 그대로 보고 고쳐 줘요', amt: '' }) + row({ act: 'backup', t: '백업·되살리기', s: '폰을 바꿀 때 쓰는 파일이에요', amt: '' }) +
       (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') +
       row({ act: 'resetAll', t: '<span class="danger">처음부터 다시 시작</span>', s: '이 기기의 데이터를 모두 지우고 처음 화면으로 가요', amt: '' }) + '</section>' +
       '<p class="hint center">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가<br>버전 ' + VERSION + '</p>';
@@ -1450,10 +1450,11 @@
   // ===== 백업·이전 정보 묶음 =====
   function backupSheet() {
     openSheet({
-      title: '백업·가져오기',
-      body: () => '<p class="hint">전체 백업을 가져오면 지금 데이터가 바뀌어요. 이전 정보 묶음(money-seed)은 지금 데이터에 <b>더해요</b>. 이름이 같은 건 건너뛰어요.</p>' +
-        '<textarea class="input" name="seed" placeholder="파일 내용을 붙여넣어도 돼요"></textarea><input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>',
-      foot: () => '<button class="btn" data-act="importPaste">붙여넣은 내용 가져오기</button><div class="grid2"><button class="btn ghost" data-act="importFile">파일 가져오기</button><button class="btn ghost" data-act="exportJSON">파일로 내보내기</button></div>',
+      title: '백업·되살리기',
+      body: () => '<div class="bk"><b>백업하기</b><p class="hint">지금 데이터를 파일 하나로 저장해요. 폰을 바꿔도 이 파일만 있으면 그대로 되살려요.</p><button class="btn" data-act="exportJSON">파일로 저장</button></div>' +
+        '<div class="bk"><b>되살리기</b><p class="hint">저장해 둔 백업 파일을 고르면 <b>지금 데이터가 그 파일 내용으로 바뀌어요.</b> 예전 대시보드 정보 파일은 바꾸지 않고 지금 데이터에 더해요.</p><button class="btn ghost" data-act="importFile">파일 고르기</button>' +
+        '<details class="bk-paste"><summary>파일 대신 내용 붙여넣기</summary><textarea class="input" name="seed" placeholder="파일 내용을 붙여넣어 주세요"></textarea><button class="btn ghost" data-act="importPaste">붙여넣은 내용 가져오기</button></details></div>' +
+        '<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>',
       mount(el) { el.querySelector('#importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) f.text().then(takeImport).catch(() => toast('이 파일은 읽을 수 없어요')); }); },
     });
   }
