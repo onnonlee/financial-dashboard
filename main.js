@@ -306,7 +306,7 @@
     const soon3 = st.upcoming.filter((x) => !x.skip && !x.done && x.dir === 'out' && C.daysBetween(t, x.date) <= 3);
     if (soon3.length) todo.push({ act: 'href', href: '#/flow', ic: 'red', t: '3일 안에 나갈 돈 ' + soon3.length + '건, ' + won(soon3.reduce((a, x) => a + x.amount, 0)) + '원', s: soon3.map((x) => esc(x.name)).slice(0, 3).join(', ') + (soon3.length > 3 ? ' 외' : '') });
     const bk = S.lastBackup ? C.daysBetween(S.lastBackup, today()) : null;
-    if (S.started && S.accounts.length && (bk == null || bk >= 7)) todo.push({ act: 'exportJSON', ic: 'teal', t: bk == null ? '아직 백업한 적이 없어요' : '백업한 지 ' + bk + '일 됐어요', s: 'iCloud에 저장해 두면 폰을 바꿔도 돼요' });
+    if (S.started && S.accounts.length && (bk == null || bk >= 7)) todo.push({ act: 'exportJSON', ic: 'teal', t: bk == null ? '아직 백업한 적이 없어요' : '백업한 지 ' + bk + '일 됐어요', s: '눌러서 원하는 곳에 보관해 두세요' });
     if (todo.length) h += '<section class="card todo">' + head('지금 확인할 것', todo.length + '건') + todo.map((x) => '<' + (x.act === 'href' ? 'a href="' + x.href + '"' : 'button data-act="' + x.act + '"' + Object.entries(x.data || {}).map(([k, v]) => ' data-' + k + '="' + esc(v) + '"').join('')) + ' class="row"><span class="lead"><span class="dot ' + x.ic + '"></span></span><span class="grow"><span class="t">' + x.t + '</span><span class="s">' + x.s + '</span></span><span class="chev">' + I.right + '</span></' + (x.act === 'href' ? 'a' : 'button') + '>').join('') + '</section>';
 
     // 2. 이번 주기 한눈에: 수입 / 나갈 돈 / 남는 돈 + 진행 막대
@@ -723,7 +723,7 @@
 
   // ===== 설정 =====
   function settingsScreen() {
-    return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', s: S.settings.payShift ? '주말·공휴일이면 앞 평일에 받아요' : '', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
+    return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', s: S.settings.payShift ? '급여일이 주말·공휴일이면 그 전 평일에 받아요' : '', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
       '<section class="card">' + head('데이터', '') + row({ act: 'patchPasteOpen', t: 'Claude가 보낸 변경 넣기', s: '링크가 안 열릴 때 코드를 붙여넣어요', amt: '' }) + row({ act: 'copyState', t: '지금 상태 복사', s: 'Claude에게 보내면 그대로 보고 고쳐 줘요', amt: '' }) + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
       (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') +
       row({ act: 'resetAll', t: '<span class="danger">처음부터 다시 시작</span>', s: '이 기기의 데이터를 모두 지우고 처음 화면으로 가요', amt: '' }) + '</section>' +
@@ -794,7 +794,7 @@
       h += head(titles[q], subs[q]) + '<div class="ob-q ob-in">';
       if (q === 0) h += '<div class="ob-opts"><button type="button" class="ob-opt' + (obMax() > 0 && !noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="1"><b>네, 있어요</b><span>월급, 연금처럼 매달 정해진 날에 들어와요</span></button><button type="button" class="ob-opt' + (obMax() > 0 && noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="0"><b>아니요</b><span>프리랜서·자영업·학생처럼 들어오는 날이 정해져 있지 않아요</span></button></div>';
       else if (q === 1) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 1 && pd !== 31 ? pd : '') + '" placeholder="' + (noSal() ? '1' : '25') + '"><span>일</span></div>' +
-        (noSal() ? '<p class="ob-ex">비워 두고 확인을 누르면 매월 1일부터예요.</p>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button><button type="button" class="ob-shift' + (S.settings.payShift !== false ? ' on' : '') + '" data-act="obShift"><span class="tick">' + I.check + '</span>주말·공휴일이면 앞 평일에 받아요</button>');
+        (noSal() ? '<p class="ob-ex">비워 두고 확인을 누르면 매월 1일부터예요.</p>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button><button type="button" class="ob-shift' + (S.settings.payShift !== false ? ' on' : '') + '" data-act="obShift"><span class="tick">' + I.check + '</span>급여일이 주말·공휴일이면 그 전 평일에 받아요</button>');
       else if (q === 2) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" pattern="[0-9]*" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
       else if (q === 3 && accs.length) h += '<div class="ob-accs">' + accs.map((a) => '<button type="button" class="ob-acc' + (a.id === sa ? ' on' : '') + '" data-act="obAcc" data-id="' + a.id + '">' + acctChip(a) + '<span class="grow"><b>' + esc(a.name) + '</b><span>' + (a.type === 'overdraft' ? '마이너스통장' : '입출금') + '</span></span><span class="chk"></span></button>').join('') + '</div>';
       else if (q === 3) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
@@ -1634,7 +1634,7 @@
       if (debt.dir === 'recv') r.to = acc; else r.from = acc;
       S.records.push(r); save(); closeSheet(); render(); toast('정산했어요 · 남은 금액과 잔액이 바뀌었어요');
     },
-    setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }, { name: 'shift', label: '주말·공휴일이면 앞 평일에 받아요', type: 'switch', value: !!S.settings.payShift }], () => { S.settings.payDay = Number(val('d')); S.settings.payShift = !!val('shift'); view.P = null; return LINKED; }, null, '켜면 급여 들어오는 날만 앞당겨요. 급여주기 날짜는 그대로예요.'); },
+    setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }, { name: 'shift', label: '급여일이 주말·공휴일이면 그 전 평일에 받아요', type: 'switch', value: !!S.settings.payShift }], () => { S.settings.payDay = Number(val('d')); S.settings.payShift = !!val('shift'); view.P = null; return LINKED; }, null, '켜면 급여 들어오는 날만 앞당겨요. 급여주기 날짜는 그대로예요.'); },
     backup: () => backupSheet(),
     patchGo, copyState, copyLink() { const t = sheet && sheet.link; if (t && navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했어요'), () => toast('길게 눌러 복사해 주세요')); }, patchPasteOpen: () => patchPasteSheet(),
     patchClip() { if (!navigator.clipboard || !navigator.clipboard.readText) return toast('칸에 길게 눌러 붙여넣어 주세요'); navigator.clipboard.readText().then((t) => { const p = readPatch(t); if (!p) return toast('복사한 내용이 변경 링크가 아니에요'); patchSheet(p); }, () => toast('칸에 길게 눌러 붙여넣어 주세요')); },
