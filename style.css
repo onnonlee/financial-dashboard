@@ -326,14 +326,15 @@ a.tint:active { transform: scale(.99); }
 .card.menu { padding-top: 14px; }
 .grp { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text3); letter-spacing: 0; }
 .m-ic { width: 36px; height: 36px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; }
+.row .m-ic svg { width: 19px; height: 19px; stroke-width: 1.9; }
 .m-ic.blue { background: #e8f3ff; color: #1b64da; } .m-ic.indigo { background: #efedff; color: #5b4fd6; }
 .m-ic.red { background: #ffeef0; color: #d63850; } .m-ic.teal { background: #e3f7f1; color: #0b8a6a; }
 .m-ic.green { background: #e7f8ec; color: #1f9a4a; } .m-ic.amber { background: #fff4e0; color: #b86b00; }
-.m-ic.gray { background: var(--soft); color: var(--text2); }
+.m-ic.gray { background: var(--soft); color: var(--text2); } .m-ic.purple { background: #f3ebff; color: #7c4ddb; } .m-ic.navy { background: #e9ecf4; color: #34405f; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   .m-ic.blue { background: #1b2a44; color: #8cc3ff; } .m-ic.indigo { background: #24223f; color: #b3a9ff; }
   .m-ic.red { background: #3a1820; color: #ff8ba1; } .m-ic.teal { background: #10302a; color: #6fe0bd; }
-  .m-ic.green { background: #12301d; color: #7ddc98; } .m-ic.amber { background: #33260f; color: #ffc46b; }
+  .m-ic.green { background: #12301d; color: #7ddc98; } .m-ic.amber { background: #33260f; color: #ffc46b; } .m-ic.navy { background: #2a3246; color: #b9c5e8; } .m-ic.purple { background: #2e2340; color: #c9a8ff; }
 } }
 .card.notice { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--warn) 30%, transparent); }
 .badge.warn { background: var(--warn-bg); color: var(--warn); }
@@ -363,7 +364,7 @@ a.tint:active { transform: scale(.99); }
 .mast-chips a.good b { color: #8ef0c3; } .mast-chips a.bad b { color: #ffb0bf; }
 .card.todo { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 28%, transparent); }
 .dot { display: block; width: 10px; height: 10px; border-radius: 50%; margin: 0 10px 0 4px; }
-.dot.blue { background: #3182f6; } .dot.indigo { background: #6b5bf0; } .dot.amber { background: #f0a000; } .dot.red { background: #f04452; }
+.dot.teal { background: #12b886; } .dot.blue { background: #3182f6; } .dot.indigo { background: #6b5bf0; } .dot.amber { background: #f0a000; } .dot.red { background: #f04452; }
 .card.todo .row { min-height: 52px; padding: 7px 0; }
 .card.todo .row .t { font-size: 15px; font-weight: 600; }
 .period-card { display: block; }
@@ -639,3 +640,29 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .btn:disabled { background: var(--line); color: var(--text3); }
 #pad { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .pad-keys button.hit { background: var(--soft); }
+
+/* Claude가 보낸 변경 */
+.plist { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.prow { display: flex; gap: 10px; align-items: flex-start; }
+.prow div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prow b { font-weight: 600; font-size: 15px; }
+.prow span:not(.pdot) { font-size: 13px; color: var(--text2); }
+.pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 7px; flex: none; }
+.prow.bad b { color: var(--text2); text-decoration: line-through; }
+.prow.bad .pdot { background: var(--text3, #b0b8c1); }
+
+/* 처음 시작: 휴일이면 앞당김 */
+.ob-shift { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; color: var(--text2); cursor: pointer; }
+.ob-shift .tick { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.ob-shift.on { color: var(--text); }
+.ob-shift.on .tick { background: var(--blue); border-color: var(--blue); }
+.ob-shift .tick svg { width: 14px; height: 14px; stroke-width: 3; color: #fff; opacity: 0; }
+.ob-shift.on .tick svg { opacity: 1; }
+
+/* 백업 시트 */
+.bk { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 18px; }
+.bk + .bk { border-top: 1px solid var(--line); padding-top: 18px; }
+.bk > b { font-size: 16px; }
+.bk .hint { margin: 0; }
+.bk-paste summary { font-size: 14px; color: var(--text2); padding: 6px 0; cursor: pointer; }
+.bk-paste[open] { display: flex; flex-direction: column; gap: 8px; }

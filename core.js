@@ -19,6 +19,12 @@
   const sum = (xs, f) => xs.reduce((a, x) => a + (f ? f(x) : x), 0);
 
   const payDay = (st) => st.settings.payDay || 25;
+  // 공휴일(대체공휴일 포함). 임시공휴일은 생기면 추가
+  const HOLI = new Set(('2026-01-01 2026-02-16 2026-02-17 2026-02-18 2026-03-02 2026-05-05 2026-05-25 2026-06-03 2026-08-17 2026-09-24 2026-09-25 2026-10-05 2026-10-09 2026-12-25 ' +
+    '2027-01-01 2027-02-08 2027-02-09 2027-03-01 2027-05-05 2027-05-13 2027-08-16 2027-09-14 2027-09-15 2027-09-16 2027-10-04 2027-10-11 2027-12-27').split(' '));
+  const isOff = (d) => { const w = new Date(toUTC(d)).getUTCDay(); return w === 0 || w === 6 || HOLI.has(d); };
+  // 주말·공휴일이면 앞 평일로
+  function bizBefore(d) { let x = d; for (let i = 0; i < 10 && isOff(x); i++) x = addDays(x, -1); return x; }
   // 급여일이 31일(말일)이면 30일까지인 달은 30일이 급여일
   function periodOf(st, d) { return d >= dateIn(monthOf(d), payDay(st)) ? addMonths(monthOf(d), 1) : monthOf(d); }
   function periodRange(st, P) { return { start: dateIn(addMonths(P, -1), payDay(st)), end: addDays(dateIn(P, payDay(st)), -1) }; }
@@ -59,7 +65,7 @@
     };
     for (const x of st.incomes) {
       if (!activeIn(x, P)) continue;
-      push({ key: 'income:' + x.id + ':' + P, src: 'income', id: x.id, name: x.name, dir: 'in', amount: x.amount, approx: !!x.approx, date: dayInPeriod(st, P, x.day), acct: x.accountId, cat: x.salary ? '급여' : '수입' });
+      push({ key: 'income:' + x.id + ':' + P, src: 'income', id: x.id, name: x.name, dir: 'in', amount: x.amount, approx: !!x.approx, date: x.salary && st.settings.payShift ? bizBefore(dayInPeriod(st, P, x.day)) : dayInPeriod(st, P, x.day), acct: x.accountId, cat: x.salary ? '급여' : '수입' });
     }
     for (const l of st.loans) {
       if (!activeIn(l, P) || !l.monthly || !l.accountId) continue;
@@ -276,6 +282,6 @@
   }
 
   const api = { addMonths, addDays, dateIn, daysBetween, monthDiff, periodOf, periodRange, dayInPeriod, payMonthOf, cardPayDate,
-    schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState, fixedAmount };
+    schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState, fixedAmount, bizBefore, isOff };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Core = api;
 })(this);

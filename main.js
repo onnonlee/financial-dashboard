@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.33';
+  const VERSION = '2.36';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -58,6 +58,15 @@
   const I = {
     gear: sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', 22),
     plus: sv('<path d="M12 5v14M5 12h14"/>', 26),
+    mRepeat: sv('<path d="M17 2.5 20.5 6 17 9.5"/><path d="M4 11V9a3 3 0 0 1 3-3h13"/><path d="m7 21.5L3.5 18 7 14.5"/><path d="M20 13v2a3 3 0 0 1-3 3H4"/>'),
+    mCard: sv('<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M7 14.5h4"/>'),
+    mLoan: sv('<path d="M3 10.5 12 4l9 6.5"/><path d="M5 10.5V19M9.5 10.5V19M14.5 10.5V19M19 10.5V19"/><path d="M3 20h18"/>'),
+    mWallet: sv('<path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v3"/><rect x="4" y="8" width="17" height="11.5" rx="2.5"/><path d="M16 13.5h5"/><circle cx="16" cy="13.75" r=".6" fill="currentColor"/>'),
+    mIncome: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M8.5 13l3.5 3.5 3.5-3.5"/>'),
+    mSwap: sv('<path d="M4 8.5h13"/><path d="m13.5 5 3.5 3.5L13.5 12"/><path d="M20 15.5H7"/><path d="m10.5 12-3.5 3.5 3.5 3.5"/>'),
+    mLocal: sv('<path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'),
+    mChat: sv('<path d="M5 18.5 3.5 21V6.5A2.5 2.5 0 0 1 6 4h12a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 18 18H5.5"/><path d="M8 9.5h8M8 13h5"/>'),
+    mEdit: sv('<path d="M4 20h4.5L19 9.5a2.1 2.1 0 0 0-3-3L5.5 17 4 20z"/><path d="m13.5 9 2.5 2.5"/>'),
     right: sv('<path d="m9 6 6 6-6 6"/>', 16),
     left: sv('<path d="m15 6-6 6 6 6"/>', 20),
     home: sv('<path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/>', 24),
@@ -208,7 +217,7 @@
       income: ['수입 항목', '', '해당 월 흐름에 들어가는 수입을 모아서 보여줘요.'],
       debts: ['갚을·받을 돈', '', '임시출금, 빌린 돈, 받을 돈을 따로 관리해요.'],
       settings: ['설정', '', ''],
-      more: ['전체', '', '매달 나가는 돈, 내 돈, 관리 메뉴를 모아 뒀어요.'],
+      more: ['전체', '', '자산, 지출, 관리 메뉴를 모아 뒀어요.'],
     }[view.tab];
     if (!H) return '';
     if (!H) return '';
@@ -296,6 +305,8 @@
     soonList().forEach((x) => { const n = daysTo(x.info.contractEnd); todo.push({ act: 'fixedInfo', data: { id: x.id }, ic: 'amber', t: esc(x.name) + ' 약정이 ' + (n < 0 ? '끝났어요' : n + '일 뒤 끝나요'), s: n < 0 ? '요금이 올랐는지 확인해요' : '바꿀지, 이어갈지 정해요' }); });
     const soon3 = st.upcoming.filter((x) => !x.skip && !x.done && x.dir === 'out' && C.daysBetween(t, x.date) <= 3);
     if (soon3.length) todo.push({ act: 'href', href: '#/flow', ic: 'red', t: '3일 안에 나갈 돈 ' + soon3.length + '건, ' + won(soon3.reduce((a, x) => a + x.amount, 0)) + '원', s: soon3.map((x) => esc(x.name)).slice(0, 3).join(', ') + (soon3.length > 3 ? ' 외' : '') });
+    const bk = S.lastBackup ? C.daysBetween(S.lastBackup, today()) : null;
+    if (S.started && S.accounts.length && (bk == null || bk >= 7)) todo.push({ act: 'exportJSON', ic: 'teal', t: bk == null ? '아직 백업한 적이 없어요' : '백업한 지 ' + bk + '일 됐어요', s: '눌러서 원하는 곳에 보관해 두세요' });
     if (todo.length) h += '<section class="card todo">' + head('지금 확인할 것', todo.length + '건') + todo.map((x) => '<' + (x.act === 'href' ? 'a href="' + x.href + '"' : 'button data-act="' + x.act + '"' + Object.entries(x.data || {}).map(([k, v]) => ' data-' + k + '="' + esc(v) + '"').join('')) + ' class="row"><span class="lead"><span class="dot ' + x.ic + '"></span></span><span class="grow"><span class="t">' + x.t + '</span><span class="s">' + x.s + '</span></span><span class="chev">' + I.right + '</span></' + (x.act === 'href' ? 'a' : 'button') + '>').join('') + '</section>';
 
     // 2. 이번 주기 한눈에: 수입 / 나갈 돈 / 남는 돈 + 진행 막대
@@ -315,10 +326,10 @@
     const nc = st.nextCards[0]; const Ls = C.loanSummary(S, t);
     const mine = (href, ic, lab, t1, amt, cls) => '<a class="row" href="' + href + '"><span class="lead"><span class="m-ic ' + ic + '">' + lab + '</span></span><span class="grow"><span class="t">' + t1[0] + '</span><span class="s">' + t1[1] + '</span></span><span class="end"><span class="amt' + (cls ? ' ' + cls : '') + '">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
     h += '<section class="card">' + head('내 돈', '') +
-      mine('#/accounts', 'teal', '계', ['계좌 ' + S.accounts.length + '개', aa ? shortDate(aa) + ' 확인 · 마통 남은 한도 포함' : '잔액을 아직 안 적었어요'], wonS(st.spendable)) +
-      (nc ? mine('#/cards', 'indigo', '카', [mName(nc.payMonth) + ' 카드값', md(nc.payDate) + ' 출금 · ' + st.nextCards.map((b) => esc(b.card.name)).join(' + ')], '−' + won(st.nextCardTotal)) : '') +
-      (Ls.total ? mine('#/loans', 'red', '대', ['대출 남은 돈', '매달 내 부담 ' + won(Ls.monthlySelf) + '원' + (Ls.order[0] ? ' · 먼저 갚을 것 ' + esc(Ls.order[0].name) : '')], won(Ls.total)) : '') +
-      (st.local ? mine('#/accounts', 'green', '지', ['지역화폐', '쓸 수 있는 돈과 따로 세요'], won(st.local)) : '') + '</section>';
+      mine('#/accounts', 'navy', I.mWallet, ['계좌 ' + S.accounts.length + '개', aa ? shortDate(aa) + ' 확인 · 마통 남은 한도 포함' : '잔액을 아직 안 적었어요'], wonS(st.spendable)) +
+      (nc ? mine('#/cards', 'indigo', I.mCard, [mName(nc.payMonth) + ' 카드값', md(nc.payDate) + ' 출금 · ' + st.nextCards.map((b) => esc(b.card.name)).join(' + ')], '−' + won(st.nextCardTotal)) : '') +
+      (Ls.total ? mine('#/loans', 'red', I.mLoan, ['대출 남은 돈', '매달 내 부담 ' + won(Ls.monthlySelf) + '원' + (Ls.order[0] ? ' · 먼저 갚을 것 ' + esc(Ls.order[0].name) : '')], won(Ls.total)) : '') +
+      (st.local ? mine('#/accounts', 'green', I.mLocal, ['지역화폐', '쓸 수 있는 돈과 따로 세요'], won(st.local)) : '') + '</section>';
 
     // 5. 이번 달 가계부
     const cats = Object.entries(f.byCat).sort((a, b) => b[1] - a[1]);
@@ -504,22 +515,23 @@
     const inc = S.incomes.filter(on);
     const pay = S.debts.filter((d) => d.dir === 'pay').reduce((a, d) => a + C.debtStatus(S, d).left, 0);
     const get = S.debts.filter((d) => d.dir !== 'pay').reduce((a, d) => a + C.debtStatus(S, d).left, 0);
-    const item = (tab, name, sub, amt, ic) => '<a class="row" href="#/' + tab + '"><span class="lead"><span class="m-ic ' + ic + '">' + name.slice(0, 1) + '</span></span><span class="grow"><span class="t">' + name + '</span><span class="s">' + sub + '</span></span><span class="end"><span class="amt">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
+    const item = (tab, name, sub, amt, ic, icn) => '<a class="row" href="#/' + tab + '"><span class="lead"><span class="m-ic ' + ic + '">' + I[icn] + '</span></span><span class="grow"><span class="t">' + name + '</span><span class="s">' + sub + '</span></span><span class="end"><span class="amt">' + amt + '</span></span><span class="chev">' + I.right + '</span></a>';
     const grp = (title, rows) => '<section class="card menu"><h3 class="grp">' + title + '</h3>' + rows.join('') + '</section>';
     let h = soonCard();
-    h += grp('매달 나가는 돈', [
-      item('fixed', '구독·고정비', fx.length + '개 · 통신비·보험·구독', '월 ' + won(fx.reduce((a, x) => a + x.amount, 0)), 'blue'),
-      item('cards', '카드·할부', S.cards.length + '개 카드 · 할부 ' + S.installments.length + '건', won(st.nextCardTotal || 0), 'indigo'),
-      item('loans', '대출', '매달 내 부담 ' + won(L.monthlySelf) + '원', won(L.total), 'red'),
+    h += grp('자산', [
+      item('income', '수입', inc.length + '개 · 급여·정기 수입', '월 ' + won(inc.reduce((a, x) => a + x.amount, 0)), 'green', 'mIncome'),
+      item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'navy', 'mWallet'),
+      item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber', 'mSwap'),
     ]);
-    h += grp('내 돈', [
-      item('accounts', '계좌', S.accounts.length + '개 · 쓸 수 있는 돈', wonS(st.spendable), 'teal'),
-      item('income', '수입', inc.length + '개 · 급여·정기 수입', '월 ' + won(inc.reduce((a, x) => a + x.amount, 0)), 'green'),
-      item('debts', '갚을·받을 돈', '받을 돈 ' + won(get) + '원', won(pay), 'amber'),
+    h += grp('지출', [
+      item('fixed', '구독·고정비', fx.length + '개 · 통신비·보험·구독', '월 ' + won(fx.reduce((a, x) => a + x.amount, 0)), 'blue', 'mRepeat'),
+      item('cards', '카드·할부', S.cards.length + '개 카드 · 할부 ' + S.installments.length + '건', won(st.nextCardTotal || 0), 'indigo', 'mCard'),
+      item('loans', '대출', '매달 내 부담 ' + won(L.monthlySelf) + '원', won(L.total), 'red', 'mLoan'),
     ]);
     h += grp('관리', [
-      item('input', '한 번에 입력', '잔액·카드값을 한 화면에서 고쳐요', '', 'gray'),
-      item('settings', '설정·백업', '급여일, 분류, 백업 내보내기', '', 'gray'),
+      '<a class="row" href="#" data-act="patchPasteOpen"><span class="lead"><span class="m-ic purple">' + I.mChat + '</span></span><span class="grow"><span class="t">Claude가 보낸 변경</span><span class="s">대화에서 받은 링크를 붙여넣어요</span></span><span class="end"><span class="amt"></span></span><span class="chev">' + I.right + '</span></a>',
+      item('input', '한 번에 입력', '잔액·카드값을 한 화면에서 고쳐요', '', 'gray', 'mEdit'),
+      item('settings', '설정·백업', '급여일, 분류, 백업 내보내기', '', 'gray', 'gear'),
     ]);
     return h;
   }
@@ -620,10 +632,99 @@
     return h;
   }
 
+  // ===== Claude가 보낸 변경 (반영 링크·코드) =====
+  // 형식: { kind: 'money-patch', id, note, ops: [{ t: '설명', c: 'fixed'|'incomes'|..., find?: {name}, set?: {...}, add?: {...}, del?: true }] }
+  // 값에 '$acc:이름' '$card:이름' '$today' '$now'를 쓰면 이 기기의 데이터로 바꿔 넣어요.
+  const PCOLS = ['accounts', 'cards', 'fixed', 'incomes', 'loans', 'installments', 'debts', 'records'];
+  function b64dec(t) { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; const bin = atob(t); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
+  function readPatch(txt) {
+    txt = String(txt || '').trim(); const m = txt.match(/(?:[?&]d=|MONEY:)([A-Za-z0-9_-]+)/);
+    try { const d = m ? JSON.parse(b64dec(m[1])) : JSON.parse(txt); return d && d.kind === 'money-patch' && Array.isArray(d.ops) ? d : null; } catch (e) { return null; }
+  }
+  function pVal(v) {
+    if (typeof v === 'string') {
+      if (v === '$today') return today(); if (v === '$now') return now();
+      if (v.indexOf('$acc:') === 0) { const a = S.accounts.find((x) => x.name === v.slice(5)); if (!a) throw new Error(v.slice(5) + ' 계좌'); return a.id; }
+      if (v.indexOf('$card:') === 0) { const c = S.cards.find((x) => x.name === v.slice(6)); if (!c) throw new Error(v.slice(6) + ' 카드'); return c.id; }
+      return v;
+    }
+    if (Array.isArray(v)) return v.map(pVal);
+    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = pVal(v[k]); return o; }
+    return v;
+  }
+  function pFind(op) { const xs = S[op.c]; const f = pVal(op.find || {}); return xs.find((x) => Object.keys(f).every((k) => x[k] === f[k])); }
+  function pCheck(op) {
+    try {
+      if (op.c === 'settings') { pVal(op.set || {}); return ''; }
+      if (PCOLS.indexOf(op.c) < 0) return '알 수 없는 항목';
+      if (op.add) { pVal(op.add); return ''; }
+      if (!pFind(op)) return '이 기기에서 찾을 수 없어요';
+      if (op.set) pVal(op.set); return '';
+    } catch (e) { return e.message + '을(를) 찾을 수 없어요'; }
+  }
+  function pApply(op) {
+    if (op.c === 'settings') { Object.assign(S.settings, pVal(op.set)); return; }
+    if (op.add) {
+      const x = Object.assign({ id: uid() }, pVal(op.add));
+      if (op.c === 'records') { x.at = x.at || now(); x.date = x.date || today(); if (x.from && x.from.type === 'card') { const c = card(x.from.id); if (c) x.payMonth = C.payMonthOf(c, x.date); } }
+      S[op.c].push(x); return;
+    }
+    const x = pFind(op); if (!x) return;
+    if (op.del) { S[op.c] = S[op.c].filter((y) => y !== x); return; }
+    Object.assign(x, pVal(op.set || {}));
+  }
+  function patchSheet(p) {
+    const done = (S.applied || []).indexOf(p.id) >= 0;
+    const rows = p.ops.map((op) => ({ t: op.t || op.c, err: pCheck(op) }));
+    const ok = rows.filter((r) => !r.err).length;
+    sheet = null;
+    openSheet({
+      title: 'Claude가 보낸 변경',
+      body: () => (p.note ? '<p class="hint">' + esc(p.note) + '</p>' : '') + (done ? '<p class="hint"><b>이미 반영한 변경이에요.</b> 다시 누르면 한 번 더 들어가요.</p>' : '') +
+        '<div class="plist">' + rows.map((r) => '<div class="prow' + (r.err ? ' bad' : '') + '"><span class="pdot"></span><div><b>' + esc(r.t) + '</b>' + (r.err ? '<span>' + esc(r.err) + ' · 건너뛰어요</span>' : '') + '</div></div>').join('') + '</div>',
+      foot: () => ok ? '<button class="btn" data-act="patchGo">' + ok + '개 반영하기</button>' : '<button class="btn ghost" data-act="closeSheet">닫기</button>',
+    });
+    sheet.patch = p;
+  }
+  function patchGo() {
+    const p = sheet && sheet.patch; if (!p) return; let n = 0;
+    for (const op of p.ops) { if (pCheck(op)) continue; pApply(op); n++; }
+    S.applied = (S.applied || []).concat(p.id || uid()).slice(-40);
+    save(); closeSheet(); render(); toast(n + '개 반영했어요');
+  }
+  function patchNoData(h) {
+    openSheet({ title: '여기에는 아직 데이터가 없어요', body: () => '<p class="hint">홈 화면에 추가한 앱과 Safari는 데이터를 따로 저장해요. 홈 화면 앱을 열고 <b>전체 → 설정·백업 → Claude가 보낸 변경 넣기</b>에 아래 코드를 붙여넣어 주세요.</p><textarea class="input" readonly style="min-height:120px">' + esc(location.origin + location.pathname + h) + '</textarea>', foot: () => '<button class="btn" data-act="copyLink">코드 복사</button>' });
+    sheet.link = location.origin + location.pathname + h;
+  }
+  function patchPasteSheet() {
+    openSheet({
+      title: 'Claude가 보낸 변경 넣기',
+      body: () => '<p class="hint">대화에서 받은 링크를 길게 눌러 복사한 뒤 아래 버튼을 눌러 주세요. 안 되면 칸에 직접 붙여넣어도 돼요.</p><textarea class="input" name="patch" placeholder="https://… 또는 MONEY:…"></textarea>',
+      foot: () => '<button class="btn" data-act="patchClip">복사한 링크 붙여넣기</button><button class="btn ghost" data-act="patchPaste">칸에 넣은 내용으로 확인</button>',
+    });
+  }
+  function stateText() {
+    const P = curP(); const L = [];
+    L.push('[머니 지금 상태 ' + today() + ' · 급여일 ' + S.settings.payDay + '일]');
+    L.push('계좌: ' + S.accounts.map((a) => a.name + (a.type === 'overdraft' ? '(마통 한도 ' + won(a.limit || 0) + ')' : '') + ' ' + won(a.balance || 0) + (a.balanceDate ? '@' + a.balanceDate : '')).join(' / '));
+    L.push('카드: ' + S.cards.map((c) => c.name + ' ' + c.payDay + '일').join(' / '));
+    L.push('수입: ' + S.incomes.map((x) => x.name + ' ' + won(x.amount) + ' ' + x.day + '일').join(' / '));
+    L.push('고정비: ' + S.fixed.map((x) => x.name + ' ' + won(C.fixedAmount ? C.fixedAmount(x, P) : x.amount) + ' ' + (x.day || '') + '일' + (x.active === false ? '(꺼짐)' : '')).join(' / '));
+    L.push('할부: ' + S.installments.map((x) => x.name + ' ' + won(x.amount || 0) + ' ' + x.months + '개월').join(' / '));
+    L.push('대출: ' + S.loans.map((x) => x.name + ' ' + won(x.balance || 0)).join(' / '));
+    L.push('갚을·받을 돈: ' + S.debts.map((x) => (x.dir === 'pay' ? '갚을 ' : '받을 ') + x.who + ' ' + won(x.amount)).join(' / '));
+    return L.join('\n');
+  }
+  function copyState() {
+    const t = stateText();
+    const fallback = () => openSheet({ title: '지금 상태', body: () => '<p class="hint">아래 글을 길게 눌러 전체 선택 → 복사해서 Claude에게 보내 주세요.</p><textarea class="input" readonly style="min-height:240px">' + esc(t) + '</textarea>' });
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('복사했어요. Claude 대화에 붙여넣어 주세요'), fallback); else fallback();
+  }
+
   // ===== 설정 =====
   function settingsScreen() {
-    return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
-      '<section class="card">' + head('데이터', '') + row({ act: 'backup', t: '백업 내보내기·가져오기', s: '이전 정보 묶음 붙여넣기도 여기서 해요', amt: '' }) +
+    return '<section class="card">' + head('설정', '') + row({ act: 'setPayDay', t: '급여일 (급여주기 시작일)', s: S.settings.payShift ? '급여일이 주말·공휴일이면 그 전 평일에 받아요' : '', amt: '매월 ' + S.settings.payDay + '일' }) + '</section>' +
+      '<section class="card">' + head('데이터', '') + row({ act: 'patchPasteOpen', t: 'Claude가 보낸 변경 넣기', s: '링크가 안 열릴 때 코드를 붙여넣어요', amt: '' }) + row({ act: 'copyState', t: '지금 상태 복사', s: 'Claude에게 보내면 그대로 보고 고쳐 줘요', amt: '' }) + row({ act: 'backup', t: '백업·되살리기', s: '폰을 바꿀 때 쓰는 파일이에요', amt: '' }) +
       (readJSON(OLDKEY) ? row({ act: 'remigrate', t: '예전 버전 앱 데이터 다시 가져오기', s: '지금 데이터는 바뀌어요', amt: '' }) : '') +
       row({ act: 'resetAll', t: '<span class="danger">처음부터 다시 시작</span>', s: '이 기기의 데이터를 모두 지우고 처음 화면으로 가요', amt: '' }) + '</section>' +
       '<p class="hint center">홈 화면에 추가해서 쓰면 Safari가 데이터를 지우지 않아요.<br>공유 버튼 → 홈 화면에 추가<br>버전 ' + VERSION + '</p>';
@@ -693,7 +794,7 @@
       h += head(titles[q], subs[q]) + '<div class="ob-q ob-in">';
       if (q === 0) h += '<div class="ob-opts"><button type="button" class="ob-opt' + (obMax() > 0 && !noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="1"><b>네, 있어요</b><span>월급, 연금처럼 매달 정해진 날에 들어와요</span></button><button type="button" class="ob-opt' + (obMax() > 0 && noSal() ? ' on' : '') + '" data-act="obHasSal" data-v="0"><b>아니요</b><span>프리랜서·자영업·학생처럼 들어오는 날이 정해져 있지 않아요</span></button></div>';
       else if (q === 1) h += '<div class="ob-dayin"><span>매월</span><input class="input" id="obDayIn" inputmode="numeric" pattern="[0-9]*" maxlength="2" enterkeyhint="done" value="' + (obMax() > 1 && pd !== 31 ? pd : '') + '" placeholder="' + (noSal() ? '1' : '25') + '"><span>일</span></div>' +
-        (noSal() ? '<p class="ob-ex">비워 두고 확인을 누르면 매월 1일부터예요.</p>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button>');
+        (noSal() ? '<p class="ob-ex">비워 두고 확인을 누르면 매월 1일부터예요.</p>' : '<button type="button" class="ob-last' + (obMax() > 1 && pd === 31 ? ' on' : '') + '" data-act="obDay" data-d="31">매달 말일에 받아요</button><button type="button" class="ob-shift' + (S.settings.payShift !== false ? ' on' : '') + '" data-act="obShift"><span class="tick">' + I.check + '</span>급여일이 주말·공휴일이면 그 전 평일에 받아요</button>');
       else if (q === 2) h += '<div class="money huge"><input class="input" id="obSal" inputmode="numeric" pattern="[0-9]*" data-live="money" enterkeyhint="done" value="' + (sal ? won(sal) : '') + '" placeholder="0"><span>원</span></div>';
       else if (q === 3 && accs.length) h += '<div class="ob-accs">' + accs.map((a) => '<button type="button" class="ob-acc' + (a.id === sa ? ' on' : '') + '" data-act="obAcc" data-id="' + a.id + '">' + acctChip(a) + '<span class="grow"><b>' + esc(a.name) + '</b><span>' + (a.type === 'overdraft' ? '마이너스통장' : '입출금') + '</span></span><span class="chk"></span></button>').join('') + '</div>';
       else if (q === 3) h += '<div class="bp-grid ob-banks">' + POP_ORDER.map((b) => '<button type="button" class="bp-tile' + (b === bank ? ' on' : '') + '" data-act="obBank" data-b="' + b + '">' + bankIcon(b, 'xl') + '<span>' + (POP_LABEL[b] || b) + '</span></button>').join('') + '</div>';
@@ -703,7 +804,7 @@
       // 답한 것들 (최근 답이 위로)
       const ans = [];
       if (obMax() > 0 && q !== 0) ans.push(done(0, '정기 소득', noSal() ? '없어요' : '있어요'));
-      if (obMax() > 1 && q !== 1) ans.push(done(1, noSal() ? '주기 시작' : '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
+      if (obMax() > 1 && q !== 1) ans.push(done(1, noSal() ? '주기 시작' : '급여일', (pd === 31 ? '매달 말일' : '매월 ' + pd + '일') + (!noSal() && S.settings.payShift ? ' · 휴일이면 앞당김' : '') + ' <em>' + md(r.start) + ' ~ ' + md(r.end) + '</em>'));
       if (!noSal() && obMax() > 2 && q !== 2) ans.push(done(2, '월급', sal ? won(sal) + '원' : '나중에 적기'));
       if (ans.length) h += '<section class="ob-done">' + ans.reverse().join('') + '</section>';
       if (q === 1) h += cta('obDayOk', '확인');
@@ -1349,10 +1450,11 @@
   // ===== 백업·이전 정보 묶음 =====
   function backupSheet() {
     openSheet({
-      title: '백업·가져오기',
-      body: () => '<p class="hint">전체 백업을 가져오면 지금 데이터가 바뀌어요. 이전 정보 묶음(money-seed)은 지금 데이터에 <b>더해요</b>. 이름이 같은 건 건너뛰어요.</p>' +
-        '<textarea class="input" name="seed" placeholder="파일 내용을 붙여넣어도 돼요"></textarea><input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>',
-      foot: () => '<button class="btn" data-act="importPaste">붙여넣은 내용 가져오기</button><div class="grid2"><button class="btn ghost" data-act="importFile">파일 가져오기</button><button class="btn ghost" data-act="exportJSON">파일로 내보내기</button></div>',
+      title: '백업·되살리기',
+      body: () => '<div class="bk"><b>백업하기</b><p class="hint">지금 데이터를 파일 하나로 저장해요. 폰을 바꿔도 이 파일만 있으면 그대로 되살려요.</p><button class="btn" data-act="exportJSON">파일로 저장</button></div>' +
+        '<div class="bk"><b>되살리기</b><p class="hint">저장해 둔 백업 파일을 고르면 <b>지금 데이터가 그 파일 내용으로 바뀌어요.</b> 예전 대시보드 정보 파일은 바꾸지 않고 지금 데이터에 더해요.</p><button class="btn ghost" data-act="importFile">파일 고르기</button>' +
+        '<details class="bk-paste"><summary>파일 대신 내용 붙여넣기</summary><textarea class="input" name="seed" placeholder="파일 내용을 붙여넣어 주세요"></textarea><button class="btn ghost" data-act="importPaste">붙여넣은 내용 가져오기</button></details></div>' +
+        '<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>',
       mount(el) { el.querySelector('#importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) f.text().then(takeImport).catch(() => toast('이 파일은 읽을 수 없어요')); }); },
     });
   }
@@ -1390,7 +1492,14 @@
     openSheet({ title: '이전 정보를 더했어요', body: () => '<div class="kv">' + Object.entries(add).map(([k, n]) => '<div><span>' + k + '</span><b>' + n + '개</b></div>').join('') + '</div><p class="hint">' + mName(P) + ' 급여주기부터 흐름에 들어가요. 계좌 잔액은 입력 탭에서 은행앱 숫자를 적어 주세요.</p>', foot: () => '<a class="btn" href="#/input">입력 탭으로</a>' });
   }
   function exportJSON() {
-    const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+    S.lastBackup = today(); save();
+    const name = 'money-backup-' + today() + '.json'; const txt = JSON.stringify(S, null, 1);
+    try {
+      const file = new File([txt], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: name }).then(() => { render(); toast('백업했어요'); }, () => render()); return; }
+    } catch (e) { /* 공유 못 하면 내려받기로 */ }
+    render();
+    const blob = new Blob([txt], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'money-backup-' + today() + '.json';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
@@ -1480,9 +1589,9 @@
     cardApp: (d) => cardApp(d.id, d.m),
     dynAdd(d, el) { el.insertAdjacentHTML('beforebegin', d.t === 'disc' ? discRow() : d.t === 'inc' ? extraRow() : perkRow()); const r = el.previousElementSibling; r.querySelector('input').focus(); },
     dynDel(d, el) { el.closest('.dyn-row').remove(); },
-    obDay(d) { if (sheet) closeSheet(); S.settings.payDay = Number(d.d); obAnswer(1); },
+    obDay(d) { if (sheet) closeSheet(); if (S.settings.payShift === undefined && !noSal()) S.settings.payShift = true; S.settings.payDay = Number(d.d); obAnswer(1); },
     obHasSal(d) { const no = d.v === '0'; S.settings.noSalary = no; if (no) { delete S.obSalary; delete S.obSalBank; delete S.obSalAcc; if (S.obMaxQ == null) S.settings.payDay = 1; } else if (S.obMaxQ == null) S.settings.payDay = 25; obAnswer(0); },
-    obDayOk() { const el = document.getElementById('obDayIn') || {}; const v = noSal() && !String(el.value || '').trim() ? 1 : Number(el.value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요');
+    obDayOk() { if (S.settings.payShift === undefined && !noSal()) S.settings.payShift = true; const el = document.getElementById('obDayIn') || {}; const v = noSal() && !String(el.value || '').trim() ? 1 : Number(el.value); if (!(v >= 1 && v <= 31)) return toast('1일부터 31일 중에 적어 주세요');
       // 29·30일은 '말일'인지 한 번 물어봄 (31일은 말일과 같게 계산)
       if (v === 29 || v === 30) return openSheet({ title: '매달 말일에 받나요?', body: () => '<p class="hint">' + v + '일이 없는 달(2월 등)은 그달 마지막 날로 계산해요. 31일까지 있는 달에도 말일에 받는다면 \'말일\'을 골라 주세요.</p>',
         foot: () => '<button class="btn" data-act="obDay" data-d="31">네, 매달 말일이에요</button><button class="btn ghost" data-act="obDay" data-d="' + v + '">아니요, 매월 ' + v + '일이에요</button>' });
@@ -1491,6 +1600,7 @@
     obSalAcc(d) { S.obSalAcc = d.id; const sal = salaryOf(); if (sal) sal.accountId = d.id; save(); render(); },
     obBank(d) { S.obSalBank = d.b || null; delete S.obSalAcc; obAnswer(3); },
     obAcc(d) { S.obSalAcc = d.id; S.obSalBank = (acct(d.id) || {}).bank || null; obAnswer(3); },
+    obShift(d, el) { S.settings.payShift = S.settings.payShift === false; el.classList.toggle('on', S.settings.payShift); save(); },
     obEdit(d) { obReadSal(); S.obQ = Number(d.q); save(); render(); window.scrollTo(0, 0); focusAmt(document.getElementById('obSal') || document.getElementById('obDayIn')); },
     obNext() { obReadSal(); if ((S.onboard || 0) <= 1) obSalarySave(); S.onboard = (S.onboard || 0) + 1; save(); render(); window.scrollTo(0, 0); },
 
@@ -1525,8 +1635,11 @@
       if (debt.dir === 'recv') r.to = acc; else r.from = acc;
       S.records.push(r); save(); closeSheet(); render(); toast('정산했어요 · 남은 금액과 잔액이 바뀌었어요');
     },
-    setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }], () => { S.settings.payDay = Number(val('d')); view.P = null; return LINKED; }); },
+    setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }, { name: 'shift', label: '급여일이 주말·공휴일이면 그 전 평일에 받아요', type: 'switch', value: !!S.settings.payShift }], () => { S.settings.payDay = Number(val('d')); S.settings.payShift = !!val('shift'); view.P = null; return LINKED; }, null, '켜면 급여 들어오는 날만 앞당겨요. 급여주기 날짜는 그대로예요.'); },
     backup: () => backupSheet(),
+    patchGo, copyState, copyLink() { const t = sheet && sheet.link; if (t && navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했어요'), () => toast('길게 눌러 복사해 주세요')); }, patchPasteOpen: () => patchPasteSheet(),
+    patchClip() { if (!navigator.clipboard || !navigator.clipboard.readText) return toast('칸에 길게 눌러 붙여넣어 주세요'); navigator.clipboard.readText().then((t) => { const p = readPatch(t); if (!p) return toast('복사한 내용이 변경 링크가 아니에요'); patchSheet(p); }, () => toast('칸에 길게 눌러 붙여넣어 주세요')); },
+    patchPaste() { const p = readPatch(val('patch')); if (!p) return toast('이 내용은 읽을 수 없어요'); patchSheet(p); },
     importPaste() { const t = (val('seed') || '').trim(); if (!t) return toast('내용을 붙여넣어 주세요'); takeImport(t); },
     importFile: () => document.getElementById('importFile').click(),
     exportJSON,
@@ -1564,6 +1677,7 @@
 
   function route() {
     const h = location.hash || '#/home';
+    if (h.indexOf('#/apply') === 0) { const p = readPatch(h); history.replaceState(null, '', '#/home'); view.tab = 'home'; view.P = curP(); render(); if (!p) toast('이 링크는 읽을 수 없어요'); else if (!S.started && !S.accounts.length) patchNoData(h); else patchSheet(p); return; }
     if (h.indexOf('#/import') === 0) { const q = h.split('?t=')[1]; history.replaceState(null, '', '#/book'); view.tab = 'book'; render(); if (S.accounts.length) captureSheet(q ? decodeURIComponent(q) : ''); return; }
     const tab = h.replace('#/', '');
     view.tab = TABS.some((x) => x[0] === tab) || tab === 'settings' ? tab : 'home';
