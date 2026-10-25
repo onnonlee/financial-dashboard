@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.36.1';
+  const VERSION = '2.37';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -764,7 +764,7 @@
     const feat = (ic, cls, t, d) => '<div class="in-feat"><span class="m-ic ' + cls + '">' + ic + '</span><div><b>' + t + '</b><span>' + d + '</span></div></div>';
     return '<main class="screen hello"><div class="in-hero"><img src="icons/icon-180.png" alt="" class="in-logo"><h1>이번 달 월급부터<br>다음 달 월급까지</h1><p>급여주기를 확인하고 흐름을 관리해요.</p></div>' +
       '<div class="in-feats">' + feat(I.flow, 'blue', '이번 달 남는 돈 미리 보기', '월급·카드값·고정비·대출을 날짜별로 계산해요') + feat(I.scan, 'green', '캡처 한 장으로 계좌 입력', '은행앱 화면을 찍으면 잔액이 한 번에 들어가요') + feat(I.book, 'indigo', '할부·약정까지 기억', '끝나는 할인, 남은 할부를 대신 챙겨요') + '</div>' +
-      '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="backup">예전 백업으로 시작하기</button><p class="in-note">다섯 단계면 끝나요 · 데이터는 이 아이폰에만 저장돼요</p></div></main>';
+      '<div class="ob-foot"><button class="btn" data-act="obStart">시작하기</button><button class="btn ghost" data-act="startImport">백업 파일 가져오기</button><p class="in-note">다섯 단계면 끝나요 · 데이터는 이 아이폰에만 저장돼요</p></div></main>';
   }
   // 급여 단계는 토스처럼 질문을 하나씩: 답하면 다음 질문이 위에 나타나고, 답한 건 아래에 쌓임 (누르면 다시 고치기)
   const OB_Q = ['정기적으로 들어오는 소득이 있나요?', '급여일이 언제인가요?', '월급은 얼마인가요?', '어느 은행으로 받나요?', '다른 수입도 있나요?'];
@@ -1453,11 +1453,13 @@
   }
 
   // ===== 백업·이전 정보 묶음 =====
-  function backupSheet() {
+  // start: 처음 화면에서 열 때는 저장할 데이터가 없으니 가져오기만 보여요
+  function backupSheet(start) {
     openSheet({
-      title: '백업·되살리기',
-      body: () => '<div class="bk"><b>백업하기</b><p class="hint">지금 데이터를 파일 하나로 저장해요. 폰을 바꿔도 이 파일만 있으면 그대로 되살려요.</p><button class="btn" data-act="exportJSON">파일로 저장</button></div>' +
-        '<div class="bk"><b>되살리기</b><p class="hint">저장해 둔 백업 파일을 고르면 <b>지금 데이터가 그 파일 내용으로 바뀌어요.</b> 예전 대시보드 정보 파일은 바꾸지 않고 지금 데이터에 더해요.</p><button class="btn ghost" data-act="importFile">파일 고르기</button>' +
+      title: start ? '백업 파일 가져오기' : '백업·되살리기',
+      body: () => (start ? '<div class="bk"><p class="hint">저장해 둔 백업 파일이나 예전 대시보드 정보 파일을 골라 주세요. 고른 파일 내용으로 바로 시작해요.</p><button class="btn" data-act="importFile">파일 고르기</button>'
+        : '<div class="bk"><b>백업하기</b><p class="hint">지금 데이터를 파일 하나로 저장해요. 폰을 바꿔도 이 파일만 있으면 그대로 되살려요.</p><button class="btn" data-act="exportJSON">파일로 저장</button></div>' +
+        '<div class="bk"><b>되살리기</b><p class="hint">저장해 둔 백업 파일을 고르면 <b>지금 데이터가 그 파일 내용으로 바뀌어요.</b> 예전 대시보드 정보 파일은 바꾸지 않고 지금 데이터에 더해요.</p><button class="btn ghost" data-act="importFile">파일 고르기</button>') +
         '<details class="bk-paste"><summary>파일 대신 내용 붙여넣기</summary><textarea class="input" name="seed" placeholder="파일 내용을 붙여넣어 주세요"></textarea><button class="btn ghost" data-act="importPaste">붙여넣은 내용 가져오기</button></details></div>' +
         '<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>',
       mount(el) { el.querySelector('#importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) f.text().then(takeImport).catch(() => toast('이 파일은 읽을 수 없어요')); }); },
@@ -1642,6 +1644,7 @@
     },
     setPayDay() { formSheet('급여일', [{ name: 'd', label: '매월', type: 'select', value: S.settings.payDay, options: dayOpts.slice(0, 28) }, { name: 'shift', label: '급여일이 주말·공휴일이면 그 전 평일에 받아요', type: 'switch', value: !!S.settings.payShift }], () => { S.settings.payDay = Number(val('d')); S.settings.payShift = !!val('shift'); view.P = null; return LINKED; }, null, '켜면 급여 들어오는 날만 앞당겨요. 급여주기 날짜는 그대로예요.'); },
     backup: () => backupSheet(),
+    startImport: () => backupSheet(true),
     patchGo, copyState, copyLink() { const t = sheet && sheet.link; if (t && navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했어요'), () => toast('길게 눌러 복사해 주세요')); }, patchPasteOpen: () => patchPasteSheet(),
     patchClip() { if (!navigator.clipboard || !navigator.clipboard.readText) return toast('칸에 길게 눌러 붙여넣어 주세요'); navigator.clipboard.readText().then((t) => { const p = readPatch(t); if (!p) return toast('복사한 내용이 변경 링크가 아니에요'); patchSheet(p); }, () => toast('칸에 길게 눌러 붙여넣어 주세요')); },
     patchPaste() { const p = readPatch(val('patch')); if (!p) return toast('이 내용은 읽을 수 없어요'); patchSheet(p); },
