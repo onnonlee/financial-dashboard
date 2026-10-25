@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.37';
+  const VERSION = '2.38';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -85,6 +85,17 @@
     const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('on');
     clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2600);
   }
+  // 앱 안 확인 창 (사파리 기본 confirm 대신). ask(제목, 설명, 확인 글자, 위험) → Promise<boolean>
+  function ask(title, msg, ok, danger) {
+    return new Promise((done) => {
+      const w = document.createElement('div'); w.className = 'ask-wrap';
+      w.innerHTML = '<div class="ask" role="alertdialog" aria-modal="true"><b>' + esc(title) + '</b>' + (msg ? '<p>' + esc(msg) + '</p>' : '') +
+        '<div class="ask-btns"><button type="button" class="btn ghost" data-a="0">취소</button><button type="button" class="btn' + (danger ? ' danger-btn' : '') + '" data-a="1">' + esc(ok || '확인') + '</button></div></div>';
+      const end = (v) => { w.classList.remove('on'); setTimeout(() => w.remove(), 160); done(v); };
+      w.addEventListener('click', (e) => { const b = e.target.closest('[data-a]'); if (b) end(b.dataset.a === '1'); else if (e.target === w) end(false); });
+      document.body.appendChild(w); requestAnimationFrame(() => w.classList.add('on'));
+    });
+  }
   let sheet = null;
   function openSheet(def) { sheet = def; paintSheet(); document.getElementById('scrim').hidden = false; const el = document.getElementById('sheet'); el.hidden = false; requestAnimationFrame(() => el.classList.add('on')); }
   function paintSheet() {
@@ -133,7 +144,7 @@
     document.querySelectorAll('.money.pad-on').forEach((m) => m.classList.remove('pad-on')); el.closest('.money').classList.add('pad-on');
     const [act, label] = padOk();
     const key = (k, l) => '<button type="button" data-act="padKey" data-k="' + k + '">' + (l || k) + '</button>';
-    p.innerHTML = '<div class="pad-units"><span class="pad-ko"></span></div>' +
+    p.innerHTML = '<div class="pad-units"><button type="button" class="pad-clr" data-act="padKey" data-k="clr">전체 지우기</button><span class="pad-ko"></span></div>' +
       '<button type="button" class="pad-ok" data-act="' + act + '">' + label + '</button>' +
       '<div class="pad-keys">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => key(n)).join('') + key('00') + key('0') + key('del', I.left) + '</div>';
     p.hidden = false; document.body.classList.add('pad-open'); requestAnimationFrame(() => p.classList.add('on')); padKo();
@@ -1477,11 +1488,12 @@
       mount(el) { el.querySelector('#importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) f.text().then(takeImport).catch(() => toast('이 파일은 읽을 수 없어요')); }); },
     });
   }
-  function takeImport(txt) {
+  async function takeImport(txt) {
     let d; try { d = JSON.parse(txt); } catch (e) { return toast('이 내용은 읽을 수 없어요'); }
     if (d && d.kind === 'money-seed') return mergeSeed(d);
-    if (d && d.v === 2) { if (!confirm('지금 데이터를 이 백업으로 바꿀까요?')) return; S = d; }
-    else if (d && d.version && Array.isArray(d.txns)) { if (!confirm('예전 버전 백업이에요. 지금 데이터를 바꿀까요?')) return; S = fromV1(d); }
+    const fresh = !S.started && !S.accounts.length;
+    if (d && d.v === 2) { if (!fresh && !(await ask('지금 데이터를 이 백업으로 바꿀까요?', '지금 앱에 있는 내용은 지워지고 백업 파일 내용으로 바뀌어요.', '바꾸기'))) return; S = d; }
+    else if (d && d.version && Array.isArray(d.txns)) { if (!fresh && !(await ask('예전 버전 백업이에요', '지금 앱에 있는 내용이 이 백업 내용으로 바뀌어요.', '바꾸기'))) return; S = fromV1(d); }
     else return toast('이 내용은 읽을 수 없어요');
     delete S.onboard; S.started = true; save(); closeSheet(); location.hash = '#/home'; render(); toast('가져왔어요');
   }
@@ -1570,13 +1582,14 @@
     recCat(d) { sheet.rec.f.cat = d.c; document.querySelectorAll('#sheet .cat').forEach((b) => b.classList.toggle('on', b.dataset.c === d.c)); recHint(); },
     padKey(d) {
       const el = padEl && padEl.to; if (!el) return;
-      if (d.k === 'del') { const dg = el.value.replace(/[^0-9]/g, ''); el.value = dg.slice(0, -1); } else el.value = el.value + d.k;
+      if (d.k === 'clr') el.value = '';
+      else if (d.k === 'del') { const dg = el.value.replace(/[^0-9]/g, ''); el.value = dg.slice(0, -1); } else el.value = el.value + d.k;
       el.dispatchEvent(new Event('input', { bubbles: true })); padKo();
     },
     padClose: () => closePad(),
 
     saveRecord,
-    deleteRecord(d) { if (!confirm('이 기록을 지울까요?')) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
+    async deleteRecord(d) { if (!(await ask('이 기록을 지울까요?', '잔액과 흐름에서도 같이 빠져요.', '지우기', true))) return; S.records = S.records.filter((x) => x.id !== d.id); save(); closeSheet(); render(); toast('지웠어요 · 잔액과 흐름에서도 빠졌어요'); },
     bookCat(d) { view.cat = d.k; render(); },
     goBook() { location.hash = '#/book'; },
     bankOpen(d) { bankPop(d.f); },
@@ -1652,7 +1665,7 @@
     editAccount: (d) => editAccount(d.id), editCard: (d) => editCard(d.id), editFixed: (d) => editFixed(d.id, { name: d.name, cat: d.cat }), fixedInfo: (d) => fixedInfo(d.id), editIncome: (d) => editIncome(d.id),
     editLoan: (d) => editLoan(d.id), editInst: (d) => editInst(d.id, d.card), editDebt: (d) => editDebt(d.id), debt: (d) => debtSheet(d.id),
     formSave() { const r = sheet.onSave(); if (r === true || typeof r === 'string') { save(); closeSheet(); render(); toast(r === true ? '저장했어요' : r); } },
-    formDelete() { if (!confirm('삭제할까요?')) return; if (sheet.onDelete() !== false) { save(); closeSheet(); render(); toast('삭제했어요 · 모든 탭에서 빠졌어요'); } },
+    async formDelete() { if (!(await ask('삭제할까요?', '모든 탭에서 같이 빠져요.', '삭제', true))) return; if (sheet.onDelete() !== false) { save(); closeSheet(); render(); toast('삭제했어요 · 모든 탭에서 빠졌어요'); } },
     settle(d) {
       const debt = S.debts.find((x) => x.id === d.id); const amt = Math.abs(parseAmt(val('amt'))); const acc = refOf(val('acc'));
       if (!amt) return toast('금액을 적어 주세요');
@@ -1669,7 +1682,7 @@
     importPaste() { const t = (val('seed') || '').trim(); if (!t) return toast('내용을 붙여넣어 주세요'); takeImport(t); },
     importFile: () => document.getElementById('importFile').click(),
     exportJSON,
-    remigrate() { if (!confirm('예전 버전 데이터로 지금 데이터를 바꿀까요?')) return; S = fromV1(readJSON(OLDKEY)); save(); location.hash = '#/home'; render(); toast('예전 데이터를 가져왔어요'); },
+    async remigrate() { if (!(await ask('예전 버전 데이터로 바꿀까요?', '지금 앱에 있는 내용이 예전 버전 데이터로 바뀌어요.', '바꾸기'))) return; S = fromV1(readJSON(OLDKEY)); save(); location.hash = '#/home'; render(); toast('예전 데이터를 가져왔어요'); },
   };
   document.addEventListener('click', (ev) => {
     const el = ev.target.closest('[data-act]');
@@ -1685,7 +1698,15 @@
     if (!ev.target.closest || !ev.target.closest('#pad')) return;
     ev.preventDefault();
     const k = ev.target.closest('[data-act=padKey]'); if (k) { k.classList.add('hit'); setTimeout(() => k.classList.remove('hit'), 120); A.padKey(k.dataset); }
+    // 지우기를 꾹 누르면: 0.4초 뒤부터 계속 지우고, 1.5초 넘게 누르면 전부 지워요
+    if (k && k.dataset.k === 'del') {
+      clearTimeout(delT); clearInterval(delI); const t0 = Date.now();
+      delT = setTimeout(() => { delI = setInterval(() => { if (!padEl) return stopDel(); A.padKey({ k: Date.now() - t0 > 1500 ? 'clr' : 'del' }); }, 110); }, 400);
+    }
   });
+  let delT = 0, delI = 0;
+  const stopDel = () => { clearTimeout(delT); clearInterval(delI); };
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => document.addEventListener(n, stopDel));
   document.addEventListener('input', (ev) => {
     const el = ev.target; const live = el.dataset && el.dataset.live;
     // 숫자 칸(날짜·금액)은 숫자 말고는 안 들어가게
