@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.36';
+  const VERSION = '2.36.1';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -583,7 +583,7 @@
       h += '<section class="card"><div class="acct-head"><div><h2>' + bankChip(c.name) + ' ' + esc(c.name) + '</h2><span class="s">' + md(b.payDate) + ' ' + esc((acct(c.accountId) || {}).name || '') + ' 출금</span></div><button class="icon-btn" data-act="editCard" data-id="' + c.id + '" aria-label="카드 정보">' + I.gear + '</button></div>' +
         '<div class="big-num">' + won(b.total) + '원<span>' + mName(b.payMonth) + ' 결제 예상</span></div>' +
         '<div class="kv"><div><span>카드앱 현재액 · ' + (b.app ? ago(b.app.at) : '확인 전') + '</span><b>' + (b.app ? won(b.app.amount) : '–') + '</b></div><div><span>아직 안 보이는 것</span><b>+' + won(b.pendingTotal) + '</b></div>' + (b.instTotal ? '<div><span>그중 할부</span><b>' + won(b.instTotal) + '</b></div>' : '') + '</div>' +
-        (b.pending.length ? '<div class="sub-list">' + b.pending.map((it) => row({ act: 'toggleRefl', data: { k: it.key, id: b.cardId, m: b.payMonth }, t: esc(it.name), s: (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + ' · 누르면 반영됨', amt: won(it.amount) })).join('') + '</div>' : '') +
+        reflList(b) +
         '<button class="btn soft" data-act="cardApp" data-id="' + c.id + '" data-m="' + b.payMonth + '">카드앱 금액 입력</button></section>';
     }
     if (!S.cards.length) h += '<section class="card"><p class="hint">카드가 없어요.</p></section>';
@@ -936,12 +936,17 @@
         const b = C.cardBill(S, id, m);
         return field({ name: 'amt', label: '카드앱 결제 예정 금액', type: 'money', value: b.app ? b.app.amount : '', sub: b.app ? ago(b.app.at) : '' }) +
           '<p class="hint">카드앱 숫자를 적으면 그 뒤에 쓴 것과 아직 청구 안 된 고정비만 더해요. 할부는 카드앱 금액에 들어 있다고 봐요.</p>' +
-          '<div class="sub-list">' + (b.items.filter((x) => !x.inst).map((it) => '<button class="row" data-act="toggleRefl" data-k="' + esc(it.key) + '" data-id="' + id + '" data-m="' + m + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.included ? '카드앱에 있음' : '아직 안 보임 · 더함') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + won(it.amount) + '</span><span class="tick' + (it.included ? ' on' : '') + '">' + I.check + '</span></button>').join('') || '<p class="hint">이 결제월 고정비·가계부 사용이 없어요</p>') + '</div>' +
+          reflList(b) +
           '<div class="kv"><div><span>예상 카드값</span><b>' + won(b.total) + '원</b></div></div>' +
           field({ name: 'paid', label: '실제 출금액 (출금 후, 선택)', type: 'money', value: b.paidAmount != null ? b.paidAmount : '' });
       },
       foot: () => '<button class="btn" data-act="cardAppSave" data-id="' + id + '" data-m="' + m + '">저장</button>',
     });
+  }
+  // 이번 결제에 들어갈 것: 카드앱에 보이면 켜고, 안 보이면 꺼서 예상 카드값에 더해요. 다시 누르면 되돌아가요
+  function reflList(b) {
+    if (!b.items.length) return '<p class="hint">이 결제월 고정비·할부·가계부 사용이 없어요</p>';
+    return '<div class="refl-head"><b>카드앱에 보이나요?</b><span>보이면 켜요 · 꺼진 것만 더해요</span></div><div class="sub-list">' + b.items.map((it) => '<button class="row" data-act="toggleRefl" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '" role="switch" aria-checked="' + !!it.included + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + won(it.amount) + '</span><span class="tg' + (it.included ? ' on' : '') + '"></span></button>').join('') + '</div>';
   }
   function toggleRefl(k, id, m) {
     const b = C.cardBill(S, id, m); const it = b.items.find((x) => x.key === k); if (!it) return;
