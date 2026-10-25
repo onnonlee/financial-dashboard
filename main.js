@@ -372,7 +372,7 @@
     h += '<section class="card">' + head('카드앱 현재액', '결제 예정 금액 그대로') + (st.nextCards.length ? st.nextCards.map((b) => inRow('card:' + b.cardId + ':' + b.payMonth, b.card.name + ' · ' + mName(b.payMonth) + ' 결제', b.app ? b.app.amount : '', b.app ? ago(b.app.at) : '아직 안 적었어요')).join('') : '<p class="hint">카드가 없어요.</p>') + '</section>';
     const pend = [];
     st.nextCards.forEach((b) => b.pending.forEach((it) => pend.push({ b, it })));
-    if (pend.length) h += '<section class="card">' + head('카드앱에 아직 안 보이는 것', '보이면 체크') + '<p class="hint">카드앱 금액을 적으면 그 전 날짜 것은 들어 있다고 보고 빠져요.</p>' + pend.map(({ b, it }) => '<label class="row check"><input type="checkbox" data-k="refl:' + esc(it.key) + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + esc(b.card.name) + (it.date ? ' · ' + md(it.date) : '') + (it.src === 'record' ? ' · 가계부' : ' · 고정비') + '</span></span><span class="amt">' + won(it.amount) + '</span></label>').join('') + '<button class="link-btn" data-act="addRecord" data-card="1">+ 카드앱에 아직 없는 사용 추가</button></section>';
+    if (pend.length) h += '<section class="card">' + head('카드앱에 아직 안 보이는 것', '보이면 체크') + '<p class="hint">카드앱 금액을 적으면 그 전 날짜 것은 들어 있다고 보고 빠져요.</p>' + pend.map(({ b, it }) => '<label class="row check"><input type="checkbox" data-k="refl:' + esc(it.key) + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + esc(b.card.name) + (it.date ? ' · ' + md(it.date) : '') + (it.src === 'record' ? ' · 가계부' : ' · 고정비') + '</span></span>' + (it.approx ? '<span class="money"><input class="input" inputmode="numeric" pattern="[0-9]*" data-live="money" data-k="amt:' + esc(it.key) + '" data-orig="' + Math.round(it.amount) + '" value="' + won(it.amount) + '"><span>원</span></span>' : '<span class="amt">' + won(it.amount) + '</span>') + '</label>').join('') + '<button class="link-btn" data-act="addRecord" data-card="1">+ 카드앱에 아직 없는 사용 추가</button></section>';
     h += '<section class="card">' + head('계좌 현재잔액', '은행앱 숫자 그대로') + st.accts.map((x) => {
       const a = x.account; const od = a.type === 'overdraft';
       return inRow('bal:' + a.id, a.name + (od ? ' · 사용 중인 금액' : ''), od ? Math.max(0, -x.balance) : x.balance, od ? '한도 ' + won(a.limit) + ' · 남은 한도 ' + wonS(x.available) + ' · ' + ago(a.balanceAt) : ago(a.balanceAt));
@@ -404,6 +404,8 @@
         const o = Object.assign({}, s.over[key]); if (it && v === it.planned) delete o.amount; else o.amount = v; s.over[key] = o;
       } else if (k.indexOf('card:') === 0) {
         const [, id, m] = k.split(':'); const c = s.cards.find((x) => x.id === id); c.app = Object.assign({}, c.app, { [m]: { amount: v, at: now(), date: t } });
+      } else if (k.indexOf('amt:') === 0) {
+        const key = k.slice(4); s.over[key] = Object.assign({}, s.over[key], { amount: v });
       } else if (k.indexOf('bal:') === 0) {
         const a = s.accounts.find((x) => x.id === k.slice(4)); a.balance = a.type === 'overdraft' ? -v : v; a.balanceAt = now(); a.balanceDate = t;
       }
@@ -946,7 +948,17 @@
   // 이번 결제에 들어갈 것: 카드앱에 보이면 켜고, 안 보이면 꺼서 예상 카드값에 더해요. 다시 누르면 되돌아가요
   function reflList(b) {
     if (!b.items.length) return '<p class="hint">이 결제월 고정비·할부·가계부 사용이 없어요</p>';
-    return '<div class="refl-head"><b>카드앱에 보이나요?</b><span>보이면 켜요 · 꺼진 것만 더해요</span></div><div class="sub-list">' + b.items.map((it) => '<button class="row" data-act="toggleRefl" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '" role="switch" aria-checked="' + !!it.included + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + won(it.amount) + '</span><span class="tg' + (it.included ? ' on' : '') + '"></span></button>').join('') + '</div>';
+    return '<div class="refl-head"><b>카드앱에 보이나요?</b><span>보이면 켜요 · 꺼진 것만 더해요</span></div><div class="sub-list">' + b.items.map((it) => '<button class="row" data-act="' + (it.approx ? 'reflEdit' : 'toggleRefl') + '" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '" role="switch" aria-checked="' + !!it.included + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + (it.approx ? ' · 눌러서 금액 고치기' : '') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + (it.approx && !(S.over[it.key] || {}).amount ? '약 ' : '') + won(it.amount) + '</span><span class="tg' + (it.included ? ' on' : '') + '"></span></button>').join('') + '</div>';
+  }
+  // 도시가스·관리비처럼 매달 바뀌는 항목: 이번 달 금액을 고치면서 체크
+  function reflEdit(k, id, m) {
+    const it = C.cardBill(S, id, m).items.find((x) => x.key === k); if (!it) return;
+    openSheet({
+      title: it.name + ' ' + mName(m) + ' 결제', focus: '[name=amt]',
+      body: () => field({ name: 'amt', label: '이번 달 금액', type: 'money', value: it.amount, sub: '고지서나 카드앱에 찍힌 금액을 적어 주세요' }) +
+        field({ name: 'on', label: '카드앱에 보여요', type: 'switch', value: true, hint: '켜 두면 카드앱 금액에 들어 있다고 보고 따로 더하지 않아요' }),
+      foot: () => '<button class="btn" data-act="reflEditSave" data-k="' + esc(k) + '" data-id="' + id + '" data-m="' + m + '">저장</button>',
+    });
   }
   function toggleRefl(k, id, m) {
     const b = C.cardBill(S, id, m); const it = b.items.find((x) => x.key === k); if (!it) return;
@@ -1622,6 +1634,12 @@
       save(); closeSheet(); render(); toast('카드값을 맞췄어요 · 현황과 흐름에 반영됐어요');
     },
     toggleRefl: (d) => toggleRefl(d.k, d.id, d.m),
+    reflEdit: (d) => reflEdit(d.k, d.id, d.m),
+    reflEditSave: (d) => {
+      const el = document.getElementById('sheet'); const v = Math.abs(parseAmt(el.querySelector('[name=amt]').value));
+      S.over[d.k] = Object.assign({}, S.over[d.k], { amount: v, reflected: el.querySelector('[name=on]').checked });
+      save(); closeSheet(); render(); toast('이번 달 금액을 ' + won(v) + '원으로 바꿨어요');
+    },
     balance: (d) => balanceSheet(d.id),
     saveBalance(d) {
       const a = acct(d.id); const v = Math.abs(parseAmt(val('amt'))); const nb = a.type === 'overdraft' ? -v : v;
