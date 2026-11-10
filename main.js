@@ -781,7 +781,7 @@
     if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = pVal(v[k]); return o; }
     return v;
   }
-  function pFind(op) { const xs = S[op.c]; const f = pVal(op.find || {}); return xs.find((x) => Object.keys(f).every((k) => x[k] === f[k])); }
+  function pFind(op) { const xs = S[op.c] || []; const f = pVal(op.find || {}); return xs.find((x) => Object.keys(f).every((k) => x[k] === f[k])); }
   function pCheck(op) {
     try {
       if (op.c === 'settings') { pVal(op.set || {}); return ''; }
@@ -796,7 +796,7 @@
     if (op.add) {
       const x = Object.assign({ id: uid() }, pVal(op.add));
       if (op.c === 'records') { x.at = x.at || now(); x.date = x.date || today(); if (x.from && x.from.type === 'card') { const c = card(x.from.id); if (c) x.payMonth = C.payMonthOf(c, x.date); } }
-      S[op.c].push(x); return;
+      (S[op.c] = S[op.c] || []).push(x); return;
     }
     const x = pFind(op); if (!x) return;
     if (op.del) { S[op.c] = S[op.c].filter((y) => y !== x); return; }
