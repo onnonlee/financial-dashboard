@@ -421,7 +421,7 @@ details.paste .btn { margin-top: 8px; }
 .bank-btn.empty b { color: var(--text3); font-weight: 500; }
 .field > .bank-btn { background: var(--soft); }
 .bank-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 0 2px; }
-.bank-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 8px; border-radius: 14px; background: var(--soft); }
+.bank-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 8px; border-radius: 14px; background: rgba(255, 255, 255, .14); }
 .bank-tile span { font-size: 12px; color: var(--text2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 /* 은행 선택 창 (토스 송금 화면처럼) */
 #bankPop { position: fixed; inset: 0; z-index: 40; }
@@ -686,3 +686,43 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ask-btns .btn { height: 48px; }
 .ask-btns .danger-btn { background: #e5484d; color: #fff; }
 .pad-units .pad-clr { min-width: 0; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--text2); }
+
+/* ===== v3 ===== */
+.mast.v3 { width: 100%; text-align: left; cursor: pointer; }
+.mast-num.bad { color: #e5484d; }
+.mast-chips span.mast-chip, .mast-chips > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .14); }
+.mast-chips > span span { font-size: 12px; color: rgba(255, 255, 255, .8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mast-chips > span b { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -0.3px; display: flex; align-items: center; gap: 2px; }
+.mast-chips > span b svg { width: 14px; height: 14px; }
+/* 할 일 */
+.todo-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.todo-row:first-of-type { border-top: 0; }
+.todo-row .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.todo-row .t { font-size: 15px; font-weight: 600; }
+.todo-row .s { font-size: 12.5px; color: var(--text3); }
+.todo-row.warn .s { color: var(--warn); }
+.todo-row .due { flex: none; font-size: 12px; font-weight: 700; color: var(--blue); background: var(--blue-bg); border-radius: 10px; padding: 4px 8px; }
+.todo-row .tick { width: 28px; height: 28px; border-radius: 9px; border: 2px solid var(--line); flex: none; display: grid; place-items: center; }
+.todo-row .tick:active { background: var(--blue); border-color: var(--blue); }
+/* 전망 */
+.obars { display: flex; gap: 5px; align-items: flex-end; height: 86px; margin: 8px 0 14px; }
+.obars div { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; height: 100%; gap: 4px; }
+.obars div i { display: block; background: var(--blue-bg); border-radius: 6px 6px 2px 2px; min-height: 2px; }
+.obars div.cur i { background: var(--blue); }
+.obars div span { font-size: 10.5px; color: var(--text3); text-align: center; }
+.otable { display: flex; flex-direction: column; }
+.otr { display: grid; grid-template-columns: 46px 1.1fr .8fr 1.1fr 50px; gap: 4px; align-items: center; width: 100%; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.otr.th { border-top: 0; padding: 0 0 6px; font-size: 11px; color: var(--text3); }
+.otr span { text-align: right; min-width: 0; }
+.otr span:first-child { text-align: left; font-weight: 700; }
+.otr span i { display: block; font-style: normal; font-size: 10px; color: var(--text3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.otr .ok { color: var(--in); font-weight: 700; } .otr .lo { color: var(--warn); font-weight: 700; }
+.otr.now { background: var(--blue-bg); border-top: 0; border-radius: 10px; margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.otr.now span:first-child i { color: var(--blue); }
+.kv .kh { display: flex; justify-content: space-between; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.kv .kh b { color: var(--text); }
+.kv small { color: var(--text3); font-weight: 500; }
+.kv b.in { color: var(--in); }
+.kv.tot { background: var(--soft); border-radius: 14px; padding: 12px 14px; border-top: 0; }
+.kv.tot div span { color: var(--text); font-weight: 600; }
+.kv b.warn { color: var(--warn); }

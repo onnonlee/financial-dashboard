@@ -158,3 +158,53 @@ test('급여일이 주말·공휴일이면 앞 평일로 당겨요', () => {
 });
 
 console.log('\n' + passed + '개 통과');
+
+// ---- v3: 쓰는 달 기준 전망 ----
+test('전망: 11월에 써도 되는 돈 = 낼 돈 − 정해진 카드값 − 갚을 돈 + 지금 여유', () => {
+  const s = base(); s.settings.payDay = 24; s.settings.buffer = 80000;
+  s.cards = [{ id: 'c', name: 'C카드', payDay: 14, accountId: 'a' }];
+  s.accounts[0].balance = 0; s.accounts[0].balanceDate = '2026-11-09'; s.accounts[0].balanceAt = 1000;
+  s.accounts[1].balance = -2000000; s.accounts[1].balanceDate = '2026-11-09'; s.accounts[1].balanceAt = 1000; // B은행 쓸 수 있는 300만
+  s.incomes.push({ id: 'sal', name: '급여', amount: 2000000, day: 24, accountId: 'a', salary: true });
+  s.extras.push({ id: 'x1', name: '수당', amount: 300000, date: '2026-12-01', accountId: 'a' });
+  s.fixed.push({ id: 'rent', name: '월세', amount: 500000, day: 26, pay: { type: 'account', id: 'a' } });
+  s.fixed.push({ id: 'sub', name: '구독', amount: 10000, day: 5, pay: { type: 'card', id: 'c' } });
+  s.installments.push({ id: 'i', name: '노트북', cardId: 'c', startMonth: '2026-10', months: 3, amount: 100000 });
+  s.debts.push({ id: 'd', dir: 'pay', who: '친구', amount: 500000, plan: { monthly: 200000, from: '2026-12' } });
+  s.cards[0].app = { '2026-11': { amount: 400000, at: 900, date: '2026-11-08' } };
+  const rows = C.monthOutlook(s, '2026-11-09', 4);
+  const nov = rows[0];
+  assert.strictEqual(nov.month, '2026-11');
+  assert.strictEqual(nov.winStart, '2026-11-16'); // 14일 토요일 → 16일
+  assert.strictEqual(nov.winEnd, '2026-12-14');
+  assert.strictEqual(nov.inflow, 2300000); // 급여 11/24 + 수당 12/1
+  assert.strictEqual(nov.outflow, 500000); // 월세 11/26
+  assert.strictEqual(nov.fixedCard, 110000); // 12월 청구: 구독 1만 + 할부 3/3 10만
+  assert.strictEqual(nov.debtPay, 0); // 계획은 12월부터
+  // 지금 여유 = (A 0 + B 300만) − 11/14 카드값(카드앱 40만 + 아직 안 보이는 것) − 비상금 8만
+  const bill = C.cardBill(s, 'c', '2026-11').total;
+  assert.strictEqual(nov.carry, 3000000 - bill - 80000);
+  assert.strictEqual(nov.room, 2300000 - 500000 - 110000 + nov.carry);
+  assert.strictEqual(nov.daysLeft, 22);
+  const dec = rows[1];
+  assert.strictEqual(dec.debtPay, 200000);
+  assert.strictEqual(dec.carry, 0);
+  assert.ok(nov.ends.indexOf('노트북') >= 0); // 12월 청구가 마지막 회차 → 11월(쓰는 달) 줄에 '끝'
+  const feb = rows[3];
+  assert.strictEqual(feb.debtPay, 100000); // 50만 = 20 + 20 + 10
+  assert.ok(feb.ends.indexOf('친구 다 갚음') >= 0);
+});
+
+test('할 일: 카드값 낼 돈이 출금 통장에 모자라면 전날까지 옮기기', () => {
+  const s = base(); s.settings.payDay = 24;
+  s.cards = [{ id: 'c', name: 'C카드', payDay: 14, accountId: 'a' }];
+  s.accounts[0].balance = 100000; s.accounts[0].balanceDate = '2026-11-09'; s.accounts[0].balanceAt = 1000;
+  s.accounts[1].balance = -2000000; s.accounts[1].balanceDate = '2026-11-09'; s.accounts[1].balanceAt = 1000;
+  s.cards[0].app = { '2026-11': { amount: 400000, at: 900, date: '2026-11-08' } };
+  const t = C.todos(s, '2026-11-09');
+  const mv = t.find((x) => x.kind === 'move');
+  assert.ok(mv); assert.strictEqual(mv.amount, 300000); assert.strictEqual(mv.from.id, 'b'); assert.strictEqual(mv.to.id, 'a');
+  assert.strictEqual(mv.payDate, '2026-11-16'); assert.strictEqual(mv.due, '2026-11-13'); // 15일 일요일 → 13일 금요일
+  s.todoDone = { [mv.key]: '2026-11-09' };
+  assert.ok(!C.todos(s, '2026-11-09').find((x) => x.kind === 'move'));
+});

@@ -25,6 +25,8 @@
   const isOff = (d) => { const w = new Date(toUTC(d)).getUTCDay(); return w === 0 || w === 6 || HOLI.has(d); };
   // 주말·공휴일이면 앞 평일로
   function bizBefore(d) { let x = d; for (let i = 0; i < 10 && isOff(x); i++) x = addDays(x, -1); return x; }
+  // 주말·공휴일이면 다음 평일로 (카드값 출금)
+  function bizAfter(d) { let x = d; for (let i = 0; i < 10 && isOff(x); i++) x = addDays(x, 1); return x; }
   // 급여일이 31일(말일)이면 30일까지인 달은 30일이 급여일
   function periodOf(st, d) { return d >= dateIn(monthOf(d), payDay(st)) ? addMonths(monthOf(d), 1) : monthOf(d); }
   function periodRange(st, P) { return { start: dateIn(addMonths(P, -1), payDay(st)), end: addDays(dateIn(P, payDay(st)), -1) }; }
@@ -78,6 +80,11 @@
       push({ key: 'fixed:' + f.id + ':' + P, src: 'fixed', id: f.id, name: f.name, dir: 'out', amount: fixedAmount(f, P), approx: !!f.approx, date: dayInPeriod(st, P, f.day), acct: f.pay.id, cat: f.cat || '고정비' });
     }
     const { start, end } = periodRange(st, P);
+    // 한 번씩 받는 돈 (정근수당·명절휴가비·환급 등)
+    for (const x of st.extras || []) {
+      if (!x.date || x.date < start || x.date > end) continue;
+      push({ key: 'extra:' + x.id, src: 'extra', id: x.id, name: x.name, dir: 'in', amount: x.amount, approx: !!x.approx, date: x.date, acct: x.accountId, cat: '수입' });
+    }
     for (const c of st.cards) {
       for (const m of [addMonths(P, -1), P, addMonths(P, 1)]) {
         const d = cardPayDate(c, m);
@@ -269,6 +276,96 @@
     return rows;
   }
 
+  // ---------- v3: 쓰는 달 기준 전망 ----------
+  // 생각의 틀: M월에 카드로 쓴 돈은 M+1월 카드 날에 나간다.
+  // M월에 써도 되는 돈 = (M월 카드 날 다음 날 ~ M+1월 카드 날 사이에 들어오는 돈 − 같은 기간 통장 고정비·대출)
+  //                    − 이미 정해진 카드값(할부·분할·카드 고정비) − 그달 갚기로 한 돈 (+ 이번 달은 지금 통장에 남는 여유)
+  // st.extras: 한 번씩 받는 돈 [{ id, name, amount, date, accountId }]
+  // debt.plan: { monthly, from: 'YYYY-MM' } 매달 갚기 계획.  settings.buffer: 비상금(기본 8만), settings.cashAccountId: 카드값 낼 돈을 모아 두는 통장
+  const cardDateReal = (c, m) => bizAfter(cardPayDate(c, m));
+  const lastCardDate = (st, m) => st.cards.length ? st.cards.map((c) => cardDateReal(c, m)).sort().pop() : dateIn(m, payDay(st));
+  // (from, to] 사이 일정 (카드값 포함, 건너뛰기 제외)
+  function itemsBetween(st, from, to, today) {
+    if (to <= from) return [];
+    const out = [];
+    for (const P of periodsBetween(st, addDays(from, 1), to)) for (const it of schedule(st, P, today)) if (!it.skip && it.date > from && it.date <= to) out.push(it);
+    return out;
+  }
+  const incAcct = (st) => new Set(st.accounts.filter((a) => a.include !== false && a.type !== 'local').map((a) => a.id));
+  function monthOutlook(st, today, n) {
+    n = n || 7;
+    const M0 = monthOf(today); const inc = incAcct(st); const buffer = st.settings.buffer == null ? 80000 : st.settings.buffer;
+    const planLeft = {}; // 갚을 돈 계획: 달이 지나며 줄어드는 남은 금액
+    for (const d of st.debts) planLeft[d.id] = debtStatus(st, d).left;
+    const rows = [];
+    for (let k = 0; k < n; k++) {
+      const M = addMonths(M0, k);
+      const winStart = lastCardDate(st, M), winEnd = lastCardDate(st, addMonths(M, 1));
+      // 카드별 정해진 것 + 이미 쓴 것
+      const byCard = st.cards.map((c) => {
+        const pm = addMonths(M, c.offset == null ? 1 : c.offset);
+        const b = cardBill(st, c.id, pm);
+        const set = b.items.filter((x) => x.src !== 'record');
+        const fixed = sum(set.filter((x) => !x.inst), (x) => x.amount), inst = sum(set.filter((x) => x.inst), (x) => x.amount);
+        const spent = Math.max(0, b.total - fixed - inst);
+        const ends = st.installments.filter((i) => i.cardId === c.id && addMonths(i.startMonth, i.months - 1) === pm).map((i) => i.name);
+        return { card: c, payMonth: pm, payDate: cardDateReal(c, pm), fixed, inst, set: fixed + inst, spent, total: b.total, app: b.app, items: set, ends };
+      });
+      const fixedCard = sum(byCard, (x) => x.set), spent = sum(byCard, (x) => x.spent);
+      // 들어오는 돈·통장에서 나가는 돈 (이번 달은 오늘 이후 것만)
+      const from = k === 0 ? (winStart > today ? winStart : today) : winStart;
+      const items = itemsBetween(st, from, winEnd, today).filter((x) => x.src !== 'card' && inc.has(x.acct));
+      const ins = items.filter((x) => x.dir === 'in'), outs = items.filter((x) => x.dir === 'out');
+      const inflow = sum(ins, (x) => x.amount), outflow = sum(outs, (x) => x.amount);
+      // 갚을 돈 계획 (받을 돈 계획은 들어오는 돈으로)
+      let debtPay = 0, debtIn = 0; const debtLines = [];
+      for (const d of st.debts) {
+        const p = d.plan; if (!p || !p.monthly || (p.from && M < p.from) || planLeft[d.id] <= 0) continue;
+        const a = Math.min(planLeft[d.id], p.monthly); planLeft[d.id] -= a;
+        if (d.dir === 'pay') debtPay += a; else debtIn += a;
+        debtLines.push({ debt: d, amount: a, left: planLeft[d.id], done: planLeft[d.id] <= 0 });
+      }
+      // 이번 달: 지금 통장 여유 = 지금 쓸 수 있는 돈 ± 오늘~이번 달 카드 날까지 일정 − 비상금
+      let carry = 0, carryItems = [];
+      if (k === 0) {
+        const spendable = sum(st.accounts.filter((a) => inc.has(a.id)), (a) => available(a, accountBalance(st, a.id, today)));
+        carryItems = winStart > today ? itemsBetween(st, today, winStart, today).filter((x) => inc.has(x.acct)) : [];
+        carry = spendable + sum(carryItems.filter((x) => x.dir === 'in'), (x) => x.amount) - sum(carryItems.filter((x) => x.dir === 'out'), (x) => x.amount) - buffer;
+      }
+      const payable = inflow + debtIn - outflow;
+      const room = payable - fixedCard - debtPay + carry;
+      const daysLeft = k === 0 ? daysIn(M) - dayOf(today) + 1 : daysIn(M);
+      const remaining = room - spent;
+      rows.push({ month: M, winStart, winEnd, byCard, fixedCard, spent, inflow, outflow, ins, outs, payable, debtPay, debtIn, debtLines, carry, carryItems, buffer: k === 0 ? buffer : 0,
+        room, remaining, daysLeft, daily: Math.round(remaining / Math.max(1, daysLeft)),
+        ends: [].concat(...byCard.map((x) => x.ends)).concat(debtLines.filter((x) => x.done).map((x) => x.debt.who + ' 다 갚음')), extras: ins.filter((x) => x.src === 'extra') });
+    }
+    return rows;
+  }
+
+  // ---------- v3: 이번 달 할 일 (날짜 보고 자동으로) ----------
+  // 카드값 낼 돈 옮기기: 카드 출금 통장에 모자라면, 모아 두는 통장(cashAccountId, 없으면 쓸 수 있는 돈이 가장 많은 다른 통장)에서 전날까지
+  function todos(st, today) {
+    const out = []; const inc = incAcct(st);
+    const avail = {}; for (const a of st.accounts) avail[a.id] = available(a, accountBalance(st, a.id, today));
+    const bills = st.cards.map((c) => { let m = monthOf(today); if (cardDateReal(c, m) < today) m = addMonths(m, 1); const b = cardBill(st, c.id, m); return { card: c, m, date: cardDateReal(c, m), total: b.total, app: b.app }; })
+      .filter((b) => daysBetween(today, b.date) <= 12).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const need = {}; // 통장별로 앞선 카드값까지 누적
+    for (const b of bills) {
+      const to = findBy(st.accounts, b.card.accountId); if (!to) continue;
+      need[to.id] = (need[to.id] || 0) + b.total;
+      if (avail[to.id] >= need[to.id]) continue;
+      const cash = findBy(st.accounts, st.settings.cashAccountId) || st.accounts.filter((a) => inc.has(a.id) && a.id !== to.id).sort((x, y) => avail[y.id] - avail[x.id])[0];
+      if (!cash) continue;
+      const short = Math.min(b.total, need[to.id] - avail[to.id]);
+      out.push({ key: 'move:' + b.card.id + ':' + b.m, kind: 'move', due: bizBefore(addDays(b.date, -1)), amount: short, from: cash, to, card: b.card, payDate: b.date, enough: avail[cash.id] >= short });
+      avail[to.id] += short; avail[cash.id] -= short;
+    }
+    for (const b of bills) if (!b.app) out.push({ key: 'app:' + b.card.id + ':' + b.m, kind: 'app', due: bizBefore(addDays(b.date, -2)), card: b.card, m: b.m, payDate: b.date });
+    const done = st.todoDone || {};
+    return out.filter((x) => !done[x.key]).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
+  }
+
   // ---------- 캡처 중복 의심 ----------
   const norm = (s) => (s || '').replace(/\s+/g, '').toLowerCase();
   const findDuplicate = (st, c) => st.records.find((r) => r.date === c.date && r.amount === c.amount && norm(r.memo) === norm(c.memo)) || null;
@@ -276,12 +373,13 @@
   function emptyState() {
     return {
       v: 2, settings: { payDay: 25 },
-      accounts: [], cards: [], fixed: [], loans: [], installments: [], incomes: [], debts: [], records: [], over: {},
+      accounts: [], cards: [], fixed: [], loans: [], installments: [], incomes: [], extras: [], debts: [], records: [], over: {},
       categories: ['식비', '카페', '교통', '쇼핑', '생활', '의료', '경조사', '주거', '통신', '구독', '보험', '기타'],
     };
   }
 
   const api = { addMonths, addDays, dateIn, daysBetween, monthDiff, periodOf, periodRange, dayInPeriod, payMonthOf, cardPayDate,
-    schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState, fixedAmount, bizBefore, isOff };
+    schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState, fixedAmount, bizBefore, bizAfter, isOff,
+    monthOutlook, todos, lastCardDate, itemsBetween };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Core = api;
 })(this);
