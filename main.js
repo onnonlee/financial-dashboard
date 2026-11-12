@@ -764,7 +764,7 @@
   // ===== Claude가 보낸 변경 (반영 링크·코드) =====
   // 형식: { kind: 'money-patch', id, note, ops: [{ t: '설명', c: 'fixed'|'incomes'|..., find?: {name}, set?: {...}, add?: {...}, del?: true }] }
   // 값에 '$acc:이름' '$card:이름' '$today' '$now'를 쓰면 이 기기의 데이터로 바꿔 넣어요.
-  const PCOLS = ['accounts', 'cards', 'fixed', 'incomes', 'loans', 'installments', 'debts', 'records'];
+  const PCOLS = ['accounts', 'cards', 'fixed', 'incomes', 'loans', 'installments', 'debts', 'records', 'extras'];
   function b64dec(t) { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; const bin = atob(t); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
   function readPatch(txt) {
     txt = String(txt || '').trim(); const m = txt.match(/(?:[?&]d=|MONEY:)([A-Za-z0-9_-]+)/);
@@ -1638,7 +1638,7 @@
     }
     for (const l of d.loans || []) { if (S.loans.some((y) => y.name === l.name)) continue; const a = findAcc(l.payFrom); if (!a) continue; S.loans.push({ id: uid(), bank: l.bank || '', name: l.name, balance: l.balance || 0, balanceDate: t, rate: l.rate || null, monthly: l.monthly || 0, approx: !!l.approx, payDay: l.payDay, accountId: a.id, familyPayer: l.familyPayer || null, note: l.note || '', active: true }); add.대출++; }
     for (const b of d.debts || []) { if (S.debts.some((y) => y.who === b.person && y.reason === b.reason)) continue; S.debts.push({ id: uid(), dir: b.dir, who: b.person, reason: b.reason || '', amount: b.principal, due: b.dueDate || null, inForecast: false }); add['갚을·받을 돈']++; }
-    for (const i of d.installments || []) { if (S.installments.some((y) => y.name === i.name)) continue; const c = findCard(i.card); if (!c) continue; S.installments.push({ id: uid(), name: i.name, cardId: c.id, startMonth: i.startPayMonth, months: i.months, amount: i.amount, note: i.note || '' }); add.할부++; }
+    for (const i of d.installments || []) { if (S.installments.some((y) => y.name === i.name)) continue; const c = findCard(i.card); if (!c) continue; S.installments.push({ id: uid(), name: i.name, cardId: c.id, startMonth: i.startPayMonth, months: i.months, amount: i.amount, amounts: i.amounts, note: i.note || '' }); add.할부++; }
     delete S.onboard; S.started = true; save(); closeSheet(); render();
     openSheet({ title: '이전 정보를 더했어요', body: () => '<div class="kv">' + Object.entries(add).map(([k, n]) => '<div><span>' + k + '</span><b>' + n + '개</b></div>').join('') + '</div><p class="hint">' + mName(P) + ' 급여주기부터 흐름에 들어가요. 계좌 잔액은 입력 탭에서 은행앱 숫자를 적어 주세요.</p>', foot: () => '<a class="btn" href="#/input">입력 탭으로</a>' });
   }
