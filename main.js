@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '2.38';
+  const VERSION = '3.1';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -22,6 +22,8 @@
   function save() {
     S.updatedAt = Date.now();
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('저장 공간이 부족해요. 백업을 내보내 주세요'); }
+    // 아티팩트(비공개 페이지)에서는 Claude도 읽고 고칠 수 있는 저장소에 같이 저장
+    if (window.MoneyStore) window.MoneyStore.push(S);
   }
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
@@ -1872,4 +1874,11 @@
   window.App = { get state() { return S; }, render };
   if (migrated) { save(); setTimeout(() => toast('예전 버전 데이터를 옮겨 왔어요'), 400); }
   route();
+  // 저장소에서 새 데이터가 오면(처음 열 때, Claude가 고쳤을 때) 화면을 바꿈
+  if (window.MoneyStore) window.MoneyStore.init((d) => {
+    if (!d || d.v !== 2) return;
+    const base = C.emptyState(); for (const k of Object.keys(base)) if (d[k] == null) d[k] = base[k];
+    S = d; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 보조 저장 */ }
+    if (!sheet) render();
+  });
 })();
