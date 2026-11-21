@@ -771,3 +771,4 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ocard.now .otag.in { background: var(--card); }
 .ocard .chev { color: var(--text3); }
 .mv-chip { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--soft); color: var(--text2); margin-left: 8px; white-space: nowrap; }
+.mv-arrow { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin-left: 8px; border-radius: 50%; background: var(--soft); color: var(--text2); flex: none; }
