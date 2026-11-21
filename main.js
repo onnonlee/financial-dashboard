@@ -390,7 +390,8 @@
     if (nc.length) h += g('cards', ['indigo', 'mCard'], mName(nc[0].payMonth) + ' 카드값', nc.map((b) => md(C.bizAfter(b.payDate)) + ' ' + esc(b.card.name.replace(/카드$/, '')) + ' ' + shortWon(b.total)).join(' · '), won(st.nextCardTotal || 0), pend ? '미청구 ' + shortWon(pend) : '미청구 없음');
     h += g('fixed', ['blue', 'mRepeat'], '매달 나가는 돈', '대출·이자 ' + shortWon(L.monthlySelf + L.monthlyFamily) + (fxSum ? ' · 그 밖 ' + shortWon(fxSum) : ''), won(monthly), '통장에서');
     if (L.total || pay) h += g('loans', ['red', 'mLoan'], '빚 전체', '마통 ' + shortWon(L.odTotal) + ' · 대출 ' + shortWon(L.loanTotal) + (pay ? ' · 갚을 돈 ' + shortWon(pay) : ''), won(L.total + pay), '');
-    if (rows.length > 1) h += g('outlook', ['green', 'flow'], '앞으로', rows.slice(1).map((r) => mName(r.month) + ' ' + (r.room < 0 ? '−' : '') + shortWon(Math.abs(r.room))).join(' · '), '', '달마다 써도 되는 돈');
+    { const f = C.flow(S, P, t); h += g('flow', ['green', 'flow'], pName(P) + ' 월간 흐름', '들어온·나가는 돈 날짜순 전체', (f.left < 0 ? '−' : '+') + won(f.left), '수입 ' + shortWon(f.lines.income) + ' · 지출 ' + shortWon(f.out)); }
+    if (rows.length > 1) h += g('outlook', ['gray', 'flow'], '앞으로', rows.slice(1).map((r) => mName(r.month) + ' ' + (r.room < 0 ? '−' : '') + shortWon(Math.abs(r.room))).join(' · '), '', '달마다 써도 되는 돈');
     h += '</section>';
     // 3. 곧 들어오고 나가는 돈 (7일)
     const soon = plan.rows.reduce((a, r) => a.concat(r.items.map((it) => ({ it, a: r.account }))), []).filter((x) => C.daysBetween(t, x.it.date) <= 7).sort((x, y) => (x.it.date < y.it.date ? -1 : x.it.date > y.it.date ? 1 : 0));
