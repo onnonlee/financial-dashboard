@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '3.1';
+  const VERSION = '3.2';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -320,7 +320,7 @@
   function todoList() {
     const t = today(); const st = C.status(S, t); const out = [];
     for (const x of C.todos(S, t)) {
-      if (x.kind === 'move') out.push({ key: x.key, due: x.due, act: 'todoMove', data: { key: x.key }, t: esc(x.from.name) + ' → ' + esc(x.to.name) + ' ' + won(x.amount) + '원 옮기기', s: esc(x.card.name) + ' ' + md(x.payDate) + ' 출금' + (x.enough ? '' : ' · ' + esc(x.from.name) + '에 모자라요'), warn: !x.enough });
+      if (x.kind === 'move') out.push({ key: x.key, due: x.due, act: 'todoMove', data: { key: x.key }, t: esc(x.from.name) + ' → ' + esc(x.to.name) + ' ' + won(x.amount) + '원 옮기기', s: moveWhy(x) + (x.enough ? '' : ' · ' + esc(x.from.name) + '에도 모자라요'), warn: !x.enough || x.excluded });
       else out.push({ key: x.key, due: x.due, act: 'cardApp', data: { id: x.card.id, m: x.m }, t: esc(x.card.name) + ' ' + mName(x.m) + ' 결제예정액 적기', s: md(x.payDate) + ' 출금 · 카드앱 숫자를 적으면 계산이 정확해져요' });
     }
     const aa = Math.max(0, ...S.accounts.map((a) => a.balanceAt || 0));
@@ -330,6 +330,36 @@
     const bk = S.lastBackup ? C.daysBetween(S.lastBackup, t) : null;
     if (S.started && S.accounts.length && (bk == null || bk >= 7)) out.push({ key: 'bk', due: t, act: 'exportJSON', t: bk == null ? '백업하기' : '백업하기 · ' + bk + '일 지남', s: '파일로 저장해서 원하는 곳에 두세요' });
     return out;
+  }
+  // 옮기는 이유: "신한 이자 12/5 출금 · 한도 4천 원 남음"
+  function moveWhy(x) {
+    const names = x.why.map((w) => w.name.replace(/ ?\d+월 결제$/, ''));
+    return esc(names.slice(0, 2).join(', ') + (names.length > 2 ? ' 외 ' + (names.length - 2) + '건' : '')) + ' ' + md(x.payDate) + ' 출금' + (x.excluded ? ' · 합계에서 뺀 통장' : '');
+  }
+  // ===== 현황: 통장별 돈 계획 (월급 들어오면 어디에 얼마 두고 어디로 옮길지) =====
+  function planCard() {
+    const t = today(); const p = C.cashPlan(S, t); if (!p.rows.length) return '';
+    const sal = p.rows.some((r) => r.items.some((it) => it.cat === '급여'));
+    const mv = p.moves.filter((m) => m.from);
+    const sub = mv.length ? mv.length + '번 옮기면 돼요' : '옮길 돈 없어요';
+    return '<section class="card">' + head(sal ? '월급날 나누기' : '통장별 돈 계획', md(p.end) + '까지') +
+      '<p class="hint plan-hint">' + (sal ? '월급이 들어와서 ' + md(p.end) + ' 카드값까지 나갈 돈을 통장마다 따라가 봤어요. ' : md(p.end) + ' 카드값까지 나갈 돈을 통장마다 따라가 봤어요. ') + '<b>' + sub + '</b></p>' +
+      (mv.length ? '<div class="plan-moves">' + mv.map((m) => '<button class="plan-move' + (m.enough ? '' : ' warn') + '" data-act="todoMove" data-key="' + esc(m.key) + '"><span class="pm-when">' + md(m.due) + '까지</span><span class="pm-what">' + esc(m.from.name) + ' → ' + esc(m.to.name) + ' <b>' + won(m.amount) + '원</b></span><span class="pm-why">' + moveWhy(m) + '</span></button>').join('') + '</div>' : '') +
+      p.rows.map((r) => row({ act: 'planAcct', data: { id: r.account.id }, lead: bankChip(r.account.bank || r.account.name), t: esc(r.account.name) + (r.included ? '' : badge('합계 밖', '')),
+        s: [r.inSum ? '들어옴 +' + shortWon(r.inSum) : '', r.outSum ? '나감 −' + shortWon(r.outSum) : '', r.mvIn ? '받기 +' + shortWon(r.mvIn) : '', r.mvOut ? '보내기 −' + shortWon(r.mvOut) : ''].filter(Boolean).join(' · '),
+        amt: (r.low < 0 ? '−' : '') + won(r.low) + '원', amtCls: r.low < 0 ? 'warn' : '', end: '가장 적을 때 여유' })).join('') + '</section>';
+  }
+  function planAcct(id) {
+    const t = today(); const p = C.cashPlan(S, t); const r = p.rows.find((x) => x.account.id === id); if (!r) return;
+    const ev = r.items.map((it) => ({ date: it.date, name: it.name, d: it.dir === 'in' ? it.amount : -it.amount }));
+    for (const m of p.moves) { if (m.to.id === id) ev.push({ date: m.due, name: (m.from ? m.from.name : '') + '에서 받기', d: m.amount, mv: true }); if (m.from && m.from.id === id) ev.push({ date: m.due, name: m.to.name + '로 보내기', d: -m.amount, mv: true }); }
+    ev.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : b.d - a.d));
+    let cur = r.now;
+    const lines = ev.map((e) => { cur += e.d; return '<div class="plan-line' + (e.mv ? ' mv' : '') + (cur < 0 ? ' neg' : '') + '"><span class="d">' + md(e.date) + '</span><span class="n">' + esc(e.name) + '</span><span class="a ' + (e.d > 0 ? 'in' : '') + '">' + (e.d > 0 ? '+' : '−') + won(e.d) + '</span><span class="r">' + (cur < 0 ? '−' : '') + won(cur) + '</span></div>'; }).join('');
+    const a = r.account;
+    openSheet({ title: a.name + ' 돈 계획', body: () => '<p class="hint">' + (a.type === 'overdraft' ? '마이너스통장이라 <b>남은 한도</b>로 따라가요. 0 밑으로 내려가면 출금이 안 돼요.' : '통장 잔액으로 따라가요.') + (r.included ? '' : ' 이 통장은 합계에서 뺐지만 이자가 빠져서 같이 봐요.') + '</p>' +
+      '<div class="plan-line th"><span class="d">날짜</span><span class="n">지금 여유</span><span class="a"></span><span class="r">' + (r.now < 0 ? '−' : '') + won(r.now) + '</span></div>' + lines +
+      '<p class="hint">오른쪽 숫자는 그날 지나고 남는 여유예요. 파란 줄은 앱이 추천하는 옮기기예요.</p>' });
   }
   function homeScreen() {
     const t = today(); const st = C.status(S, t);
@@ -341,6 +371,7 @@
       '<span class="t">' + x.t + '</span><span class="s">' + x.s + '</span>' + (x.act === 'href' ? '</a>' : '</button>') +
       '<span class="due">' + (x.due && x.due !== t ? md(x.due) + '까지' : '오늘') + '</span>' +
       (x.key.indexOf('move:') === 0 || x.key.indexOf('app:') === 0 ? '<button class="tick" data-act="todoDone" data-key="' + esc(x.key) + '" aria-label="했어요"></button>' : '') + '</div>').join('') : '<p class="hint">지금 할 일이 없어요. 카드 날이 가까워지면 옮길 돈을 알려 드려요.</p>') + '</section>';
+    h += planCard();
     // 2. 통장·카드
     const nc = st.nextCards.slice().sort((a, b) => (a.payDate < b.payDate ? -1 : 1));
     h += '<section class="card">' + head('통장·카드', '', 'accounts') + st.accts.map(acctRow).join('') +
@@ -1744,15 +1775,16 @@
     outlookDetail: (d) => outlookDetail(d.m),
     editExtra: (d) => editExtra(d.id),
     todoDone: (d) => { S.todoDone = S.todoDone || {}; S.todoDone[d.key] = today(); save(); render(); toast('했어요로 표시했어요'); },
+    planAcct: (d) => planAcct(d.id),
     todoMove(d) {
-      const x = C.todos(S, today()).find((y) => y.key === d.key); if (!x) return;
-      openSheet({ title: '카드값 낼 돈 옮기기', body: () => '<div class="kv"><div><span>어디서</span><b>' + esc(x.from.name) + '</b></div><div><span>어디로</span><b>' + esc(x.to.name) + '</b></div><div><span>얼마</span><b>' + won(x.amount) + '원</b></div><div><span>언제까지</span><b>' + md(x.due) + '</b></div></div>' +
-        '<p class="hint">' + esc(x.card.name) + ' ' + md(x.payDate) + ' 출금에 맞춰요. 은행앱에서 옮긴 뒤 아래를 누르면 두 통장 잔액이 같이 바뀌어요.</p>',
+      const x = C.cashPlan(S, today()).moves.find((y) => y.key === d.key); if (!x || !x.from) return;
+      openSheet({ title: '돈 옮기기', body: () => '<div class="kv"><div><span>어디서</span><b>' + esc(x.from.name) + '</b></div><div><span>어디로</span><b>' + esc(x.to.name) + '</b></div><div><span>얼마</span><b>' + won(x.amount) + '원</b></div><div><span>언제까지</span><b>' + md(x.due) + '</b></div></div>' +
+        '<p class="hint">' + moveWhy(x) + '에 맞춰요. 모자라는 돈은 ' + won(x.need) + '원인데 넉넉하게 맞췄어요.' + (x.enough ? '' : ' ' + esc(x.from.name) + '에도 다 옮길 만큼은 없어요.') + ' 은행앱에서 옮긴 뒤 아래를 누르면 두 통장 잔액이 같이 바뀌어요.</p>',
         foot: () => '<button class="btn" data-act="todoMoveDone" data-key="' + esc(x.key) + '">옮겼어요</button>' });
     },
     todoMoveDone(d) {
-      const x = C.todos(S, today()).find((y) => y.key === d.key); if (!x) return;
-      S.records.push({ id: uid(), type: 'transfer', amount: x.amount, date: today(), memo: x.card.name + ' 카드값', from: { type: 'account', id: x.from.id }, to: { type: 'account', id: x.to.id }, at: now() });
+      const x = C.cashPlan(S, today()).moves.find((y) => y.key === d.key); if (!x || !x.from) return;
+      S.records.push({ id: uid(), type: 'transfer', amount: x.amount, date: today(), memo: (x.why[0] ? x.why[0].name : x.to.name) + ' 낼 돈', from: { type: 'account', id: x.from.id }, to: { type: 'account', id: x.to.id }, at: now() });
       S.todoDone = S.todoDone || {}; S.todoDone[x.key] = today(); save(); closeSheet(); render(); toast('이체로 기록했어요');
     },
     setBuffer() { formSheet('비상금', [{ name: 'amount', label: '남겨 둘 금액', type: 'money', value: S.settings.buffer == null ? 80000 : S.settings.buffer }], () => { S.settings.buffer = Math.abs(parseAmt(val('amount'))); return true; }); },

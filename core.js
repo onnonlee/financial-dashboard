@@ -345,22 +345,67 @@
 
   // ---------- v3: 이번 달 할 일 (날짜 보고 자동으로) ----------
   // 카드값 낼 돈 옮기기: 카드 출금 통장에 모자라면, 모아 두는 통장(cashAccountId, 없으면 쓸 수 있는 돈이 가장 많은 다른 통장)에서 전날까지
-  function todos(st, today) {
-    const out = []; const inc = incAcct(st);
-    const avail = {}; for (const a of st.accounts) avail[a.id] = available(a, accountBalance(st, a.id, today));
-    const bills = st.cards.map((c) => { let m = monthOf(today); if (cardDateReal(c, m) < today) m = addMonths(m, 1); const b = cardBill(st, c.id, m); return { card: c, m, date: cardDateReal(c, m), total: b.total, app: b.app }; })
-      .filter((b) => daysBetween(today, b.date) <= 12).sort((a, b) => (a.date < b.date ? -1 : 1));
-    const need = {}; // 통장별로 앞선 카드값까지 누적
-    for (const b of bills) {
-      const to = findBy(st.accounts, b.card.accountId); if (!to) continue;
-      need[to.id] = (need[to.id] || 0) + b.total;
-      if (avail[to.id] >= need[to.id]) continue;
-      const cash = findBy(st.accounts, st.settings.cashAccountId) || st.accounts.filter((a) => inc.has(a.id) && a.id !== to.id).sort((x, y) => avail[y.id] - avail[x.id])[0];
-      if (!cash) continue;
-      const short = Math.min(b.total, need[to.id] - avail[to.id]);
-      out.push({ key: 'move:' + b.card.id + ':' + b.m, kind: 'move', due: bizBefore(addDays(b.date, -1)), amount: short, from: cash, to, card: b.card, payDate: b.date, enough: avail[cash.id] >= short });
-      avail[to.id] += short; avail[cash.id] -= short;
+  // ---------- 돈 옮기기 계획: 통장마다 앞으로 들어오고 나갈 돈을 날짜순으로 따라가며 모자라는 날을 찾음 ----------
+  // 합계에서 뺀 통장(이자만 나가는 마통 등)도 잔액을 적었으면 같이 봄. 옮길 돈은 그 뒤로도 모자라지 않는 통장에서.
+  function cashPlan(st, today, days) {
+    // 기본: 다음 카드값 날까지 (그 사이 월급·대출·이자가 다 들어감)
+    let end;
+    if (days) end = addDays(today, days);
+    else { let M = monthOf(today); end = lastCardDate(st, M); for (let i = 0; i < 3 && end <= addDays(today, 3); i++) { M = addMonths(M, 1); end = lastCardDate(st, M); } }
+    const inc = incAcct(st);
+    const accts = st.accounts.filter((a) => a.type !== 'local' && a.balanceDate);
+    const ids = new Set(accts.map((a) => a.id));
+    const start = {}; for (const a of accts) start[a.id] = available(a, accountBalance(st, a.id, today));
+    const items = itemsBetween(st, today, end, today).filter((it) => ids.has(it.acct) && it.amount)
+      .map((it) => (it.src === 'card' ? Object.assign({}, it, { date: bizAfter(it.date) }) : it))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.dir === 'in' ? 0 : 1) - (b.dir === 'in' ? 0 : 1)));
+    const moves = [];
+    // 통장 하나의 흐름: [{date, delta}] (들어올 돈 먼저)
+    const evs = (id) => {
+      const e = items.filter((it) => it.acct === id).map((it) => ({ date: it.date, d: it.dir === 'in' ? it.amount : -it.amount, it }));
+      for (const m of moves) { if (m.to.id === id) e.push({ date: m.due, d: m.amount, mv: true }); if (m.from.id === id) e.push({ date: m.due, d: -m.amount, mv: true }); }
+      return e.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : b.d - a.d));
+    };
+    // from 날짜부터 끝까지 가장 낮을 때의 여유
+    const minFrom = (id, from) => { let cur = start[id], mn = Infinity; for (const e of evs(id)) { if (e.date >= from && cur < mn) mn = cur; cur += e.d; if (e.date >= from && cur < mn) mn = cur; } return Math.min(mn, cur); };
+    const round = (n, cap) => { const r = Math.ceil(n / 10000) * 10000; if (r <= cap) return r; const r2 = Math.ceil(n / 1000) * 1000; return r2 <= cap ? r2 : n; };
+    for (let guard = 0; guard < 30; guard++) {
+      // 처음 모자라는 곳 찾기
+      let hit = null;
+      for (const a of accts) {
+        let cur = start[a.id];
+        for (const e of evs(a.id)) { cur += e.d; if (cur < 0 && e.d < 0) { if (!hit || e.date < hit.date) hit = { acct: a, date: e.date, need: -cur, it: e.it }; break; } }
+      }
+      if (!hit) break;
+      const due = (() => { const d = bizBefore(addDays(hit.date, -1)); return d < today ? today : d; })();
+      const pref = st.settings.cashAccountId;
+      const cands = accts.filter((a) => a.id !== hit.acct.id).map((a) => ({ a, cap: minFrom(a.id, due) }))
+        .sort((x, y) => (x.a.id === pref && x.cap >= hit.need ? -1 : 0) - (y.a.id === pref && y.cap >= hit.need ? -1 : 0) || (inc.has(y.a.id) - inc.has(x.a.id)) || y.cap - x.cap);
+      const ok = cands.find((c) => c.cap >= hit.need);
+      const src = ok || cands[0];
+      const enough = !!ok;
+      const amount = enough ? round(hit.need, src.cap) : hit.need;
+      const why = items.filter((it) => it.acct === hit.acct.id && it.dir === 'out' && it.date >= due && it.date <= hit.date);
+      moves.push({ key: 'move:' + hit.acct.id + ':' + hit.date, kind: 'move', due, amount, need: hit.need, from: src ? src.a : null, to: hit.acct, payDate: hit.date, why, enough, excluded: !inc.has(hit.acct.id) });
+      if (!src) break;
     }
+    // 통장별 요약 (지금 여유 → 들어올 돈 · 나갈 돈 · 옮길 돈 → 가장 낮을 때)
+    const rows = accts.map((a) => {
+      const its = items.filter((it) => it.acct === a.id);
+      const inSum = its.filter((x) => x.dir === 'in').reduce((s, x) => s + x.amount, 0);
+      const outSum = its.filter((x) => x.dir === 'out').reduce((s, x) => s + x.amount, 0);
+      const mvIn = moves.filter((m) => m.to.id === a.id).reduce((s, m) => s + m.amount, 0);
+      const mvOut = moves.filter((m) => m.from && m.from.id === a.id).reduce((s, m) => s + m.amount, 0);
+      return { account: a, now: start[a.id], inSum, outSum, mvIn, mvOut, low: minFrom(a.id, today), items: its, included: inc.has(a.id) };
+    }).filter((r) => r.items.length || r.mvIn || r.mvOut);
+    return { end, moves, rows };
+  }
+
+  function todos(st, today) {
+    const out = [];
+    for (const m of cashPlan(st, today).moves) if (m.from && daysBetween(today, m.payDate) <= 14) out.push(m);
+    const bills = st.cards.map((c) => { let m = monthOf(today); if (cardDateReal(c, m) < today) m = addMonths(m, 1); const b = cardBill(st, c.id, m); return { card: c, m, date: cardDateReal(c, m), total: b.total, app: b.app }; })
+      .filter((b) => daysBetween(today, b.date) <= 12);
     for (const b of bills) if (!b.app) out.push({ key: 'app:' + b.card.id + ':' + b.m, kind: 'app', due: bizBefore(addDays(b.date, -2)), card: b.card, m: b.m, payDate: b.date });
     const done = st.todoDone || {};
     return out.filter((x) => !done[x.key]).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
@@ -380,6 +425,6 @@
 
   const api = { addMonths, addDays, dateIn, daysBetween, monthDiff, periodOf, periodRange, dayInPeriod, payMonthOf, cardPayDate,
     schedule, cardCharges, cardBill, accountBalance, available, loanBalance, loanSummary, debtStatus, flow, status, installmentTrend, findDuplicate, emptyState, fixedAmount, bizBefore, bizAfter, isOff,
-    monthOutlook, todos, lastCardDate, itemsBetween };
+    monthOutlook, todos, cashPlan, lastCardDate, itemsBetween };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Core = api;
 })(this);

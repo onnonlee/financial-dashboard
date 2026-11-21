@@ -726,3 +726,24 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .kv.tot { background: var(--soft); border-radius: 14px; padding: 12px 14px; border-top: 0; }
 .kv.tot div span { color: var(--text); font-weight: 600; }
 .kv b.warn { color: var(--warn); }
+
+/* 월급날 나누기 (돈 계획) */
+.plan-hint { margin: 2px 0 10px; }
+.plan-moves { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.plan-move { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; text-align: left; padding: 12px 14px; border-radius: 14px; background: var(--blue-bg); color: var(--text); border: 0; font: inherit; }
+.plan-move .pm-when { grid-row: span 2; align-self: center; font-size: 12px; font-weight: 700; color: var(--blue); min-width: 52px; }
+.plan-move .pm-what { font-size: 15px; }
+.plan-move .pm-what b { font-variant-numeric: tabular-nums; }
+.plan-move .pm-why { font-size: 12px; color: var(--text2); }
+.plan-move.warn { background: var(--warn-bg); }
+.plan-move.warn .pm-when { color: var(--warn); }
+.plan-line { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 8px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.plan-line.th { border-top: 0; color: var(--text2); font-size: 12px; }
+.plan-line .d { color: var(--text3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.plan-line .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-line .a, .plan-line .r { font-variant-numeric: tabular-nums; text-align: right; }
+.plan-line .a.in { color: var(--in); }
+.plan-line .r { min-width: 84px; font-weight: 600; }
+.plan-line.mv { background: var(--blue-bg); margin: 0 -10px; padding-left: 10px; padding-right: 10px; border-radius: 10px; }
+.plan-line.neg .r { color: var(--warn); }
+.amt.warn { color: var(--warn); }
