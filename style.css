@@ -772,3 +772,18 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ocard .chev { color: var(--text3); }
 .mv-chip { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--soft); color: var(--text2); margin-left: 8px; white-space: nowrap; }
 .mv-arrow { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin-left: 8px; border-radius: 50%; background: var(--soft); color: var(--text2); flex: none; }
+
+/* v4: 종합 화면 */
+.mast.v4 .mast-main { display: block; text-align: left; color: inherit; background: none; border: 0; font: inherit; padding: 0; }
+.verdict { display: inline-block; font-size: 13px; font-weight: 700; padding: 3px 11px; border-radius: 999px; background: #2fbf87; color: #fff; margin: 8px 0 2px; }
+.verdict.bad { background: #ff7a3d; }
+.mast.v4 .mast-num.bad { color: #ffb38a; }
+.mast.v4 .mast-chips { width: 100%; border: 0; background: none; font: inherit; color: inherit; padding: 0; }
+.ph-gear { margin-left: auto; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--card); color: var(--text2); }
+.ph-gear svg { width: 20px; height: 20px; }
+.row.glance .end .s.warn { color: var(--warn); font-weight: 700; }
+.seg { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0 8px; background: var(--line); }
+.seg i { display: block; } .seg .s1, .seg-lg .s1 { background: var(--blue); } .seg .s2, .seg-lg .s2 { background: var(--warn); }
+.seg-lg { display: flex; gap: 14px; font-size: 13px; color: var(--text2); flex-wrap: wrap; }
+.seg-lg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.date.ok { color: #12a36b; font-weight: 700; }
