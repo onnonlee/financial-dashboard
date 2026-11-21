@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '3.2';
+  const VERSION = '3.3';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -393,12 +393,20 @@
 
   // ===== 전망: 달마다 써도 되는 돈 =====
   function outlookScreen() {
-    const rows = outRows(7); const mx = Math.max(1, ...rows.map((r) => Math.max(0, r.room)));
+    const rows = outRows(7); const mx = Math.max(1, ...rows.map((r, i) => Math.max(0, i === 0 ? r.remaining : r.room)));
     let h = '<section class="card">' + head('달마다 써도 되는 돈', '7개월') +
-      '<div class="obars">' + rows.map((r, i) => '<div' + (i === 0 ? ' class="cur"' : '') + '><i style="height:' + Math.max(2, Math.round(64 * Math.max(0, r.room) / mx)) + 'px"></i><span>' + mName(r.month) + '</span></div>').join('') + '</div>' +
-      '<div class="otable"><div class="otr th"><span>쓰는 달</span><span>정해진 카드값</span><span>갚을 돈</span><span>써도 되는 돈</span><span>하루</span></div>' +
-      rows.map((r, i) => '<button class="otr' + (i === 0 ? ' now' : '') + '" data-act="outlookDetail" data-m="' + r.month + '"><span>' + mName(r.month) + (i === 0 ? '<i>지금</i>' : '') + '</span><span>' + won(r.fixedCard) + (r.ends.length ? '<i>' + esc(r.ends.slice(0, 2).join(', ')) + (r.ends.length > 2 ? ' 외' : '') + ' 끝</i>' : '') + '</span><span>' + (r.debtPay ? won(r.debtPay) : '—') + '</span><span class="' + (r.room < 0 ? 'lo' : 'ok') + '">' + sign(i === 0 ? r.remaining : r.room) + (r.extras.length ? '<i>+' + esc(r.extras.map((x) => x.name).join(', ')) + '</i>' : '') + '</span><span>' + (r.daily >= 0 ? shortWon(r.daily) : '−') + '</span></button>').join('') + '</div>' +
-      '<p class="hint">써도 되는 돈 = 들어오는 돈 − 통장 고정비·대출 − 정해진 카드값(할부·분할·카드 고정비) − 갚을 돈. 이번 달은 이미 쓴 돈을 뺀 남은 금액이에요. 줄을 누르면 풀이가 나와요.</p></section>';
+      '<p class="hint oc-hint">월급·고정으로 나갈 돈을 다 빼고, <b>그달에 카드로 더 써도 되는 돈</b>이에요.</p>' +
+      '<div class="ocards">' + rows.map((r, i) => {
+        const v = i === 0 ? r.remaining : r.room; const lo = v < 0;
+        const tags = r.extras.map((x) => '<span class="otag in">+ ' + esc(x.name) + '</span>').join('') + r.ends.slice(0, 2).map((x) => '<span class="otag">' + esc(x.replace(/\s*\d+개월.*$/, '')) + ' 할부 끝</span>').join('') + (r.ends.length > 2 ? '<span class="otag">외 ' + (r.ends.length - 2) + '개 끝</span>' : '');
+        return '<button class="ocard' + (i === 0 ? ' now' : '') + '" data-act="outlookDetail" data-m="' + r.month + '">' +
+          '<span class="om">' + mName(r.month) + (i === 0 ? '<i>지금</i>' : '') + '</span>' +
+          '<span class="ob"><span class="ov' + (lo ? ' lo' : '') + '">' + sign(v) + '<em>원</em></span>' +
+          '<span class="obar"><i style="width:' + Math.max(2, Math.round(100 * Math.max(0, v) / mx)) + '%"></i></span>' +
+          '<span class="os">' + (v >= 0 ? '하루 ' + shortWon(r.daily) + ' · ' : '') + '카드 할부·고정 ' + shortWon(r.fixedCard) + (r.debtPay ? ' · 갚을 돈 ' + shortWon(r.debtPay) : '') + '</span>' +
+          (tags ? '<span class="otags">' + tags + '</span>' : '') + '</span><span class="chev">' + I.right + '</span></button>';
+      }).join('') + '</div>' +
+      '<p class="hint">줄을 누르면 어떻게 계산했는지 나와요. 이번 달은 이미 쓴 돈을 뺀 남은 금액이에요.</p></section>';
     // 한 번씩 받는 돈
     const ex = (S.extras || []).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
     h += '<section class="card">' + head('한 번씩 받는 돈', ex.length ? ex.length + '개' : '') + (ex.map((x) => row({ act: 'editExtra', data: { id: x.id }, lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: x.date.slice(0, 4) + '년 · ' + esc((acct(x.accountId) || {}).name || ''), amt: '+' + won(x.amount), amtCls: 'in' })).join('') || '<p class="hint">정근수당, 명절휴가비, 연말정산 환급처럼 한 번 들어오는 돈을 적어 두면 그달 전망에 들어가요.</p>') +
@@ -1109,7 +1117,12 @@
   // 이번 결제에 들어갈 것: 카드앱에 보이면 켜고, 안 보이면 꺼서 예상 카드값에 더해요. 다시 누르면 되돌아가요
   function reflList(b) {
     if (!b.items.length) return '<p class="hint">이 결제월 고정비·할부·가계부 사용이 없어요</p>';
-    return '<div class="refl-head"><b>카드앱에 보이나요?</b><span>보이면 켜요 · 꺼진 것만 더해요</span></div><div class="sub-list">' + b.items.map((it) => '<button class="row" data-act="' + (it.approx ? 'reflEdit' : 'toggleRefl') + '" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '" role="switch" aria-checked="' + !!it.included + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + (it.approx ? ' · 눌러서 금액 고치기' : '') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + (it.approx && !(S.over[it.key] || {}).amount ? '약 ' : '') + won(it.amount) + '</span><span class="tg' + (it.included ? ' on' : '') + '"></span></button>').join('') + '</div>';
+    const one = (it) => '<button class="row" data-act="' + (it.approx ? 'reflEdit' : 'toggleRefl') + '" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + (it.approx ? ' · 눌러서 금액 고치기' : '') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + (it.included ? '' : '+') + (it.approx && !(S.over[it.key] || {}).amount ? '약 ' : '') + won(it.amount) + '</span><span class="mv-chip">' + (it.included ? '안 떴어요' : '떴어요') + '</span></button>';
+    const pend = b.items.filter((x) => !x.included), inc = b.items.filter((x) => x.included);
+    const grp = (title, sub, xs, empty) => '<div class="refl-head"><b>' + title + '</b><span>' + sub + '</span></div>' + (xs.length ? '<div class="sub-list">' + xs.map(one).join('') + '</div>' : '<p class="hint">' + empty + '</p>');
+    return grp('아직 카드앱에 안 뜬 것', pend.length ? '카드앱 금액에 더해요 · +' + won(sum(pend, (x) => x.amount)) + '원' : '', pend, '없어요. 카드앱 금액 그대로예요.') +
+      grp('카드앱 금액에 이미 들어 있는 것', '따로 더하지 않아요', inc, '없어요') +
+      '<p class="hint">날짜를 보고 앱이 알아서 나눠요. 틀린 것만 오른쪽 단추로 옮기면 돼요.</p>';
   }
   // 도시가스·관리비처럼 매달 바뀌는 항목: 이번 달 금액을 고치면서 체크
   function reflEdit(k, id, m) {

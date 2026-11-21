@@ -747,3 +747,27 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .plan-line.mv { background: var(--blue-bg); margin: 0 -10px; padding-left: 10px; padding-right: 10px; border-radius: 10px; }
 .plan-line.neg .r { color: var(--warn); }
 .amt.warn { color: var(--warn); }
+
+/* 전망: 달마다 한 줄 카드 */
+.oc-hint { margin: 2px 0 10px; }
+.ocards { display: flex; flex-direction: column; }
+.ocard { display: grid; grid-template-columns: 44px 1fr 16px; gap: 10px; align-items: center; width: 100%; padding: 14px 0; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; font: inherit; color: var(--text); }
+.ocard:first-child { border-top: 0; }
+.ocard.now { background: var(--blue-bg); border-radius: 14px; margin: 0 -10px; padding: 14px 10px; width: calc(100% + 20px); }
+.ocard.now + .ocard { border-top: 0; }
+.ocard .om { font-weight: 700; font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.ocard .om i { font-style: normal; font-size: 11px; color: var(--blue); font-weight: 600; }
+.ocard .ob { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ocard .ov { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--blue); }
+.ocard .ov em { font-style: normal; font-size: 13px; font-weight: 600; margin-left: 1px; }
+.ocard .ov.lo { color: var(--warn); }
+.ocard .obar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.ocard .obar i { display: block; height: 100%; border-radius: 3px; background: var(--blue); opacity: .55; }
+.ocard.now .obar i { opacity: 1; }
+.ocard .os { font-size: 12px; color: var(--text2); }
+.ocard .otags { display: flex; flex-wrap: wrap; gap: 4px; }
+.otag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--soft); color: var(--text2); }
+.otag.in { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+.ocard.now .otag.in { background: var(--card); }
+.ocard .chev { color: var(--text3); }
+.mv-chip { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--soft); color: var(--text2); margin-left: 8px; white-space: nowrap; }
