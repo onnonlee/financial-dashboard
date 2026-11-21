@@ -348,7 +348,7 @@
       (mv.length ? '<div class="plan-moves">' + mv.map((m) => '<button class="plan-move' + (m.enough ? '' : ' warn') + '" data-act="todoMove" data-key="' + esc(m.key) + '"><span class="pm-when">' + md(m.due) + '까지</span><span class="pm-what">' + esc(m.from.name) + ' → ' + esc(m.to.name) + ' <b>' + won(m.amount) + '원</b></span><span class="pm-why">' + moveWhy(m) + '</span></button>').join('') + '</div>' : '') +
       p.rows.map((r) => row({ act: 'planAcct', data: { id: r.account.id }, lead: bankChip(r.account.bank || r.account.name), t: esc(r.account.name) + (r.included ? '' : badge('합계 밖', '')),
         s: [r.inSum ? '들어옴 +' + shortWon(r.inSum) : '', r.outSum ? '나감 −' + shortWon(r.outSum) : '', r.mvIn ? '받기 +' + shortWon(r.mvIn) : '', r.mvOut ? '보내기 −' + shortWon(r.mvOut) : ''].filter(Boolean).join(' · '),
-        amt: (fin(r) < 0 ? '−' : '') + won(fin(r)) + '원', amtCls: r.low < 0 ? 'warn' : '', end: r.low < 0 ? '중간에 모자라요' : md(p.end) + ' 지나고 남는 돈' })).join('') + '</section>';
+        amt: (fin(r) < 0 ? '−' : '') + won(fin(r)) + '원', amtCls: r.low < 0 ? 'warn' : '', end: r.low < 0 ? '중간에 모자라요' : '남는 돈' })).join('') + '</section>';
   }
   function planAcct(id) {
     const t = today(); const p = C.cashPlan(S, t); const r = p.rows.find((x) => x.account.id === id); if (!r) return;
