@@ -316,7 +316,7 @@
     const fixedOut = r.outflow + r.fixedCard + r.debtPay;
     return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + ' · ' + md(r.winEnd) + ' 카드 날까지</p><span class="verdict' + (short ? ' bad' : '') + '">' + (short ? '부족' : '여유') + '</span><b class="mast-num' + (short ? ' bad' : '') + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
       '<a class="mast-btn" href="#/more" aria-label="관리">' + I.gear + '</a></div>' +
-      '<p class="mast-sub">' + (short ? '통장·마통 한도를 다 모아도 <b>' + won(r.remaining) + '원</b>이 모자라요' : '<b>하루 약 ' + shortWon(Math.max(0, r.daily)) + ' 원</b>씩 써도 돼요 · ' + r.daysLeft + '일 남음') + '</p>' +
+      '<p class="mast-sub">' + (short ? '통장·마통 한도를 다 모아도 <b>' + won(r.remaining) + '원</b>이 모자라요' : '<b>하루 약 ' + shortWon(Math.max(0, r.daily)) + ' 원</b>씩 써도 돼요 · ' + r.daysLeft + '일 남음') + (r.buffer ? ' · 비상금 ' + shortWon(r.buffer) + ' 남기고' : '') + '</p>' +
       '<button class="mast-chips" data-act="outlookDetail" data-m="' + r.month + '"><span><span>들어옴</span><b>' + shortWon(r.inflow + r.debtIn + Math.max(0, r.carry)) + '</b></span><span><span>정해진 지출</span><b>' + shortWon(fixedOut) + '</b></span><span><span>이미 씀</span><b>' + shortWon(r.spent) + '</b></span></button></div></header>';
   }
   function todoList() {
