@@ -1117,12 +1117,12 @@
   // 이번 결제에 들어갈 것: 카드앱에 보이면 켜고, 안 보이면 꺼서 예상 카드값에 더해요. 다시 누르면 되돌아가요
   function reflList(b) {
     if (!b.items.length) return '<p class="hint">이 결제월 고정비·할부·가계부 사용이 없어요</p>';
-    const one = (it) => '<button class="row" data-act="' + (it.approx ? 'reflEdit' : 'toggleRefl') + '" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + (it.approx ? ' · 눌러서 금액 고치기' : '') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + (it.included ? '' : '+') + (it.approx && !(S.over[it.key] || {}).amount ? '약 ' : '') + won(it.amount) + '</span><span class="mv-chip">' + (it.included ? '미청구로' : '청구로') + '</span></button>';
+    const one = (it) => '<button class="row" data-act="' + (it.approx ? 'reflEdit' : 'toggleRefl') + '" data-k="' + esc(it.key) + '" data-id="' + b.cardId + '" data-m="' + b.payMonth + '"><span class="grow"><span class="t">' + esc(it.name) + '</span><span class="s">' + (it.date ? md(it.date) + ' · ' : '') + (it.src === 'record' ? '가계부' : it.inst ? '할부' : '고정비') + (it.approx ? ' · 눌러서 금액 고치기' : '') + '</span></span><span class="amt' + (it.included ? ' muted' : '') + '">' + (it.included ? '' : '+') + (it.approx && !(S.over[it.key] || {}).amount ? '약 ' : '') + won(it.amount) + '</span><span class="mv-arrow" aria-label="' + (it.included ? '미청구로 옮기기' : '청구로 옮기기') + '"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="' + (it.included ? 'M12 19V5M6 11l6-6 6 6' : 'M12 5v14M6 13l6 6 6-6') + '"/></svg></span></button>';
     const pend = b.items.filter((x) => !x.included), inc = b.items.filter((x) => x.included);
     const grp = (title, sub, xs, empty) => '<div class="refl-head"><b>' + title + '</b><span>' + sub + '</span></div>' + (xs.length ? '<div class="sub-list">' + xs.map(one).join('') + '</div>' : '<p class="hint">' + empty + '</p>');
     return grp('미청구', pend.length ? '아직 카드앱에 없어서 더해요 · +' + won(sum(pend, (x) => x.amount)) + '원' : '', pend, '없어요. 카드앱 금액 그대로예요.') +
       grp('청구', '카드앱 금액에 들어 있어서 안 더해요', inc, '없어요') +
-      '<p class="hint">날짜를 보고 앱이 알아서 나눠요. 틀린 것만 오른쪽 단추로 옮기면 돼요.</p>';
+      '<p class="hint">날짜를 보고 앱이 알아서 나눠요. 틀린 것만 화살표를 눌러 옮기면 돼요.</p>';
   }
   // 도시가스·관리비처럼 매달 바뀌는 항목: 이번 달 금액을 고치면서 체크
   function reflEdit(k, id, m) {
