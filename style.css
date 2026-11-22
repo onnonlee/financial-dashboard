@@ -776,7 +776,7 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 /* v4: 종합 화면 */
 .mast.v4 .mast-main { display: block; text-align: left; color: inherit; background: none; border: 0; font: inherit; padding: 0; }
 .verdict { display: inline-block; vertical-align: 1px; font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: #2fbf87; color: #fff; margin-left: 8px; }
-.mast.v4 .mast-lab { display: flex; align-items: center; }
+.mast.v4 .mast-lab { display: flex; align-items: center; margin-bottom: 8px; }
 .verdict.bad { background: #ff7a3d; }
 .mast.v4 .mast-num.bad { color: #ffb38a; }
 .mast.v4 .mast-chips { width: 100%; border: 0; background: none; font: inherit; color: inherit; padding: 0; }
@@ -791,3 +791,35 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mast-btn.wide, .ph-gear.wide { width: auto; padding: 0 12px; gap: 5px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
 .mast-btn.wide svg, .ph-gear.wide svg { width: 17px; height: 17px; }
 .mast-btn svg { width: 20px; height: 20px; }
+
+/* 앞으로 줄 딱지 */
+.verdict.sm { font-size: 11px; padding: 1px 7px; margin: 2px 0 0; align-self: flex-start; }
+/* 달 돈 계산 시트 */
+.og-res { background: var(--soft); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.og-res span { font-size: 13px; font-weight: 600; color: #1f9e6e; }
+.og-res.bad span { color: var(--warn); }
+.og-res b { font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--text); }
+.og-res b em { font-style: normal; font-size: 18px; margin-left: 2px; }
+.og-res.bad b { color: var(--warn); }
+.og-res small { font-size: 12px; color: var(--text3); }
+.og-cap { font-size: 12px; color: var(--text3); margin: 16px 0 6px; }
+.og-list { display: flex; flex-direction: column; margin-bottom: 12px; }
+.og { border-top: 1px solid var(--line); }
+.og summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px 0; cursor: pointer; }
+.og summary::-webkit-details-marker { display: none; }
+.og summary i { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--text3); }
+.og.in summary i { background: #2fbf87; } .og.out summary i { background: #ff7a3d; } .og.cv summary i { background: #6b5cff; }
+.og.debt summary i { background: #e5484d; } .og.carry summary i { background: var(--blue); } .og.spent summary i { background: #f5a623; }
+.og-t { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; }
+.og-t small { font-size: 12px; font-weight: 500; color: var(--text3); margin-left: 6px; }
+.og summary b { font-size: 15px; font-weight: 700; }
+.og.in summary b { color: var(--in); }
+.og-chev { display: flex; width: 16px; color: var(--text3); transition: transform .15s; }
+.og-chev svg { width: 16px; height: 16px; }
+.og[open] .og-chev { transform: rotate(90deg); }
+.og-body { background: var(--soft); border-radius: 12px; padding: 6px 12px; margin: 0 0 12px; }
+.og-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 14px; color: var(--text2); }
+.og-row + .og-row { border-top: 1px dashed var(--line); }
+.og-row small { font-size: 12px; color: var(--text3); margin-left: 4px; }
+.og-row b { font-weight: 600; color: var(--text); white-space: nowrap; }
+.og-sub { font-size: 12px; color: var(--text3); padding: 0 0 7px; }
