@@ -787,3 +787,5 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .seg-lg { display: flex; gap: 14px; font-size: 13px; color: var(--text2); flex-wrap: wrap; }
 .seg-lg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 .date.ok { color: #12a36b; font-weight: 700; }
+.mast-btn.wide, .ph-gear.wide { width: auto; padding: 0 12px; gap: 5px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
+.mast-btn.wide svg, .ph-gear.wide svg { width: 17px; height: 17px; }
