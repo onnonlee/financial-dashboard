@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.2';
+  const VERSION = '4.3';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -315,7 +315,7 @@
   function homeMast3() {
     const r = outRows(1)[0]; const short = r.remaining < 0;
     const fixedOut = r.outflow + r.fixedCard + r.debtPay;
-    return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + '에 더 써도 되는 돈</p><span class="verdict' + (short ? ' bad' : '') + '">' + (short ? '부족' : '여유') + '</span><b class="mast-num' + (short ? ' bad' : '') + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
+    return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + ' 현황<span class="verdict' + (short ? ' bad' : '') + '">' + (short ? '부족' : '여유') + '</span></p><b class="mast-num' + (short ? ' bad' : '') + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
       '<a class="mast-btn" href="#/more" aria-label="전체 메뉴">' + MENU_IC + '</a></div>' +
       '<p class="mast-sub">' + (short ? '통장·마통 한도를 다 모아도 <b>' + won(r.remaining) + '원</b>이 모자라요' : '<b>하루 약 ' + shortWon(Math.max(0, r.daily)) + '원</b> · 남은 ' + r.daysLeft + '일') + (r.buffer ? ' · 비상금 ' + shortWon(r.buffer) + '원 기준' : '') + '</p>' +
       '<button class="mast-chips" data-act="outlookDetail" data-m="' + r.month + '"><span><span>들어올 돈</span><b>' + shortWon(r.inflow + r.debtIn + Math.max(0, r.carry)) + '</b></span><span><span>나갈 돈</span><b>' + shortWon(fixedOut) + '</b></span><span><span>쓴 돈</span><b>' + shortWon(r.spent) + '</b></span></button></div></header>';
