@@ -823,3 +823,33 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .og-row small { font-size: 12px; color: var(--text3); margin-left: 4px; }
 .og-row b { font-weight: 600; color: var(--text); white-space: nowrap; }
 .og-sub { font-size: 12px; color: var(--text3); padding: 0 0 7px; }
+
+/* 예상: 막대그래프 + 고른 달 */
+.ochart { display: flex; gap: 4px; margin: 6px 0 14px; }
+.ocol { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 6px 0 4px; border: 0; border-radius: 12px; background: none; font: inherit; color: var(--text3); }
+.ocol.on { background: var(--blue-bg); color: var(--text); }
+.ocol-v { font-size: 10.5px; font-weight: 600; text-align: center; white-space: nowrap; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.ocol.on .ocol-v { color: var(--blue); }
+.ocol.neg .ocol-v { color: var(--warn); }
+.ocol-pos { display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
+.ocol-neg { display: flex; align-items: flex-start; justify-content: center; }
+.ocol i { display: block; width: 62%; max-width: 28px; background: var(--blue); opacity: .3; }
+.ocol-pos i { border-radius: 6px 6px 2px 2px; }
+.ocol-neg i { border-radius: 2px 2px 6px 6px; background: var(--warn); }
+.ocol.on i { opacity: 1; }
+.ocol-m { font-size: 11.5px; text-align: center; margin-top: 6px; font-weight: 600; white-space: nowrap; }
+.opick { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); font: inherit; color: var(--text); }
+.opick-top { display: flex; align-items: center; gap: 8px; }
+.opick-m { font-size: 16px; font-weight: 700; }
+.opick .verdict { margin: 0; }
+.opick-more { margin-left: auto; display: flex; align-items: center; gap: 2px; font-size: 12px; color: var(--text3); }
+.opick-more svg { width: 14px; height: 14px; }
+.opick-v { font-size: 28px; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.opick-v em { font-style: normal; font-size: 17px; margin-left: 2px; }
+.opick.bad .opick-v { color: var(--warn); }
+.opick-s { font-size: 13px; color: var(--text2); }
+.opick-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.opick-stats span { display: flex; flex-direction: column; gap: 2px; background: var(--card); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.opick-stats small { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opick-stats b { font-size: 14px; font-weight: 700; }
+.opick .otags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
