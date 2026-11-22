@@ -789,3 +789,4 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .date.ok { color: #12a36b; font-weight: 700; }
 .mast-btn.wide, .ph-gear.wide { width: auto; padding: 0 12px; gap: 5px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
 .mast-btn.wide svg, .ph-gear.wide svg { width: 17px; height: 17px; }
+.mast-btn svg { width: 20px; height: 20px; }
