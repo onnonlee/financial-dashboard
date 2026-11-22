@@ -863,3 +863,13 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .olegend u { width: 14px; border-top: 1px dashed var(--text3); }
 .opick-lab { font-size: 12px; color: var(--text3); margin-top: 2px; }
 .opick-v { margin-top: -4px; }
+
+/* 위험(0 아래) = 빨강 */
+.verdict.risk { background: #e5484d; }
+.mast.v4 .mast-num.risk { color: #ff9a9a; }
+.ocol.risk .ocol-v { color: #e5484d; }
+.ocol.risk .ocol-neg i, .ocol.risk .ocol-pos i { background: #e5484d; }
+.opick.risk .opick-v, .og-res.risk b, .og-res.risk span { color: #e5484d; }
+.olegend i.risk { background: #e5484d; }
+.ocol.neg i { opacity: .65; }
+.ocol.neg.on i { opacity: 1; }
