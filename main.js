@@ -176,6 +176,7 @@
   // ---------- 화면 틀 ----------
   // 아래 메뉴는 자주 보는 4개만. 나머지는 '전체' 안에서 들어감
   // v3: 현황 · 전망 · (기록) · 돈 · 입력. 가계부·급여주기 흐름은 '돈' 안에서
+  const MENU_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   const NAV = [['home', '종합', 'home'], ['cards', '카드', 'mCard'], ['accounts', '통장', 'mWallet'], ['outlook', '앞으로', 'flow']];
   const SUB = ['fixed', 'loans', 'income', 'debts', 'settings', 'book', 'flow', 'input'];
   const TABS = NAV.concat(SUB.map((k) => [k]), [['more']]);
@@ -237,7 +238,7 @@
     if (!H) return '';
     if (!H) return '';
     const back = SUB.includes(view.tab) ? '<a class="back" href="#/more">' + I.left + '전체</a>' : view.tab === 'more' ? '<a class="back" href="#/home">' + I.left + '종합</a>' : '';
-    const gear = NAV.some((n) => n[0] === view.tab) ? '<a class="ph-gear wide" href="#/more">' + I.grid + '<span>전체</span></a>' : '';
+    const gear = NAV.some((n) => n[0] === view.tab) ? '<a class="ph-gear" href="#/more" aria-label="전체 메뉴">' + MENU_IC + '</a>' : '';
     return '<div class="page-head">' + back + '<div class="ph-row"><h2>' + H[0] + '</h2>' + (H[1] ? '<span class="chk">' + esc(H[1]) + '</span>' : '') + gear + '</div>' + (H[2] ? '<p>' + H[2] + '</p>' : '') + '</div>';
   }
   // 은행 이름 [알아보는 글자, 칩 색, 이름]. 앞쪽 은행이 고르기 목록에 나옴 (카드사는 칩 색만)
@@ -315,7 +316,7 @@
     const r = outRows(1)[0]; const short = r.remaining < 0;
     const fixedOut = r.outflow + r.fixedCard + r.debtPay;
     return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + ' · ' + md(r.winEnd) + ' 카드 날까지</p><span class="verdict' + (short ? ' bad' : '') + '">' + (short ? '부족' : '여유') + '</span><b class="mast-num' + (short ? ' bad' : '') + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
-      '<a class="mast-btn wide" href="#/more">' + I.grid + '<span>전체</span></a></div>' +
+      '<a class="mast-btn" href="#/more" aria-label="전체 메뉴">' + MENU_IC + '</a></div>' +
       '<p class="mast-sub">' + (short ? '통장·마통 한도를 다 모아도 <b>' + won(r.remaining) + '원</b>이 모자라요' : '<b>하루 약 ' + shortWon(Math.max(0, r.daily)) + ' 원</b>씩 써도 돼요 · ' + r.daysLeft + '일 남음') + (r.buffer ? ' · 비상금 ' + shortWon(r.buffer) + ' 남기고' : '') + '</p>' +
       '<button class="mast-chips" data-act="outlookDetail" data-m="' + r.month + '"><span><span>들어옴</span><b>' + shortWon(r.inflow + r.debtIn + Math.max(0, r.carry)) + '</b></span><span><span>정해진 지출</span><b>' + shortWon(fixedOut) + '</b></span><span><span>이미 씀</span><b>' + shortWon(r.spent) + '</b></span></button></div></header>';
   }
