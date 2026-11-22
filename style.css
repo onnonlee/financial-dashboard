@@ -832,7 +832,7 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ocol.on .ocol-v { color: var(--blue); }
 .ocol.neg .ocol-v { color: var(--warn); }
 .ocol-pos { position: relative; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
-.ocol-pos u { position: absolute; left: -2px; right: -2px; border-top: 1.5px dashed var(--warn); z-index: 1; opacity: .8; }
+.ocol-pos u { position: absolute; left: -2px; right: -2px; border-top: 1.5px dashed var(--text3); z-index: 1; opacity: .9; }
 .ocol-neg { display: flex; align-items: flex-start; justify-content: center; }
 .ocol i { display: block; width: 62%; max-width: 28px; background: var(--blue); opacity: .3; }
 .ocol-pos i { border-radius: 6px 6px 2px 2px; }
@@ -860,6 +860,6 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .olegend span { display: flex; align-items: center; gap: 4px; }
 .olegend i { width: 8px; height: 8px; border-radius: 2px; background: var(--blue); }
 .olegend i.bad { background: var(--warn); }
-.olegend u { width: 14px; border-top: 1.5px dashed var(--warn); }
+.olegend u { width: 14px; border-top: 1.5px dashed var(--text3); }
 .opick-lab { font-size: 12px; color: var(--text3); margin-top: 2px; }
 .opick-v { margin-top: -4px; }
