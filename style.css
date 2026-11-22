@@ -783,7 +783,7 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ph-gear { margin-left: auto; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--card); color: var(--text2); }
 .ph-gear svg { width: 20px; height: 20px; }
 .row.glance .end .s.warn { color: var(--warn); font-weight: 700; }
-.seg { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0 8px; background: var(--line); }
+.seg { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0 8px; background: var(--line); padding: 0; gap: 0; }
 .seg i { display: block; } .seg .s1, .seg-lg .s1 { background: var(--blue); } .seg .s2, .seg-lg .s2 { background: var(--warn); }
 .seg-lg { display: flex; gap: 14px; font-size: 13px; color: var(--text2); flex-wrap: wrap; }
 .seg-lg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
