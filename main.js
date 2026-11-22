@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.5';
+  const VERSION = '4.6';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -411,30 +411,33 @@
   let olSel = null;
   function outlookScreen() {
     const rows = outRows(7); const vals = rows.map((r, i) => (i === 0 ? r.remaining : r.room));
-    const pmx = Math.max(1, ...vals.map((v) => Math.max(0, v))); const nmx = Math.max(0, ...vals.map((v) => Math.max(0, -v)));
-    const negH = nmx ? Math.round(110 * nmx / (pmx + nmx)) : 0; const posH = 110 - negH;
+    // 막대 = 그달 남는 돈(이번 달은 비상금 빼기 전). 비상금 선 아래면 부족, 0 아래로 내려가면 마이너스
+    const B = Math.max(0, S.settings.buffer == null ? 80000 : S.settings.buffer); const lefts = vals.map((v, i) => (i === 0 ? v + B : v)); const shorts = lefts.map((x) => x < B);
+    const pmx = Math.max(1, B * 1.4, ...lefts); const nmx = Math.max(0, ...lefts.map((x) => -x));
+    const negH = nmx ? Math.round(120 * nmx / (pmx + nmx)) : 0; const posH = 120 - negH; const lineY = Math.round(posH * B / pmx);
     if (!rows.some((r) => r.month === olSel)) olSel = rows[0] && rows[0].month;
-    const si = Math.max(0, rows.findIndex((r) => r.month === olSel)); const r = rows[si]; const v = vals[si]; const lo = v < 0;
+    const si = Math.max(0, rows.findIndex((r) => r.month === olSel)); const r = rows[si]; const v = lefts[si]; const lo = shorts[si]; const over = v - B; const perDay = r ? Math.floor(Math.max(0, over) / Math.max(1, r.daysLeft) / 100) * 100 : 0;
     const shortN = (n) => (n < 0 ? '−' : '') + shortWon(Math.abs(n));
     let h = '<section class="card">' + head('달마다 여유', '7개월') +
+      (B ? '<div class="olegend"><span><i class="ok"></i>여유</span><span><i class="bad"></i>부족</span><span><u></u>비상금 ' + shortWon(B) + '</span></div>' : '') +
       '<div class="ochart">' + rows.map((x, i) => {
-        const w = vals[i]; const neg = w < 0;
+        const w = lefts[i]; const neg = shorts[i];
         return '<button class="ocol' + (i === si ? ' on' : '') + (neg ? ' neg' : '') + '" data-act="olPick" data-m="' + x.month + '">' +
           '<span class="ocol-v">' + shortN(w) + '</span>' +
-          '<span class="ocol-pos" style="height:' + posH + 'px">' + (neg ? '' : '<i style="height:' + Math.max(3, Math.round(posH * w / pmx)) + 'px"></i>') + '</span>' +
-          (negH ? '<span class="ocol-neg" style="height:' + negH + 'px">' + (neg ? '<i style="height:' + Math.max(3, Math.round(negH * -w / nmx)) + 'px"></i>' : '') + '</span>' : '') +
+          '<span class="ocol-pos" style="height:' + posH + 'px">' + (B ? '<u style="bottom:' + lineY + 'px"></u>' : '') + (lefts[i] > 0 ? '<i style="height:' + Math.max(3, Math.round(posH * lefts[i] / pmx)) + 'px"></i>' : '') + '</span>' +
+          (negH ? '<span class="ocol-neg" style="height:' + negH + 'px">' + (lefts[i] < 0 ? '<i style="height:' + Math.max(3, Math.round(negH * -lefts[i] / nmx)) + 'px"></i>' : '') + '</span>' : '') +
           '<span class="ocol-m">' + (i === 0 ? '이번 달' : mName(x.month)) + '</span></button>';
       }).join('') + '</div>';
     if (r) {
       const tags = r.extras.map((x) => '<span class="otag in">+ ' + esc(x.name) + '</span>').join('') + r.ends.map((x) => '<span class="otag">' + esc(x.replace(/\s*\d+개월.*$/, '')) + (/다 갚음$/.test(x) ? '' : ' 할부 끝') + '</span>').join('');
       h += '<button class="opick' + (lo ? ' bad' : '') + '" data-act="outlookDetail" data-m="' + r.month + '">' +
         '<span class="opick-top"><span class="opick-m">' + mName(r.month) + '</span><span class="verdict' + (lo ? ' bad' : '') + '">' + (lo ? '부족' : '여유') + '</span><span class="opick-more">계산 보기' + I.right + '</span></span>' +
-        '<b class="opick-v">' + sign(v) + '<em>원</em></b>' +
-        '<span class="opick-s">' + (v >= 0 ? '하루 약 ' + shortWon(r.daily) + '원' + (si === 0 ? ' · 이미 쓴 돈 뺀 금액' : ' 써도 돼요') : '이만큼 모자라요') + '</span>' +
+        '<span class="opick-lab">남는 돈' + (si === 0 ? ' (이미 쓴 돈 뺌)' : '') + '</span><b class="opick-v">' + (v < 0 ? '−' : '') + won(Math.abs(v)) + '<em>원</em></b>' +
+        '<span class="opick-s">' + (lo ? '비상금 ' + shortWon(B) + '원 기준으로 <b>' + won(-over) + '원</b> 모자라요' : '비상금 ' + shortWon(B) + '원 빼고 하루 약 ' + shortWon(perDay) + '원 써도 돼요') + '</span>' +
         '<span class="opick-stats"><span><small>들어올 돈</small><b>' + shortWon(r.inflow + r.debtIn) + '</b></span><span><small>카드 할부·고정</small><b>' + shortWon(r.fixedCard) + '</b></span><span><small>' + (r.debtPay ? '갚을 돈' : '통장 나갈 돈') + '</small><b>' + shortWon(r.debtPay || r.outflow) + '</b></span></span>' +
         (tags ? '<span class="otags">' + tags + '</span>' : '') + '</button>';
     }
-    h += '<p class="hint">막대를 누르면 그 달이 아래에 나와요.</p></section>';
+    h += '<p class="hint">' + (B ? '막대는 그달 남는 돈이에요. 점선(비상금 ' + shortWon(B) + '원) 아래로 내려가면 부족, 0 밑은 마이너스예요. ' : '') + '막대를 누르면 그 달이 아래에 나와요.</p></section>';
     // 한 번씩 받는 돈
     const ex = (S.extras || []).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
     h += '<section class="card">' + head('비정기 수입', ex.length ? ex.length + '개' : '') + (ex.map((x) => row({ act: 'editExtra', data: { id: x.id }, lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: x.date.slice(0, 4) + '년 · ' + esc((acct(x.accountId) || {}).name || ''), amt: '+' + won(x.amount), amtCls: 'in' })).join('') || '<p class="hint">정근수당, 명절휴가비, 연말정산 환급처럼 가끔 들어오는 돈을 적어 두면 그달 예상에 들어가요.</p>') +
