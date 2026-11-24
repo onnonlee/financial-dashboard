@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.9';
+  const VERSION = '4.10';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -372,7 +372,7 @@
       '<p class="hint">오른쪽 숫자는 그날 이후 남는 돈이에요. 파란 줄은 옮겨 두면 좋은 돈이에요.</p>' });
   }
   // 월간 흐름: 지금 디자인(카드·줄·칩) 그대로, 예전 화면 아이디어(월 칩, 입금/출금 구분, 펼치기, 대출 합계)만 가져옴
-  let mfSel = null, mfF = 'all', mfVar = 'A';
+  let mfSel = null, mfF = 'all';
   function monthFlowCard(t) {
     const cur = curP(); const f0 = C.flow(S, cur, t);
     const def = C.daysBetween(t, f0.end) <= 1 ? C.addMonths(cur, 1) : cur;
@@ -390,31 +390,19 @@
     const r = (x, sub) => row({ cls: isPast(x) ? 'off' : '', lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: sub != null ? sub : KL[kind(x)] + (isPast(x) ? ' · 지남' : ''), amt: (x.dir === 'in' ? '+' : '−') + won(x.amount), amtCls: x.dir === 'in' ? 'in' : '' });
     const list = (xs, sub) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } h += r(x, sub); }); return h || '<p class="hint">없어요.</p>'; };
     const chips = '<div class="chips mf-m">' + opts.map((m) => '<button class="chip' + (m === P ? ' on' : '') + '" data-act="mfPick" data-m="' + m + '">' + pName(m) + (m === cur ? ' · 지금' : '') + '</button>').join('') + '</div>';
-    const sian = window.MONEY_SIAN ? '<div class="chips mf-sian">' + [['A', 'A 요약+목록'], ['B', 'B 항목별 펼치기'], ['C', 'C 표']].map(([k, l]) => '<button class="chip' + (mfVar === k ? ' on' : '') + '" data-act="mfVarPick" data-v="' + k + '">' + l + '</button>').join('') + '</div>' : '';
-    let h = sian + '<section class="card mflow">' + head('월간 흐름', md(f.start) + '~' + md(f.end), 'flow') + chips;
-    if (mfVar === 'A') {
-      // A: 세 칸 요약(눌러서 거르기) + 날짜순 줄 + 대출·이자 접힘
-      const xs = mfF === 'in' ? ins : mfF === 'out' ? outs : items;
-      const cell = (k, lab, v, cls) => '<button class="' + (mfF === k ? 'on' : '') + '" data-act="mfFilter" data-f="' + k + '"><span>' + lab + '</span><b class="' + cls + '">' + v + '</b></button>';
-      h += '<div class="trio mf-trio">' + cell('in', '들어올 돈', '+' + shortWon(inAll), 'in') + cell('out', '나갈 돈', '−' + shortWon(outAll), '') + cell('all', '남는 돈', (left < 0 ? '−' : '+') + shortWon(Math.abs(left)), left < 0 ? 'warn' : '') + '</div>';
-      h += list(xs);
-      const L = by('loan');
-      if (L.length) h += '<details class="mf-fold"><summary>' + row({ t: '대출·이자', s: L.length + '건 · ' + L.filter(isPast).length + '건 나감', amt: won(tot(L)) + '원' }) + '</summary>' + list(L, '') + '<div class="kv tot"><div><span>합계</span><b>' + won(tot(L)) + '원</b></div></div></details>';
-    } else if (mfVar === 'B') {
-      // B: 항목별 한 줄, 누르면 그 아래 펼침 (예전 '펼치기')
-      const grp = (k, lab, sign) => { const xs = by(k); if (!xs.length) return ''; return '<details class="mf-fold"><summary>' + row({ t: lab, s: xs.length + '건 · ' + xs.filter(isPast).length + '건 지남', amt: sign + won(tot(xs)), amtCls: k === 'in' ? 'in' : '' }) + '</summary>' + list(xs, '') + '<div class="kv tot"><div><span>합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
-      h += grp('in', '들어올 돈', '+') + grp('card', '카드값', '−') + grp('loan', '대출·이자', '−') + grp('fix', '고정비', '−');
-      h += '<div class="kv tot"><div><span>남는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? '−' : '+') + won(Math.abs(left)) + '원</b></div></div>';
-    } else {
-      // C: 칩으로 거르는 표 (날짜·항목·금액·구분 줄 맞춤) + 합계
-      const F = [['all', '전체'], ['in', '입금'], ['card', '카드'], ['loan', '대출·이자'], ['fix', '고정']];
-      const xs = mfF === 'all' ? items : items.filter((x) => kind(x) === mfF);
-      h += '<div class="chips mf-f">' + F.map(([k, l]) => '<button class="chip' + (mfF === k ? ' on' : '') + '" data-act="mfFilter" data-f="' + k + '">' + l + '</button>').join('') + '</div>';
-      let rows = '', mk = P !== cur;
-      xs.forEach((x) => { if (!mk && !isPast(x)) { rows += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } rows += '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span>' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="' + (x.dir === 'in' ? 'in' : '') + '">' + (x.dir === 'in' ? '+' : '−') + won(x.amount) + '</b><span class="k">' + KL[kind(x)].replace('·이자', '') + '</span></div>'; });
-      const net = xs.reduce((a, x) => a + (x.dir === 'in' ? x.amount : -x.amount), 0);
-      h += '<div class="mf-th"><span>날짜</span><span>항목</span><span>금액</span><span>구분</span></div>' + rows + '<div class="kv tot"><div><span>' + (mfF === 'all' ? '남는 돈' : '합계') + '</span><b>' + (net < 0 ? '−' : '+') + won(Math.abs(net)) + '원</b></div></div>';
-    }
+    let h = '<section class="card mflow">' + head('월간 흐름', md(f.start) + '~' + md(f.end), 'flow') + chips;
+    // 위: 그달 수입·카드·고정비·대출을 한 줄씩 (누르면 아래 표가 그것만)
+    const cat = (k, lab, sign) => { const xs = by(k); if (!xs.length) return ''; const n = xs.filter(isPast).length;
+      return '<button class="mf-cat' + (mfF === k ? ' on' : '') + '" data-act="mfFilter" data-f="' + k + '"><span class="dot k-' + k + '"></span><span class="grow"><span class="t">' + lab + '</span><span class="s">' + xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + (k === 'in' ? '들어옴' : '나감') : '') + '</span></span><b class="' + (k === 'in' ? 'in' : '') + '">' + sign + won(tot(xs)) + '</b></button>'; };
+    h += '<div class="mf-cats">' + cat('in', '수입', '+') + cat('card', '카드값', '−') + cat('fix', '고정비', '−') + cat('loan', '대출·이자', '−') +
+      '<div class="mf-left"><span>남는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? '−' : '+') + won(Math.abs(left)) + '</b></div></div>';
+    // 아래: 날짜·항목·금액·구분 표
+    const xs = mfF === 'all' ? items : items.filter((x) => kind(x) === mfF);
+    let rows = '', mk = P !== cur;
+    xs.forEach((x) => { if (!mk && !isPast(x)) { rows += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } rows += '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span>' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="' + (x.dir === 'in' ? 'in' : '') + '">' + (x.dir === 'in' ? '+' : '−') + won(x.amount) + '</b><span class="k">' + KL[kind(x)].replace('·이자', '') + '</span></div>'; });
+    h += '<div class="mf-tbar"><b>' + (mfF === 'all' ? '날짜별 전체' : KL[mfF] + '만') + ' <small>' + xs.length + '건</small></b>' + (mfF !== 'all' ? '<button data-act="mfFilter" data-f="all">전체 보기</button>' : '') + '</div>';
+    h += '<div class="mf-th"><span>날짜</span><span>항목</span><span>금액</span><span>구분</span></div>' + rows;
+    if (mfF !== 'all') h += '<div class="kv tot"><div><span>' + KL[mfF] + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div>';
     return h + '</section>';
   }
   function homeScreen() {
@@ -1890,7 +1878,6 @@
     olPick: (d) => { olSel = d.m; render(); },
     mfPick: (d) => { mfSel = d.m; render(); },
     mfFilter: (d) => { mfF = mfF === d.f ? 'all' : d.f; render(); },
-    mfVarPick: (d) => { mfVar = d.v; mfF = 'all'; render(); },
     editExtra: (d) => editExtra(d.id),
     todoDone: (d) => { S.todoDone = S.todoDone || {}; S.todoDone[d.key] = today(); save(); render(); toast('했어요로 표시했어요'); },
     planAcct: (d) => planAcct(d.id),
