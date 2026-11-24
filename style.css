@@ -922,3 +922,9 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 /* 부호 자리 고정: 금액 칸을 같은 폭으로, 부호는 왼쪽 끝·숫자는 오른쪽 끝 */
 .mflow .amt:has(.sg), .mflow .mf-cap b:has(.sg) { display: inline-flex; justify-content: space-between; min-width: 6.4em; font-variant-numeric: tabular-nums; }
 .mf-infold > .mf-fold:first-of-type { border-top: 1px solid var(--line); }
+/* 칸 안 세로 가운데 맞춤 */
+.mf-sec { padding: 0 12px; }
+.mf-sec[open], div.mf-sec { padding-bottom: 6px; }
+.mf-cap { align-items: center; padding: 14px 0; line-height: 1.2; }
+.mf-cap > span:first-child { display: flex; align-items: center; }
+.mf-capr { align-items: center; }
