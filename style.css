@@ -874,25 +874,36 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .ocol.neg i { opacity: .65; }
 .ocol.neg.on i { opacity: 1; }
 
-/* 종합: 이번 달 흐름 */
-.mf-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 12px; }
-.mf-sum > div { display: flex; flex-direction: column; gap: 3px; background: var(--soft); border-radius: 12px; padding: 10px; min-width: 0; }
-.mf-sum span { font-size: 12px; color: var(--text3); }
-.mf-sum b { font-size: 16px; font-weight: 700; }
-.mf-sum b.in { color: var(--in); } .mf-sum b.warn { color: var(--warn); }
-.mf-sum i { display: block; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 3px; }
-.mf-sum i u { display: block; height: 100%; background: var(--in); }
-.mf-sum i.o u { background: var(--text2); } .mf-sum i.t u { background: var(--text3); }
-.mf-sum small { font-size: 11px; color: var(--text3); white-space: nowrap; }
-.mf-past { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text3); padding: 8px 0; }
-.mf-past svg, .mf-more svg { width: 14px; height: 14px; }
-.mf-today { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; }
-.mf-today::before, .mf-today::after { content: ""; flex: 1; border-top: 1px solid var(--blue); opacity: .5; }
-.mf-today span { font-size: 11.5px; font-weight: 700; color: var(--blue); }
-.mf-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
-.mf-row:last-of-type { border-bottom: 0; }
-.mf-d { font-size: 12.5px; color: var(--text3); font-variant-numeric: tabular-nums; }
-.mf-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mf-row b { font-weight: 600; font-variant-numeric: tabular-nums; }
-.mf-row.in b { color: var(--in); }
-.mf-more { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 13px; color: var(--text2); padding: 10px 0 2px; }
+/* 종합: 월간 흐름 (지금 디자인 그대로) */
+.mflow .chip { background: var(--soft); }
+.mflow .chip.on { background: var(--text); color: var(--card); }
+.mf-m { margin: 0 0 10px; }
+.mf-f { margin: 0 0 6px; }
+.mf-sian { padding: 0 2px; }
+.mf-sian .chip { background: var(--card); font-size: 13px; }
+.mf-sian .chip.on { background: var(--blue); color: #fff; }
+.mf-trio { margin: 0 0 4px; }
+.mf-trio button { display: flex; flex-direction: column; gap: 2px; padding: 10px 9px; border-radius: 14px; background: var(--soft); min-width: 0; text-align: left; font: inherit; color: inherit; border: 1.5px solid transparent; }
+.mf-trio button span { font-size: 12px; color: var(--text3); }
+.mf-trio button b { font-size: 15px; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
+.mf-trio button b.in { color: var(--in); } .mf-trio button b.warn { color: var(--warn); }
+.mf-trio button.on { border-color: var(--text); }
+.mf-now { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; color: var(--blue); margin: 4px 0; }
+.mf-now::after { content: ""; flex: 1; border-top: 1px solid var(--blue); opacity: .5; }
+.mf-fold { border-top: 1px solid var(--line); }
+.mf-fold > summary { list-style: none; cursor: pointer; }
+.mf-fold > summary::-webkit-details-marker { display: none; }
+.mf-fold > summary .row .end::after { content: "펼치기"; font-size: 11.5px; color: var(--text3); }
+.mf-fold[open] > summary .row .end::after { content: "접기"; }
+.mf-fold > .kv.tot { margin: 6px 0 12px; }
+.mflow > .kv.tot { margin-top: 12px; }
+.mf-th, .mf-tr { display: grid; grid-template-columns: 42px 1fr auto 40px; gap: 8px; align-items: center; padding: 9px 2px; font-size: 14px; }
+.mf-th { font-size: 11.5px; font-weight: 600; color: var(--text3); border-bottom: 1px solid var(--line); padding-top: 4px; }
+.mf-th span:nth-child(3) { text-align: right; } .mf-th span:last-child { text-align: center; }
+.mf-tr { border-bottom: 1px solid var(--line); }
+.mf-tr > span:first-child { font-size: 12.5px; color: var(--text3); font-variant-numeric: tabular-nums; }
+.mf-tr .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mf-tr b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.mf-tr b.in { color: var(--in); }
+.mf-tr .k { font-size: 11.5px; color: var(--text3); text-align: center; }
+.mf-tr.off { opacity: .45; }
