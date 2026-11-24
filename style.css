@@ -907,3 +907,12 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-sec .mf-fold > summary .row .lead { display: none; }
 .mf-cap { font-size: 15px; }
 .mf-cap b { font-size: 16px; }
+
+.mf-infold > summary { list-style: none; cursor: pointer; }
+.mf-infold > summary::-webkit-details-marker { display: none; }
+.mf-cap small { font-size: 12.5px; font-weight: 500; color: var(--text3); margin-left: 8px; }
+.mf-capr { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.mf-capr em { font-style: normal; font-size: 11.5px; font-weight: 500; color: var(--text3); }
+.mf-capr em::after { content: "펼치기"; }
+.mf-infold[open] .mf-capr em::after { content: "접기"; }
+.mf-infold > .kv.tot { margin: 6px 0 10px; }
