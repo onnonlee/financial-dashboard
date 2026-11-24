@@ -324,7 +324,7 @@
     return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + (L.k === 'risk' ? ' risk' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + ' 현황<span class="verdict' + vCls(L.k) + '">' + VLAB[L.k] + '</span></p><b class="mast-num' + vCls(L.k) + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
       '<a class="mast-btn" href="#/more" aria-label="전체 메뉴">' + MENU_IC + '</a></div>' +
       '<p class="mast-sub">' + (L.k === 'risk' ? '통장·마통 한도를 다 모아도 <b>' + won(-L.left) + '원</b>이 모자라요' : short ? '비상금에서 <b>' + won(-r.remaining) + '원</b>을 꺼내 써야 해요' : '<b>하루 약 ' + shortWon(Math.max(0, r.daily)) + '원</b> · 남은 ' + r.daysLeft + '일') + (r.buffer ? ' · 비상금 ' + shortWon(r.buffer) + '원 기준' : '') + '</p>' +
-      '<button class="mast-chips" data-act="outlookDetail" data-m="' + r.month + '"><span><span>들어올 돈</span><b>' + shortWon(r.inflow + r.debtIn + Math.max(0, r.carry)) + '</b></span><span><span>나갈 돈</span><b>' + shortWon(fixedOut) + '</b></span><span><span>쓴 돈</span><b>' + shortWon(r.spent) + '</b></span></button></div></header>';
+      '<button class="mast-chips" data-act="outlookDetail" data-m="' + r.month + '"><span><span>수입</span><b>' + shortWon(r.inflow + r.debtIn + Math.max(0, r.carry)) + '</b></span><span><span>지출</span><b>' + shortWon(fixedOut) + '</b></span><span><span>쓴 돈</span><b>' + shortWon(r.spent) + '</b></span></button></div></header>';
   }
   function todoList() {
     const t = today(); const st = C.status(S, t); const out = [];
@@ -478,8 +478,8 @@
       title: mName(r.month) + ' 돈 계산',
       body: () => '<div class="og-res' + vCls(level(r, first).k) + '"><span>' + mName(r.month) + ' ' + VLAB[level(r, first).k] + '</span><b>' + sign(res) + '<em>원</em></b><small>' + (r.daily >= 0 ? '하루 약 ' + shortWon(r.daily) + '원 · ' : '') + '남은 ' + r.daysLeft + '일</small></div>' +
         '<p class="og-cap">눌러서 자세히 볼 수 있어요</p><div class="og-list">' +
-        grp('in', '들어올 돈', r.ins.length + gets.length, '+' + won(r.inflow + r.debtIn), items(r.ins, true) + gets.map((x) => line('받을 돈 · ' + esc(x.debt.who), '', '+' + won(x.amount))).join('')) +
-        grp('out', '통장에서 나갈 돈', r.outs.length, '−' + won(r.outflow), items(r.outs)) +
+        grp('in', '수입', r.ins.length + gets.length, '+' + won(r.inflow + r.debtIn), items(r.ins, true) + gets.map((x) => line('받을 돈 · ' + esc(x.debt.who), '', '+' + won(x.amount))).join('')) +
+        grp('out', '통장 지출', r.outs.length, '−' + won(r.outflow), items(r.outs)) +
         grp('cv', '정해진 카드값', r.byCard.length, '−' + won(r.fixedCard), r.byCard.map((c) => line(esc(c.card.name), md(c.payDate), '−' + won(c.inst + c.fixed)) + '<div class="og-sub">할부 ' + won(c.inst) + ' · 고정비 ' + won(c.fixed) + (c.ends.length ? ' · ' + esc(c.ends.join(', ')) + ' 끝' : '') + '</div>').join('')) +
         (r.debtPay ? grp('debt', '갚을 돈', pays.length, '−' + won(r.debtPay), pays.map((x) => line(esc(x.debt.who), x.done ? '다 갚음' : '남은 ' + won(x.left), '−' + won(x.amount))).join('')) : '') +
         (first ? grp('carry', '지금 통장 여유', 0, sign(r.carry), line('지금 쓸 수 있는 돈', '', won(r.carry + r.buffer - sum(cIn, (x) => x.amount) + sum(cOut, (x) => x.amount))) + items(cIn, true) + items(cOut) + line('비상금', '', '−' + won(r.buffer))) : '') +
