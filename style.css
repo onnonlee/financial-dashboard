@@ -878,13 +878,6 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mflow .chip { background: var(--soft); }
 .mflow .chip.on { background: var(--text); color: var(--card); }
 .mf-m { margin: 0 0 10px; }
-.mf-f { margin: 0 0 6px; }
-.mf-trio { margin: 0 0 4px; }
-.mf-trio button { display: flex; flex-direction: column; gap: 2px; padding: 10px 9px; border-radius: 14px; background: var(--soft); min-width: 0; text-align: left; font: inherit; color: inherit; border: 1.5px solid transparent; }
-.mf-trio button span { font-size: 12px; color: var(--text3); }
-.mf-trio button b { font-size: 15px; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap; }
-.mf-trio button b.in { color: var(--in); } .mf-trio button b.warn { color: var(--warn); }
-.mf-trio button.on { border-color: var(--text); }
 .mf-now { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; color: var(--blue); margin: 4px 0; }
 .mf-now::after { content: ""; flex: 1; border-top: 1px solid var(--blue); opacity: .5; }
 .mf-fold { border-top: 1px solid var(--line); }
@@ -894,29 +887,8 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-fold[open] > summary .row .end::after { content: "접기"; }
 .mf-fold > .kv.tot { margin: 6px 0 12px; }
 .mflow > .kv.tot { margin-top: 12px; }
-.mf-th, .mf-tr { display: grid; grid-template-columns: 42px 1fr auto 40px; gap: 8px; align-items: center; padding: 9px 2px; font-size: 14px; }
-.mf-th { font-size: 11.5px; font-weight: 600; color: var(--text3); border-bottom: 1px solid var(--line); padding-top: 4px; }
-.mf-th span:nth-child(3) { text-align: right; } .mf-th span:last-child { text-align: center; }
-.mf-tr { border-bottom: 1px solid var(--line); }
-.mf-tr > span:first-child { font-size: 12.5px; color: var(--text3); font-variant-numeric: tabular-nums; }
-.mf-tr .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mf-tr b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-.mf-tr b.in { color: var(--in); }
-.mf-tr .k { font-size: 11.5px; color: var(--text3); text-align: center; }
-.mf-tr.off { opacity: .45; }
 
-.mf-cats { display: flex; flex-direction: column; margin-bottom: 8px; }
-.mf-cat { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 10px; margin: 0 -10px; width: calc(100% + 20px); border-radius: 12px; text-align: left; font: inherit; color: inherit; background: none; border: 0; }
-.mf-cat.on { background: var(--soft); }
-.mf-cat .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.mf-cat .t { font-size: 15.5px; font-weight: 600; }
-.mf-cat .s { font-size: 12.5px; color: var(--text3); }
-.mf-cat b { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.mf-cat b.in { color: var(--in); }
-.mf-cat .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.mf-cat .k-in { background: var(--in); } .mf-cat .k-card { background: #6b5cff; } .mf-cat .k-fix { background: var(--text3); } .mf-cat .k-loan { background: var(--warn); }
-.mf-left { display: flex; justify-content: space-between; align-items: center; background: var(--soft); border-radius: 14px; padding: 12px 14px; margin-top: 6px; font-size: 15px; font-weight: 700; }
-.mf-left b { font-size: 17px; font-variant-numeric: tabular-nums; } .mf-left b.warn { color: var(--warn); }
-.mf-tbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 4px; border-top: 1px solid var(--line); margin-top: 6px; }
-.mf-tbar b { font-size: 15px; } .mf-tbar small { font-size: 12px; font-weight: 500; color: var(--text3); }
-.mf-tbar button { font: inherit; font-size: 13px; color: var(--blue); background: none; border: 0; }
+
+.mf-fold > summary .row .lead { width: 12px; display: flex; justify-content: center; }
+.mf-dot { display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--text3); }
+.mf-dot.k-in { background: var(--in); } .mf-dot.k-card { background: #6b5cff; } .mf-dot.k-fix { background: var(--text3); } .mf-dot.k-loan { background: var(--warn); }

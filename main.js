@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.10';
+  const VERSION = '4.11';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -372,7 +372,7 @@
       '<p class="hint">오른쪽 숫자는 그날 이후 남는 돈이에요. 파란 줄은 옮겨 두면 좋은 돈이에요.</p>' });
   }
   // 월간 흐름: 지금 디자인(카드·줄·칩) 그대로, 예전 화면 아이디어(월 칩, 입금/출금 구분, 펼치기, 대출 합계)만 가져옴
-  let mfSel = null, mfF = 'all';
+  let mfSel = null;
   function monthFlowCard(t) {
     const cur = curP(); const f0 = C.flow(S, cur, t);
     const def = C.daysBetween(t, f0.end) <= 1 ? C.addMonths(cur, 1) : cur;
@@ -391,18 +391,11 @@
     const list = (xs, sub) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } h += r(x, sub); }); return h || '<p class="hint">없어요.</p>'; };
     const chips = '<div class="chips mf-m">' + opts.map((m) => '<button class="chip' + (m === P ? ' on' : '') + '" data-act="mfPick" data-m="' + m + '">' + pName(m) + (m === cur ? ' · 지금' : '') + '</button>').join('') + '</div>';
     let h = '<section class="card mflow">' + head('월간 흐름', md(f.start) + '~' + md(f.end), 'flow') + chips;
-    // 위: 그달 수입·카드·고정비·대출을 한 줄씩 (누르면 아래 표가 그것만)
-    const cat = (k, lab, sign) => { const xs = by(k); if (!xs.length) return ''; const n = xs.filter(isPast).length;
-      return '<button class="mf-cat' + (mfF === k ? ' on' : '') + '" data-act="mfFilter" data-f="' + k + '"><span class="dot k-' + k + '"></span><span class="grow"><span class="t">' + lab + '</span><span class="s">' + xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + (k === 'in' ? '들어옴' : '나감') : '') + '</span></span><b class="' + (k === 'in' ? 'in' : '') + '">' + sign + won(tot(xs)) + '</b></button>'; };
-    h += '<div class="mf-cats">' + cat('in', '수입', '+') + cat('card', '카드값', '−') + cat('fix', '고정비', '−') + cat('loan', '대출·이자', '−') +
-      '<div class="mf-left"><span>남는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? '−' : '+') + won(Math.abs(left)) + '</b></div></div>';
-    // 아래: 날짜·항목·금액·구분 표
-    const xs = mfF === 'all' ? items : items.filter((x) => kind(x) === mfF);
-    let rows = '', mk = P !== cur;
-    xs.forEach((x) => { if (!mk && !isPast(x)) { rows += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } rows += '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span>' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="' + (x.dir === 'in' ? 'in' : '') + '">' + (x.dir === 'in' ? '+' : '−') + won(x.amount) + '</b><span class="k">' + KL[kind(x)].replace('·이자', '') + '</span></div>'; });
-    h += '<div class="mf-tbar"><b>' + (mfF === 'all' ? '날짜별 전체' : KL[mfF] + '만') + ' <small>' + xs.length + '건</small></b>' + (mfF !== 'all' ? '<button data-act="mfFilter" data-f="all">전체 보기</button>' : '') + '</div>';
-    h += '<div class="mf-th"><span>날짜</span><span>항목</span><span>금액</span><span>구분</span></div>' + rows;
-    if (mfF !== 'all') h += '<div class="kv tot"><div><span>' + KL[mfF] + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div>';
+    // 항목별 한 줄(합계), 누르면 그 아래 날짜별 목록과 합계가 펼쳐짐
+    const grp = (k, lab, sign) => { const xs = by(k); if (!xs.length) return ''; const n = xs.filter(isPast).length;
+      return '<details class="mf-fold"><summary>' + row({ lead: '<span class="mf-dot k-' + k + '"></span>', t: lab, s: xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + (k === 'in' ? '들어옴' : '나감') : ''), amt: sign + won(tot(xs)), amtCls: k === 'in' ? 'in' : '' }) + '</summary>' + list(xs, '') + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
+    h += grp('in', '수입', '+') + grp('card', '카드값', '−') + grp('fix', '고정비', '−') + grp('loan', '대출·이자', '−');
+    h += '<div class="kv tot"><div><span>남는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? '−' : '+') + won(Math.abs(left)) + '원</b></div></div>';
     return h + '</section>';
   }
   function homeScreen() {
@@ -1877,7 +1870,6 @@
     outlookDetail: (d) => outlookDetail(d.m),
     olPick: (d) => { olSel = d.m; render(); },
     mfPick: (d) => { mfSel = d.m; render(); },
-    mfFilter: (d) => { mfF = mfF === d.f ? 'all' : d.f; render(); },
     editExtra: (d) => editExtra(d.id),
     todoDone: (d) => { S.todoDone = S.todoDone || {}; S.todoDone[d.key] = today(); save(); render(); toast('했어요로 표시했어요'); },
     planAcct: (d) => planAcct(d.id),
