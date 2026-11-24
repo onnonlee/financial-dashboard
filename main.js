@@ -383,10 +383,10 @@
     const pct = (a, b) => Math.round(100 * (b ? Math.min(1, a / b) : 0));
     const line = (x) => '<div class="mf-row' + (x.dir === 'in' ? ' in' : '') + '"><span class="mf-d">' + md(x.date) + '</span><span class="mf-n">' + esc(x.name) + '</span><b>' + (x.dir === 'in' ? '+' : '−') + won(x.amount) + '</b></div>';
     const show = next.slice(0, 6);
-    let h = '<section class="card mflow">' + head(pName(P) + ' 흐름', (ahead ? md(f.start) + '부터 · ' : md(f.start) + '~') + md(f.end), 'flow') +
+    let h = '<section class="card mflow">' + head(pName(P) + ' 흐름', md(f.start) + '~' + md(f.end), 'flow') +
       '<div class="mf-sum"><div><span>들어올 돈</span><b class="in">+' + shortWon(inAll) + '</b><i><u style="width:' + pct(inDone, inAll) + '%"></u></i><small>들어옴 ' + shortWon(inDone) + '</small></div>' +
       '<div><span>나갈 돈</span><b>−' + shortWon(outAll) + '</b><i class="o"><u style="width:' + pct(outDone, outAll) + '%"></u></i><small>나감 ' + shortWon(outDone) + '</small></div>' +
-      '<div><span>남는 돈</span><b class="' + (f.left < 0 ? 'warn' : '') + '">' + (f.left < 0 ? '−' : '+') + shortWon(Math.abs(f.left)) + '</b><i class="t"><u style="width:' + Math.round(el * 100) + '%"></u></i><small>' + Math.round(el * 100) + '% 지남</small></div></div>';
+      '<div><span>남는 돈</span><b class="' + (f.left < 0 ? 'warn' : '') + '">' + (f.left < 0 ? '−' : '+') + shortWon(Math.abs(f.left)) + '</b><i class="t"><u style="width:' + Math.round(el * 100) + '%"></u></i><small>' + (ahead ? md(f.start) + ' 시작' : Math.round(el * 100) + '% 지남') + '</small></div></div>';
     h += past.length ? '<a class="mf-past" href="#/flow">지난 ' + past.length + '건 · 들어옴 ' + shortWon(inDone) + ' · 나감 ' + shortWon(outDone) + I.right + '</a>' : '';
     if (!ahead) h += '<div class="mf-today"><span>오늘 ' + md(t) + '</span></div>';
     h += show.length ? show.map(line).join('') : '<p class="hint">이번 달 남은 입출금이 없어요.</p>';
