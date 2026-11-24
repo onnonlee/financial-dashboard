@@ -943,3 +943,17 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-sec.k-card, .mf-sec.k-loan, .mf-sec.k-fix { background: color-mix(in srgb, var(--c) 8%, transparent); }
 .mf-sec.k-card .mf-cap > span:first-child, .mf-sec.k-loan .mf-cap > span:first-child, .mf-sec.k-fix .mf-cap > span:first-child { color: var(--c); }
 .mf-sec.k-card .mf-cap b, .mf-sec.k-loan .mf-cap b, .mf-sec.k-fix .mf-cap b, .mf-sec.k-card .mf-tr .amt, .mf-sec.k-loan .mf-tr .amt, .mf-sec.k-fix .mf-tr .amt { color: var(--c); }
+/* 가운데 뜨는 팝업(할 일 처리) */
+.sheet.pop { left: 16px; right: 16px; top: 50%; bottom: auto; max-width: 420px; max-height: 80vh; border-radius: 24px; transform: translateY(-46%) scale(.97); opacity: 0; transition: transform .2s ease, opacity .2s ease; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.sheet.pop.on { transform: translateY(-50%); opacity: 1; }
+.sheet.pop .sheet-foot { padding-bottom: 18px; }
+body.pad-open .sheet.pop { top: auto; bottom: calc(var(--padh) + 12px); transform: none; max-height: calc(92vh - var(--padh) - 24px); border-radius: 24px; }
+/* 칸 안 건수·꺽쇠도 칸 색으로 */
+.mf-sec.in { --c: var(--in); }
+.mf-sec .mf-cap small { color: var(--c); opacity: .65; }
+.mf-sec .mf-chev, .mf-sec .mf-fold > summary .row .end::after { border-color: var(--c); opacity: .7; }
+/* 맨 아래 쓸 수 있는 돈: 위 칸들과 같은 줄·크기 */
+.mf-sec.mf-left { --c: var(--text); background: var(--soft); }
+.mf-sec.mf-left.neg { --c: var(--warn); }
+.mf-left .mf-cap b { color: var(--c); }
+.mf-chev.mf-sp { visibility: hidden; }

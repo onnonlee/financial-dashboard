@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.15';
+  const VERSION = '4.16';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -100,7 +100,7 @@
     });
   }
   let sheet = null;
-  function openSheet(def) { sheet = def; paintSheet(); document.getElementById('scrim').hidden = false; const el = document.getElementById('sheet'); el.hidden = false; requestAnimationFrame(() => el.classList.add('on')); }
+  function openSheet(def) { sheet = def; const el = document.getElementById('sheet'); el.classList.toggle('pop', !!def.pop); paintSheet(); document.getElementById('scrim').hidden = false; el.hidden = false; requestAnimationFrame(() => el.classList.add('on')); }
   function paintSheet() {
     if (!sheet) return;
     const el = document.getElementById('sheet');
@@ -400,7 +400,7 @@
     if (by('loan').length) h += box('out k-loan', '대출·이자', by('loan'), '나감', MN);
     if (by('fix').length) h += box('out k-fix', '구독·보험 등', by('fix'), '나감', MN);
     if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
-    h += '<div class="kv tot"><div><span>쓸 수 있는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? MN : '') + won(Math.abs(left)) + '원</b></div></div>';
+    h += '<div class="mf-sec mf-left' + (left < 0 ? ' neg' : '') + '"><div class="mf-cap"><span>쓸 수 있는 돈</span><span class="mf-capr"><b>' + (left < 0 ? MN : PL) + won(Math.abs(left)) + '</b><em class="mf-chev mf-sp"></em></span></div></div>';
     return { h, f };
   }
   // 종합: 이번 달만. 다른 달은 예상 탭에서 같은 모양으로
@@ -720,7 +720,7 @@
     const x = S.fixed.find((y) => y.id === id); if (!x) return;
     const inf = x.info || {};
     const has = INFO_KEYS.some((k) => inf[k]) || !!inf.extra || !!x.base || !!(x.perks || []).length;
-    openSheet({
+    openSheet({ pop: true,
       title: x.name,
       body: () => '<div class="info-top"><b>' + amtText(x) + '</b><span>매월 ' + esc(dayText(x)) + ' · ' + esc(refName(x.pay)) + (x.cat ? ' · ' + esc(x.cat) : '') + '</span></div>' +
         billHtml(x) +
@@ -1177,7 +1177,7 @@
   function cardApp(id, m) {
     const c = card(id);
     openSheet({
-      title: c.name + ' ' + mName(m) + ' 결제', focus: '[name=amt]',
+      pop: true, title: c.name + ' ' + mName(m) + ' 결제', focus: '[name=amt]',
       body() {
         const b = C.cardBill(S, id, m);
         return field({ name: 'amt', label: '카드앱 결제 예정 금액', type: 'money', value: b.app ? b.app.amount : '', sub: b.app ? ago(b.app.at) : '' }) +
@@ -1869,7 +1869,7 @@
     planAcct: (d) => planAcct(d.id),
     todoMove(d) {
       const x = C.cashPlan(S, today()).moves.find((y) => y.key === d.key); if (!x || !x.from) return;
-      openSheet({ title: '돈 옮기기', body: () => '<div class="kv"><div><span>어디서</span><b>' + esc(x.from.name) + '</b></div><div><span>어디로</span><b>' + esc(x.to.name) + '</b></div><div><span>얼마</span><b>' + won(x.amount) + '원</b></div><div><span>언제까지</span><b>' + md(x.due) + '</b></div></div>' +
+      openSheet({ pop: true, title: '돈 옮기기', body: () => '<div class="kv"><div><span>어디서</span><b>' + esc(x.from.name) + '</b></div><div><span>어디로</span><b>' + esc(x.to.name) + '</b></div><div><span>얼마</span><b>' + won(x.amount) + '원</b></div><div><span>언제까지</span><b>' + md(x.due) + '</b></div></div>' +
         '<p class="hint">' + moveWhy(x) + '에 맞췄어요. 모자라는 돈은 ' + won(x.need) + '원이고, 만 원 단위로 올렸어요.' + (x.enough ? '' : ' ' + esc(x.from.name) + '에도 다 옮길 만큼은 없어요.') + ' 은행앱에서 옮긴 뒤 아래를 누르면 두 통장 잔액이 같이 바뀌어요.</p>',
         foot: () => '<button class="btn" data-act="todoMoveDone" data-key="' + esc(x.key) + '">옮겼어요</button>' });
     },
