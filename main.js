@@ -400,7 +400,9 @@
     if (by('loan').length) h += box('out k-loan', '대출·이자', by('loan'), '나감', MN);
     if (by('fix').length) h += box('out k-fix', '구독·보험 등', by('fix'), '나감', MN);
     if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
-    h += '<div class="mf-sec mf-left' + (left < 0 ? ' neg' : '') + '"><div class="mf-cap"><span>쓸 수 있는 돈</span><span class="mf-capr"><b>' + (left < 0 ? MN : PL) + won(Math.abs(left)) + '</b><em class="mf-chev mf-sp"></em></span></div></div>';
+    // 맨 아래: 수입 − 카드값 − 고정비를 비상금 기준으로 여유/부족/위험
+    const B = Math.max(0, S.settings.buffer == null ? 80000 : S.settings.buffer); const lk = left < 0 ? 'risk' : left < B ? 'short' : 'ok';
+    h += '<div class="mf-sec mf-left k-' + lk + '"><div class="mf-cap"><span><span class="verdict' + vCls(lk) + '">' + VLAB[lk] + '</span><small>비상금 ' + shortWon(B) + '원 기준</small></span><span class="mf-capr"><b>' + (left < 0 ? MN : PL) + won(Math.abs(left)) + '</b><em class="mf-chev mf-sp"></em></span></div></div>';
     return { h, f };
   }
   // 종합: 이번 달만. 다른 달은 예상 탭에서 같은 모양으로

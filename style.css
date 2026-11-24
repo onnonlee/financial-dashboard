@@ -954,6 +954,8 @@ body.pad-open .sheet.pop { top: auto; bottom: calc(var(--padh) + 12px); transfor
 .mf-sec .mf-chev, .mf-sec .mf-fold > summary .row .end::after { border-color: var(--c); opacity: .7; }
 /* 맨 아래 쓸 수 있는 돈: 위 칸들과 같은 줄·크기 */
 .mf-sec.mf-left { --c: var(--text); background: var(--soft); }
-.mf-sec.mf-left.neg { --c: var(--warn); }
+.mf-sec.mf-left.k-short { --c: #ff7a3d; } .mf-sec.mf-left.k-risk { --c: #e5484d; }
+.mf-left .verdict { margin-left: 0; }
+.mf-sec.mf-left .mf-cap small { color: var(--text3); opacity: 1; }
 .mf-left .mf-cap b { color: var(--c); }
 .mf-chev.mf-sp { visibility: hidden; }
