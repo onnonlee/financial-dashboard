@@ -920,3 +920,5 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mflow .sg { margin-right: 2px; }
 .mf-range { font-size: 13px; font-weight: 500; color: var(--text3); margin-left: 8px; font-variant-numeric: tabular-nums; }
 div.mf-sec.out > .mf-cap b { margin-right: 19px; }
+/* 부호 자리 고정: 금액 칸을 같은 폭으로, 부호는 왼쪽 끝·숫자는 오른쪽 끝 */
+.mflow .amt:has(.sg), .mflow .mf-cap b:has(.sg) { display: inline-flex; justify-content: space-between; min-width: 6.4em; font-variant-numeric: tabular-nums; }
