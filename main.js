@@ -388,8 +388,7 @@
     // 펼친 목록은 표처럼: 날짜 · 항목 · 금액 줄 맞춤
     const r = (x) => '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span class="d">' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="amt' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? PL : MN) + won(x.amount) + '</b></div>';
     const list = (xs) => xs.map(r).join('');
-    // "4건 중 1건 받음": 이미 들어왔거나 나간 건수 (그 줄은 목록에서 흐리게)
-    const cnt = (xs, verb) => { const n = xs.filter(isPast).length; return n ? (n === xs.length ? xs.length + '건 다 ' + verb : xs.length + '건 중 ' + n + '건 ' + verb) : xs.length + '건'; };
+    const cnt = (xs) => xs.length + '건';
     const grp = (k, lab) => { const xs = by(k); if (!xs.length) return '';
       return '<details class="mf-fold"><summary>' + row({ t: lab, s: cnt(xs, '나감'), amt: MN + won(tot(xs)) }) + '</summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
     // 한 줄짜리 칸: 누르면 날짜별 목록이 펼쳐짐
