@@ -387,15 +387,16 @@
     const MN = '<span class="sg">−</span>', PL = '<span class="sg">+</span>';
     // 펼친 목록은 표처럼: 날짜 · 항목 · 금액 줄 맞춤
     const r = (x) => '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span class="d">' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="amt' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? PL : MN) + won(x.amount) + '</b></div>';
-    const list = (xs) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now"><span>오늘</span></div>'; mk = true; } h += r(x); }); return h; };
-    const cnt = (xs, verb) => { const n = xs.filter(isPast).length; return xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + verb : ''); };
+    const list = (xs) => xs.map(r).join('');
+    // "4건 중 1건 받음": 이미 들어왔거나 나간 건수 (그 줄은 목록에서 흐리게)
+    const cnt = (xs, verb) => { const n = xs.filter(isPast).length; return n ? (n === xs.length ? xs.length + '건 다 ' + verb : xs.length + '건 중 ' + n + '건 ' + verb) : xs.length + '건'; };
     const grp = (k, lab) => { const xs = by(k); if (!xs.length) return '';
       return '<details class="mf-fold"><summary>' + row({ t: lab, s: cnt(xs, '나감'), amt: MN + won(tot(xs)) }) + '</summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
     // 한 줄짜리 칸: 누르면 날짜별 목록이 펼쳐짐
     const box = (cls, lab, xs, verb, sign) => '<details class="mf-sec ' + cls + ' mf-infold"><summary class="mf-cap"><span>' + lab + '<small>' + cnt(xs, verb) + '</small></span><span class="mf-capr"><b>' + sign + won(tot(xs)) + '</b><em class="mf-chev"></em></span></summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>';
     const ins = by('in'), cards = by('card'), fixed = by('loan').concat(by('fix'));
     let h = '';
-    if (ins.length) h += box('in', '수입', ins, '들어옴', PL);
+    if (ins.length) h += box('in', '수입', ins, '받음', PL);
     if (cards.length) h += box('out k-card', '카드값', cards, '나감', MN);
     if (by('loan').length) h += box('out k-loan', '대출·이자', by('loan'), '나감', MN);
     if (by('fix').length) h += box('out k-fix', '구독·보험 등', by('fix'), '나감', MN);
