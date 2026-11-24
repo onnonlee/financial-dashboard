@@ -417,7 +417,7 @@
       (x.act === 'href' ? '<a class="grow" href="' + x.href + '">' : '<button class="grow" data-act="' + x.act + '"' + Object.entries(x.data || {}).map(([k, v]) => ' data-' + k + '="' + esc(v) + '"').join('') + '>') +
       '<span class="t">' + x.t + '</span><span class="s">' + x.s + '</span>' + (x.act === 'href' ? '</a>' : '</button>') +
       '<span class="due">' + (x.due && x.due !== t ? md(x.due) + '까지' : '오늘') + '</span>' +
-      (x.key.indexOf('move:') === 0 || x.key.indexOf('app:') === 0 ? '<button class="tick" data-act="todoDone" data-key="' + esc(x.key) + '" aria-label="했어요"></button>' : '') + '</div>').join('') : '<p class="hint">지금 할 일이 없어요.</p>') + '</section>';
+      '</div>').join('') : '<p class="hint">지금 할 일이 없어요.</p>') + '</section>';
     // 2. 이번 달 흐름: 급여주기 안에서 들어오고 나가는 돈, 오늘 기준으로 지난 것과 남은 것
     h += monthFlowCard(t);
     // 3. 최근 가계부
