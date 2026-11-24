@@ -873,3 +873,26 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .olegend i.risk { background: #e5484d; }
 .ocol.neg i { opacity: .65; }
 .ocol.neg.on i { opacity: 1; }
+
+/* 종합: 이번 달 흐름 */
+.mf-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 12px; }
+.mf-sum > div { display: flex; flex-direction: column; gap: 3px; background: var(--soft); border-radius: 12px; padding: 10px; min-width: 0; }
+.mf-sum span { font-size: 12px; color: var(--text3); }
+.mf-sum b { font-size: 16px; font-weight: 700; }
+.mf-sum b.in { color: var(--in); } .mf-sum b.warn { color: var(--warn); }
+.mf-sum i { display: block; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 3px; }
+.mf-sum i u { display: block; height: 100%; background: var(--in); }
+.mf-sum i.o u { background: var(--text2); } .mf-sum i.t u { background: var(--text3); }
+.mf-sum small { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.mf-past { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text3); padding: 8px 0; }
+.mf-past svg, .mf-more svg { width: 14px; height: 14px; }
+.mf-today { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; }
+.mf-today::before, .mf-today::after { content: ""; flex: 1; border-top: 1px solid var(--blue); opacity: .5; }
+.mf-today span { font-size: 11.5px; font-weight: 700; color: var(--blue); }
+.mf-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.mf-row:last-of-type { border-bottom: 0; }
+.mf-d { font-size: 12.5px; color: var(--text3); font-variant-numeric: tabular-nums; }
+.mf-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mf-row b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.mf-row.in b { color: var(--in); }
+.mf-more { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 13px; color: var(--text2); padding: 10px 0 2px; }
