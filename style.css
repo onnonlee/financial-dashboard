@@ -892,3 +892,5 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-fold > summary .row .lead { width: 12px; display: flex; justify-content: center; }
 .mf-dot { display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--text3); }
 .mf-dot.k-in { background: var(--in); } .mf-dot.k-card { background: #6b5cff; } .mf-dot.k-fix { background: var(--text3); } .mf-dot.k-loan { background: var(--warn); }
+
+.mf-go { margin-top: 4px; }
