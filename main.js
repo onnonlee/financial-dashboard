@@ -385,7 +385,8 @@
     const left = tot(by('in')) - tot(items.filter((x) => x.dir === 'out'));
     // 부호는 작고 가볍게(.sg)
     const MN = '<span class="sg">−</span>', PL = '<span class="sg">+</span>';
-    const r = (x) => row({ cls: isPast(x) ? 'off' : '', lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: '', amt: (x.dir === 'in' ? PL : MN) + won(x.amount), amtCls: x.dir === 'in' ? 'in' : '' });
+    // 펼친 목록은 표처럼: 날짜 · 항목 · 금액 줄 맞춤
+    const r = (x) => '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span class="d">' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="amt' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? PL : MN) + won(x.amount) + '</b></div>';
     const list = (xs) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } h += r(x); }); return h; };
     const cnt = (xs, verb) => { const n = xs.filter(isPast).length; return xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + verb : ''); };
     const grp = (k, lab) => { const xs = by(k); if (!xs.length) return '';
