@@ -917,6 +917,6 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-fold > summary .row .end, .mf-capr { flex-direction: row; align-items: center; gap: 12px; }
 .mf-fold > summary .row .end::after, .mf-chev { content: ""; display: block; width: 7px; height: 7px; border-right: 1.6px solid var(--text3); border-bottom: 1.6px solid var(--text3); transform: translateY(-2px) rotate(45deg); transition: transform .15s; flex: none; }
 .mf-fold[open] > summary .row .end::after, .mf-infold[open] .mf-chev { transform: translateY(2px) rotate(-135deg); }
-.mflow .sg { font-weight: 400; font-size: .85em; margin-right: 2px; opacity: .7; vertical-align: 1px; }
+.mflow .sg { font-weight: 400; margin-right: 2px; }
 .mf-range { font-size: 13px; font-weight: 500; color: var(--text3); margin-left: 8px; font-variant-numeric: tabular-nums; }
 div.mf-sec.out > .mf-cap b { margin-right: 19px; }
