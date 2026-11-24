@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.14';
+  const VERSION = '4.15';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -383,27 +383,28 @@
     const by = (k) => items.filter((x) => kind(x) === k);
     const tot = (xs) => sum(xs, (x) => x.amount);
     const left = tot(by('in')) - tot(items.filter((x) => x.dir === 'out'));
-    // 나가는 돈은 칸으로 구분되니 − 표시 없이, 들어오는 돈만 +
-    const r = (x) => row({ cls: isPast(x) ? 'off' : '', lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: '', amt: (x.dir === 'in' ? '+' : '') + won(x.amount), amtCls: x.dir === 'in' ? 'in' : '' });
+    // 부호는 작고 가볍게(.sg)
+    const MN = '<span class="sg">−</span>', PL = '<span class="sg">+</span>';
+    const r = (x) => row({ cls: isPast(x) ? 'off' : '', lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: '', amt: (x.dir === 'in' ? PL : MN) + won(x.amount), amtCls: x.dir === 'in' ? 'in' : '' });
     const list = (xs) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } h += r(x); }); return h; };
     const cnt = (xs, verb) => { const n = xs.filter(isPast).length; return xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + verb : ''); };
     const grp = (k, lab) => { const xs = by(k); if (!xs.length) return '';
-      return '<details class="mf-fold"><summary>' + row({ t: lab, s: cnt(xs, '나감'), amt: won(tot(xs)) }) + '</summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
+      return '<details class="mf-fold"><summary>' + row({ t: lab, s: cnt(xs, '나감'), amt: MN + won(tot(xs)) }) + '</summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
     // 한 줄짜리 칸: 누르면 날짜별 목록이 펼쳐짐
-    const box = (cls, lab, xs, verb, sign) => '<details class="mf-sec ' + cls + ' mf-infold"><summary class="mf-cap"><span>' + lab + '<small>' + cnt(xs, verb) + '</small></span><span class="mf-capr"><b>' + sign + won(tot(xs)) + '</b><em></em></span></summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>';
+    const box = (cls, lab, xs, verb, sign) => '<details class="mf-sec ' + cls + ' mf-infold"><summary class="mf-cap"><span>' + lab + '<small>' + cnt(xs, verb) + '</small></span><span class="mf-capr"><b>' + sign + won(tot(xs)) + '</b><em class="mf-chev"></em></span></summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>';
     const ins = by('in'), cards = by('card'), fixed = by('loan').concat(by('fix'));
     let h = '';
-    if (ins.length) h += box('in', '수입', ins, '들어옴', '+');
-    if (cards.length) h += box('out', '카드값', cards, '나감', '');
-    if (fixed.length) h += '<div class="mf-sec out"><div class="mf-cap"><span>고정비</span><b>' + won(tot(fixed)) + '</b></div>' + grp('loan', '대출·이자') + grp('fix', '구독·보험 등') + '</div>';
+    if (ins.length) h += box('in', '수입', ins, '들어옴', PL);
+    if (cards.length) h += box('out', '카드값', cards, '나감', MN);
+    if (fixed.length) h += '<div class="mf-sec out"><div class="mf-cap"><span>고정비</span><b>' + MN + won(tot(fixed)) + '</b></div>' + grp('loan', '대출·이자') + grp('fix', '구독·보험 등') + '</div>';
     if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
-    h += '<div class="kv tot"><div><span>쓸 수 있는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? '−' : '') + won(Math.abs(left)) + '원</b></div></div>';
+    h += '<div class="kv tot"><div><span>쓸 수 있는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? MN : '') + won(Math.abs(left)) + '원</b></div></div>';
     return { h, f };
   }
   // 종합: 이번 달만. 다른 달은 예상 탭에서 같은 모양으로
   function monthFlowCard(t) {
     const P = flowDefault(t); const { h, f } = flowBlock(P, t);
-    return '<section class="card mflow"><button class="sec-head mf-head" data-act="mfOpen" data-m="' + P + '"><h2>' + pName(P) + ' 흐름</h2><span>' + md(f.start) + '~' + md(f.end) + I.right + '</span></button>' + h + '</section>';
+    return '<section class="card mflow"><button class="sec-head mf-head" data-act="mfOpen" data-m="' + P + '"><h2>' + pName(P) + ' 흐름<small class="mf-range">' + md(f.start) + '~' + md(f.end) + '</small></h2><span>' + I.right + '</span></button>' + h + '</section>';
   }
   function homeScreen() {
     const t = today(); const st = C.status(S, t);
@@ -453,7 +454,7 @@
         (tags ? '<span class="otags">' + tags + '</span>' : '') + '</button>';
     }
     h += '<p class="hint">' + (B ? '막대는 그달 남는 돈이에요. 점선(비상금 ' + shortWon(B) + '원) 아래면 부족, 0 밑으로 내려가면 위험이에요. ' : '') + '막대를 누르면 그 달이 아래에 나와요.</p></section>';
-    if (r) { const fb = flowBlock(r.month, today()); h += '<section class="card mflow">' + head(pName(r.month) + ' 흐름', md(fb.f.start) + '~' + md(fb.f.end)) + fb.h + '</section>'; }
+    if (r) { const fb = flowBlock(r.month, today()); h += '<section class="card mflow">' + '<div class="sec-head"><h2>' + pName(r.month) + ' 흐름<small class="mf-range">' + md(fb.f.start) + '~' + md(fb.f.end) + '</small></h2></div>' + fb.h + '</section>'; }
     // 한 번씩 받는 돈
     const ex = (S.extras || []).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
     h += '<section class="card">' + head('비정기 수입', ex.length ? ex.length + '개' : '') + (ex.map((x) => row({ act: 'editExtra', data: { id: x.id }, lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: x.date.slice(0, 4) + '년 · ' + esc((acct(x.accountId) || {}).name || ''), amt: '+' + won(x.amount), amtCls: 'in' })).join('') || '<p class="hint">정근수당, 명절휴가비, 연말정산 환급처럼 가끔 들어오는 돈을 적어 두면 그달 예상에 들어가요.</p>') +
