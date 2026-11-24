@@ -893,7 +893,7 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-dot { display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--text3); }
 .mf-dot.k-in { background: var(--in); } .mf-dot.k-card { background: #6b5cff; } .mf-dot.k-fix { background: var(--text3); } .mf-dot.k-loan { background: var(--warn); }
 
-.mf-go { margin-top: 16px; }
+.mf-head { width: 100%; font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
 
 .mf-sec { border-radius: 16px; padding: 4px 12px 2px; margin: 10px 0 0; }
 .mf-sec.in { background: color-mix(in srgb, var(--in) 7%, transparent); }
@@ -904,3 +904,6 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-sec .mf-fold:first-of-type { border-top: 0; }
 .mf-sec > .kv.tot, .mf-sec .mf-fold > .kv.tot { background: var(--card); }
 .mflow > .kv.tot { margin-top: 10px; }
+.mf-sec .mf-fold > summary .row .lead { display: none; }
+.mf-cap { font-size: 15px; }
+.mf-cap b { font-size: 16px; }

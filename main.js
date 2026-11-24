@@ -396,8 +396,7 @@
   // 종합: 이번 달만. 다른 달은 예상 탭에서 같은 모양으로
   function monthFlowCard(t) {
     const P = flowDefault(t); const { h, f } = flowBlock(P, t);
-    return '<section class="card mflow">' + head(pName(P) + ' 흐름', md(f.start) + '~' + md(f.end)) + h +
-      '<button class="link-btn mf-go" data-act="mfOpen" data-m="' + P + '">다른 달 보기 ' + I.right + '</button></section>';
+    return '<section class="card mflow"><button class="sec-head mf-head" data-act="mfOpen" data-m="' + P + '"><h2>' + pName(P) + ' 흐름</h2><span>' + md(f.start) + '~' + md(f.end) + I.right + '</span></button>' + h + '</section>';
   }
   function homeScreen() {
     const t = today(); const st = C.status(S, t);
