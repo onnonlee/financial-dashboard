@@ -396,9 +396,9 @@
     const ins = by('in'), cards = by('card'), fixed = by('loan').concat(by('fix'));
     let h = '';
     if (ins.length) h += box('in', '수입', ins, '들어옴', PL);
-    if (cards.length) h += box('out', '카드값', cards, '나감', MN);
-    if (by('loan').length) h += box('out', '대출·이자', by('loan'), '나감', MN);
-    if (by('fix').length) h += box('out', '구독·보험 등', by('fix'), '나감', MN);
+    if (cards.length) h += box('out k-card', '카드값', cards, '나감', MN);
+    if (by('loan').length) h += box('out k-loan', '대출·이자', by('loan'), '나감', MN);
+    if (by('fix').length) h += box('out k-fix', '구독·보험 등', by('fix'), '나감', MN);
     if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
     h += '<div class="kv tot"><div><span>쓸 수 있는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? MN : '') + won(Math.abs(left)) + '원</b></div></div>';
     return { h, f };

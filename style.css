@@ -938,3 +938,7 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-tr.off { opacity: .45; }
 .mf-tr + .kv.tot, .mf-now + .mf-tr { }
 .mflow .mf-tr .amt:has(.sg) { min-width: 5.9em; }
+/* 흐름 칸마다 색 */
+.mf-sec.k-card { --c: #6b5cff; } .mf-sec.k-loan { --c: #f08c2e; } .mf-sec.k-fix { --c: #12a3a3; }
+.mf-sec.k-card, .mf-sec.k-loan, .mf-sec.k-fix { background: color-mix(in srgb, var(--c) 8%, transparent); }
+.mf-sec.k-card .mf-cap > span:first-child, .mf-sec.k-loan .mf-cap > span:first-child, .mf-sec.k-fix .mf-cap > span:first-child { color: var(--c); }
