@@ -893,4 +893,14 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mf-dot { display: block; width: 9px; height: 9px; border-radius: 50%; background: var(--text3); }
 .mf-dot.k-in { background: var(--in); } .mf-dot.k-card { background: #6b5cff; } .mf-dot.k-fix { background: var(--text3); } .mf-dot.k-loan { background: var(--warn); }
 
-.mf-go { margin-top: 4px; }
+.mf-go { margin-top: 16px; }
+
+.mf-sec { border-radius: 16px; padding: 4px 12px 2px; margin: 10px 0 0; }
+.mf-sec.in { background: color-mix(in srgb, var(--in) 7%, transparent); }
+.mf-sec.out { background: var(--soft); }
+.mf-cap { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0 6px; font-size: 13px; font-weight: 700; }
+.mf-sec.in .mf-cap { color: var(--in); }
+.mf-cap b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.mf-sec .mf-fold:first-of-type { border-top: 0; }
+.mf-sec > .kv.tot, .mf-sec .mf-fold > .kv.tot { background: var(--card); }
+.mflow > .kv.tot { margin-top: 10px; }

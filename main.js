@@ -4,7 +4,7 @@
   const C = window.Core;
   const KEY = 'money.v2';
   const OLDKEY = 'money.v1';
-  const VERSION = '4.12';
+  const VERSION = '4.13';
 
   // ---------- 저장 ----------
   const readJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
@@ -387,8 +387,9 @@
     const list = (xs) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } h += r(x); }); return h; };
     const grp = (k, lab, sign) => { const xs = by(k); if (!xs.length) return ''; const n = xs.filter(isPast).length;
       return '<details class="mf-fold"><summary>' + row({ lead: '<span class="mf-dot k-' + k + '"></span>', t: lab, s: xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + (k === 'in' ? '들어옴' : '나감') : ''), amt: sign + won(tot(xs)), amtCls: k === 'in' ? 'in' : '' }) + '</summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
-    let h = grp('in', '수입', '+') + grp('card', '카드값', '−') + grp('fix', '고정비', '−') + grp('loan', '대출·이자', '−');
-    if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
+    const inH = grp('in', '수입', '+'); const outH = grp('card', '카드값', '−') + grp('fix', '고정비', '−') + grp('loan', '대출·이자', '−');
+    const sec = (cls, lab, amt, body) => '<div class="mf-sec ' + cls + '"><div class="mf-cap"><span>' + lab + '</span><b>' + amt + '</b></div>' + (body || '<p class="hint">없어요.</p>') + '</div>';
+    let h = sec('in', '들어오는 돈', '+' + won(tot(by('in'))), inH) + sec('out', '나가는 돈', '−' + won(tot(items.filter((x) => x.dir === 'out'))), outH);
     h += '<div class="kv tot"><div><span>정해진 돈 빼고 남는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? '−' : '+') + won(Math.abs(left)) + '원</b></div></div>';
     return { h, f };
   }
@@ -396,7 +397,7 @@
   function monthFlowCard(t) {
     const P = flowDefault(t); const { h, f } = flowBlock(P, t);
     return '<section class="card mflow">' + head(pName(P) + ' 흐름', md(f.start) + '~' + md(f.end)) + h +
-      '<button class="link-btn mf-go" data-act="mfOpen" data-m="' + P + '">다른 달 흐름 · 예상에서 보기 ' + I.right + '</button></section>';
+      '<button class="link-btn mf-go" data-act="mfOpen" data-m="' + P + '">다른 달 보기 ' + I.right + '</button></section>';
   }
   function homeScreen() {
     const t = today(); const st = C.status(S, t);
