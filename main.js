@@ -396,7 +396,7 @@
     let h = '';
     if (ins.length) h += box('in', '수입', ins, '들어옴', PL);
     if (cards.length) h += box('out', '카드값', cards, '나감', MN);
-    if (fixed.length) h += '<div class="mf-sec out"><div class="mf-cap"><span>고정비</span><b>' + MN + won(tot(fixed)) + '</b></div>' + grp('loan', '대출·이자') + grp('fix', '구독·보험 등') + '</div>';
+    if (fixed.length) h += '<details class="mf-sec out mf-infold"><summary class="mf-cap"><span>고정비<small>' + cnt(fixed, '나감') + '</small></span><span class="mf-capr"><b>' + MN + won(tot(fixed)) + '</b><em class="mf-chev"></em></span></summary>' + grp('loan', '대출·이자') + grp('fix', '구독·보험 등') + '</details>';
     if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
     h += '<div class="kv tot"><div><span>쓸 수 있는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? MN : '') + won(Math.abs(left)) + '원</b></div></div>';
     return { h, f };
