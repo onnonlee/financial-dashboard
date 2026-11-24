@@ -387,7 +387,7 @@
     const MN = '<span class="sg">−</span>', PL = '<span class="sg">+</span>';
     // 펼친 목록은 표처럼: 날짜 · 항목 · 금액 줄 맞춤
     const r = (x) => '<div class="mf-tr' + (isPast(x) ? ' off' : '') + '"><span class="d">' + md(x.date) + '</span><span class="n">' + esc(x.name) + '</span><b class="amt' + (x.dir === 'in' ? ' in' : '') + '">' + (x.dir === 'in' ? PL : MN) + won(x.amount) + '</b></div>';
-    const list = (xs) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now">오늘 ' + md(t) + '</div>'; mk = true; } h += r(x); }); return h; };
+    const list = (xs) => { let h = '', mk = P !== cur; xs.forEach((x) => { if (!mk && !isPast(x)) { h += '<div class="mf-now"><span>오늘</span></div>'; mk = true; } h += r(x); }); return h; };
     const cnt = (xs, verb) => { const n = xs.filter(isPast).length; return xs.length + '건' + (n ? ' · ' + (n === xs.length ? '다 ' : n + '건 ') + verb : ''); };
     const grp = (k, lab) => { const xs = by(k); if (!xs.length) return '';
       return '<details class="mf-fold"><summary>' + row({ t: lab, s: cnt(xs, '나감'), amt: MN + won(tot(xs)) }) + '</summary>' + list(xs) + '<div class="kv tot"><div><span>' + lab + ' 합계</span><b>' + won(tot(xs)) + '원</b></div></div></details>'; };
@@ -397,7 +397,8 @@
     let h = '';
     if (ins.length) h += box('in', '수입', ins, '들어옴', PL);
     if (cards.length) h += box('out', '카드값', cards, '나감', MN);
-    if (fixed.length) h += '<details class="mf-sec out mf-infold"><summary class="mf-cap"><span>고정비<small>' + cnt(fixed, '나감') + '</small></span><span class="mf-capr"><b>' + MN + won(tot(fixed)) + '</b><em class="mf-chev"></em></span></summary>' + grp('loan', '대출·이자') + grp('fix', '구독·보험 등') + '</details>';
+    if (by('loan').length) h += box('out', '대출·이자', by('loan'), '나감', MN);
+    if (by('fix').length) h += box('out', '구독·보험 등', by('fix'), '나감', MN);
     if (!h) h = '<p class="hint">이 달에 들어오고 나갈 돈이 아직 없어요.</p>';
     h += '<div class="kv tot"><div><span>쓸 수 있는 돈</span><b class="' + (left < 0 ? 'warn' : '') + '">' + (left < 0 ? MN : '') + won(Math.abs(left)) + '원</b></div></div>';
     return { h, f };

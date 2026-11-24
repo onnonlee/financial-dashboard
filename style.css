@@ -878,8 +878,9 @@ body.pad-open .screen.ob { padding-bottom: var(--padh); }
 .mflow .chip { background: var(--soft); }
 .mflow .chip.on { background: var(--text); color: var(--card); }
 .mf-m { margin: 0 0 10px; }
-.mf-now { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; color: var(--blue); margin: 4px 0; }
-.mf-now::after { content: ""; flex: 1; border-top: 1px solid var(--blue); opacity: .5; }
+.mf-now { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+.mf-now span { font-size: 11px; font-weight: 700; color: var(--blue); background: var(--blue-bg); border-radius: 6px; padding: 2px 7px; }
+.mf-now::after { content: ""; flex: 1; border-top: 1px solid var(--blue); opacity: .3; }
 .mf-fold { border-top: 1px solid var(--line); }
 .mf-fold > summary { list-style: none; cursor: pointer; }
 .mf-fold > summary::-webkit-details-marker { display: none; }
