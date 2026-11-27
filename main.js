@@ -459,7 +459,7 @@
         (tags ? '<span class="otags">' + tags + '</span>' : '') + '</button>';
     }
     h += '<p class="hint">' + (B ? '막대는 그달 남는 돈이에요. 점선(비상금 ' + shortWon(B) + '원) 아래면 부족, 0 밑으로 내려가면 위험이에요. ' : '') + '막대를 누르면 그 달이 아래에 나와요.</p></section>';
-    if (r) { const fb = flowBlock(r.month, today()); h += '<section class="card mflow">' + '<div class="sec-head"><h2>' + pName(r.month) + ' 흐름<small class="mf-range">' + md(fb.f.start) + '~' + md(fb.f.end) + '</small></h2><span>' + mfBuf() + '</span></div>' + fb.h + '</section>'; }
+    if (r) { const fP = C.addMonths(flowDefault(today()), si); const fb = flowBlock(fP, today()); h += '<section class="card mflow">' + '<div class="sec-head"><h2>' + pName(fP) + ' 흐름<small class="mf-range">' + md(fb.f.start) + '~' + md(fb.f.end) + '</small></h2><span>' + mfBuf() + '</span></div>' + fb.h + '</section>'; }
     // 한 번씩 받는 돈
     const ex = (S.extras || []).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
     h += '<section class="card">' + head('비정기 수입', ex.length ? ex.length + '개' : '') + (ex.map((x) => row({ act: 'editExtra', data: { id: x.id }, lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: x.date.slice(0, 4) + '년 · ' + esc((acct(x.accountId) || {}).name || ''), amt: '+' + won(x.amount), amtCls: 'in' })).join('') || '<p class="hint">정근수당, 명절휴가비, 연말정산 환급처럼 가끔 들어오는 돈을 적어 두면 그달 예상에 들어가요.</p>') +
@@ -1866,7 +1866,7 @@
     cardApp: (d) => cardApp(d.id, d.m),
     outlookDetail: (d) => outlookDetail(d.m),
     olPick: (d) => { olSel = d.m; render(); },
-    mfOpen: (d) => { olSel = d.m; location.hash = '#/outlook'; },
+    mfOpen: () => { olSel = null; location.hash = '#/outlook'; },
     editExtra: (d) => editExtra(d.id),
     todoDone: (d) => { S.todoDone = S.todoDone || {}; S.todoDone[d.key] = today(); save(); render(); toast('했어요로 표시했어요'); },
     planAcct: (d) => planAcct(d.id),
