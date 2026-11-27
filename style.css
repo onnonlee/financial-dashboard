@@ -963,3 +963,6 @@ body.pad-open .sheet.pop { top: auto; bottom: calc(var(--padh) + 12px); transfor
 .mf-buf { font-size: 12.5px; font-weight: 500; color: var(--text3); margin-right: 4px; }
 .mflow .mf-tr .amt, .mflow .mf-sec .mf-tr .amt { color: var(--text); }
 .mast-buf { font-size: 12.5px; font-weight: 500; opacity: .65; margin-left: 8px; }
+.mast.v4 .mast-lab { line-height: 1; }
+.mast.v4 .mast-lab .verdict { vertical-align: 0; line-height: 1.5; }
+.mast.v4 .mast-lab .mast-buf { line-height: 1; margin: 0 0 0 8px; padding: 0; display: inline-block; }
