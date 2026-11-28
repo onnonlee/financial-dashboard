@@ -321,7 +321,7 @@
   function homeMast3() {
     const r = outRows(1)[0]; const L = level(r, true); const short = L.k !== 'ok';
     const fixedOut = r.outflow + r.fixedCard + r.debtPay;
-    return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + (L.k === 'risk' ? ' risk' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + ' 현황<span class="verdict' + vCls(L.k) + '">' + VLAB[L.k] + '</span>' + (r.buffer ? '<small class="mast-buf">비상금 ' + shortWon(r.buffer) + '원 기준</small>' : '') + '</p><b class="mast-num' + vCls(L.k) + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
+    return '<header class="masthead"><div class="mast home v3 v4' + (short ? ' short' : '') + (L.k === 'risk' ? ' risk' : '') + '"><div class="mast-top"><button class="mast-main" data-act="outlookDetail" data-m="' + r.month + '"><p class="mast-lab">' + mName(r.month) + ' 현황<span class="verdict' + vCls(L.k) + '">' + VLAB[L.k] + '</span></p><b class="mast-num' + vCls(L.k) + '">' + (short ? '−' : '+') + won(r.remaining) + '<em>원</em></b></button>' +
       '<a class="mast-btn" href="#/more" aria-label="전체 메뉴">' + MENU_IC + '</a></div>' +
       '<p class="mast-sub">' + (L.k === 'risk' ? '통장·마통 한도를 다 모아도 <b>' + won(-L.left) + '원</b>이 모자라요' : short ? '비상금에서 <b>' + won(-r.remaining) + '원</b>을 꺼내 써야 해요' : '<b>하루 약 ' + shortWon(Math.max(0, r.daily)) + '원</b> · 남은 ' + r.daysLeft + '일') + '</p>' +
       '<button class="mast-chips" data-act="outlookDetail" data-m="' + r.month + '"><span><span>수입</span><b>' + shortWon(r.inflow + r.debtIn + Math.max(0, r.carry)) + '</b></span><span><span>고정비</span><b>' + shortWon(fixedOut) + '</b></span><span><span>지출</span><b>' + shortWon(r.spent) + '</b></span></button></div></header>';
@@ -409,7 +409,7 @@
   // 종합: 이번 달만. 다른 달은 예상 탭에서 같은 모양으로
   function monthFlowCard(t) {
     const P = flowDefault(t); const { h, f } = flowBlock(P, t);
-    return '<section class="card mflow"><button class="sec-head mf-head" data-act="mfOpen" data-m="' + P + '"><h2>' + pName(P) + ' 흐름<small class="mf-range">' + md(f.start) + '~' + md(f.end) + '</small></h2><span>' + I.right + '</span></button>' + h + '</section>';
+    return '<section class="card mflow"><button class="sec-head mf-head" data-act="mfOpen" data-m="' + P + '"><h2>' + pName(P) + ' 흐름<small class="mf-range">' + md(f.start) + '~' + md(f.end) + '</small></h2><span>' + mfBuf() + I.right + '</span></button>' + h + '</section>';
   }
   function homeScreen() {
     const t = today(); const st = C.status(S, t);
@@ -459,7 +459,7 @@
         (tags ? '<span class="otags">' + tags + '</span>' : '') + '</button>';
     }
     h += '<p class="hint">' + (B ? '막대는 그달 남는 돈이에요. 점선(비상금 ' + shortWon(B) + '원) 아래면 부족, 0 밑으로 내려가면 위험이에요. ' : '') + '막대를 누르면 그 달이 아래에 나와요.</p></section>';
-    if (r) { const fP = C.addMonths(flowDefault(today()), si); const fb = flowBlock(fP, today()); h += '<section class="card mflow">' + '<div class="sec-head"><h2>' + pName(fP) + ' 흐름<small class="mf-range">' + md(fb.f.start) + '~' + md(fb.f.end) + '</small></h2></div>' + fb.h + '</section>'; }
+    if (r) { const fP = C.addMonths(flowDefault(today()), si); const fb = flowBlock(fP, today()); h += '<section class="card mflow">' + '<div class="sec-head"><h2>' + pName(fP) + ' 흐름<small class="mf-range">' + md(fb.f.start) + '~' + md(fb.f.end) + '</small></h2><span>' + mfBuf() + '</span></div>' + fb.h + '</section>'; }
     // 한 번씩 받는 돈
     const ex = (S.extras || []).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
     h += '<section class="card">' + head('비정기 수입', ex.length ? ex.length + '개' : '') + (ex.map((x) => row({ act: 'editExtra', data: { id: x.id }, lead: '<span class="date">' + md(x.date) + '</span>', t: esc(x.name), s: x.date.slice(0, 4) + '년 · ' + esc((acct(x.accountId) || {}).name || ''), amt: '+' + won(x.amount), amtCls: 'in' })).join('') || '<p class="hint">정근수당, 명절휴가비, 연말정산 환급처럼 가끔 들어오는 돈을 적어 두면 그달 예상에 들어가요.</p>') +
